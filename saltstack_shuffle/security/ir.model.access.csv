@@ -1,0 +1,7 @@
+id,name,model_id/id,group_id/id,perm_read,perm_write,perm_create,perm_unlink
+access_shuffle_workflow_admin,shuffle.workflow.admin,model_shuffle_workflow,base.group_system,1,1,1,1
+access_shuffle_workflow_user,shuffle.workflow.user,model_shuffle_workflow,base.group_user,1,0,0,0
+access_shuffle_app_admin,shuffle.app.admin,model_shuffle_app,base.group_system,1,1,1,1
+access_shuffle_app_user,shuffle.app.user,model_shuffle_app,base.group_user,1,0,0,0
+access_shuffle_webhook_admin,shuffle.webhook.admin,model_shuffle_webhook,base.group_system,1,1,1,1
+access_shuffle_webhook_user,shuffle.webhook.user,model_shuffle_webhook,base.group_user,1,0,0,0

@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- KOPPLA GLOBALA TOOLS TILL SPECIALIST-AGENTER                     -->
+    <!-- Varje agent får sina respektive tools (salt → salt-tools, etc).  -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <!-- SaltStack Specialist → alla salt-tools -->
+    <record id="tool_salt_cmd_run" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_saltstack_specialist'))]"/>
+    </record>
+    <record id="tool_salt_disk_usage" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_saltstack_specialist'))]"/>
+    </record>
+    <record id="tool_salt_grains_get" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_saltstack_specialist'))]"/>
+    </record>
+    <record id="tool_salt_grains_items" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_saltstack_specialist'))]"/>
+    </record>
+    <record id="tool_salt_journal_errors" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_saltstack_specialist'))]"/>
+    </record>
+    <record id="tool_salt_memory_usage" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_saltstack_specialist'))]"/>
+    </record>
+    <record id="tool_salt_minion_accept" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_saltstack_specialist'))]"/>
+    </record>
+    <record id="tool_salt_minion_list" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_saltstack_specialist'))]"/>
+    </record>
+    <record id="tool_salt_pillar_get" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_saltstack_specialist'))]"/>
+    </record>
+    <record id="tool_salt_pillar_items" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_saltstack_specialist'))]"/>
+    </record>
+    <record id="tool_salt_process_list" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_saltstack_specialist'))]"/>
+    </record>
+    <record id="tool_salt_service_restart" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_saltstack_specialist'))]"/>
+    </record>
+    <record id="tool_salt_service_status" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_saltstack_specialist'))]"/>
+    </record>
+    <record id="tool_salt_state_apply" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_saltstack_specialist'))]"/>
+    </record>
+    <record id="tool_salt_state_highstate" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_saltstack_specialist'))]"/>
+    </record>
+    <record id="tool_salt_state_show_sls" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_saltstack_specialist'))]"/>
+    </record>
+    <record id="tool_salt_system_load" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_saltstack_specialist'))]"/>
+    </record>
+    <record id="tool_salt_test_ping" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_saltstack_specialist'))]"/>
+    </record>
+
+    <!-- Zabbix Specialist → alla zabbix-tools -->
+    <record id="tool_zabbix_acknowledge" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_zabbix_specialist'))]"/>
+    </record>
+    <record id="tool_zabbix_get_alerts" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_zabbix_specialist'))]"/>
+    </record>
+    <record id="tool_zabbix_get_history" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_zabbix_specialist'))]"/>
+    </record>
+    <record id="tool_zabbix_get_host" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_zabbix_specialist'))]"/>
+    </record>
+    <record id="tool_zabbix_get_host_groups" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_zabbix_specialist'))]"/>
+    </record>
+    <record id="tool_zabbix_get_item" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_zabbix_specialist'))]"/>
+    </record>
+    <record id="tool_zabbix_get_problems" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_zabbix_specialist'))]"/>
+    </record>
+    <record id="tool_zabbix_get_triggers" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_zabbix_specialist'))]"/>
+    </record>
+
+    <!-- Driftlarm-verktyget → alla specialister (kan uppdatera larmet) -->
+    <!-- Driftlarm-verktyget → alla specialister (kan uppdatera larmet) -->
+    <record id="tool_driftlarm_update" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_saltstack_specialist')), (4, ref('agent_zabbix_specialist')), (4, ref('agent_wazuh_specialist')), (4, ref('agent_odoo_specialist')), (4, ref('agent_postgres_specialist')), (4, ref('agent_system_specialist')), (4, ref('agent_caddy_specialist'))]"/>
+    </record>
+
+    <!-- Övriga specialister får generella salt-diagnostikverktyg för sitt arbete -->
+
+    <!-- Odoo Specialist: logg + tjänst + process -->
+    <record id="tool_salt_cmd_run" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_odoo_specialist')), (4, ref('agent_postgres_specialist')), (4, ref('agent_system_specialist')), (4, ref('agent_caddy_specialist')), (4, ref('agent_wazuh_specialist'))]"/>
+    </record>
+    <record id="tool_salt_journal_errors" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_odoo_specialist')), (4, ref('agent_postgres_specialist')), (4, ref('agent_system_specialist')), (4, ref('agent_caddy_specialist')), (4, ref('agent_wazuh_specialist'))]"/>
+    </record>
+    <record id="tool_salt_service_status" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_odoo_specialist')), (4, ref('agent_postgres_specialist')), (4, ref('agent_caddy_specialist')), (4, ref('agent_wazuh_specialist'))]"/>
+    </record>
+    <record id="tool_salt_service_restart" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_odoo_specialist')), (4, ref('agent_caddy_specialist'))]"/>
+    </record>
+    <record id="tool_salt_process_list" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_odoo_specialist')), (4, ref('agent_system_specialist'))]"/>
+    </record>
+    <record id="tool_salt_disk_usage" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_system_specialist'))]"/>
+    </record>
+    <record id="tool_salt_memory_usage" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_system_specialist'))]"/>
+    </record>
+    <record id="tool_salt_system_load" model="ai.tool">
+        <field name="agent_ids" eval="[(4, ref('agent_system_specialist'))]"/>
+    </record>
+</odoo>

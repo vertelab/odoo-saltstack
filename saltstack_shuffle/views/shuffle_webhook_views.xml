@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_shuffle_webhook_list" model="ir.ui.view">
+        <field name="name">shuffle.webhook.list</field>
+        <field name="model">shuffle.webhook</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="url"/>
+                <field name="source"/>
+                <field name="destination"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shuffle_webhook_form" model="ir.ui.view">
+        <field name="name">shuffle.webhook.form</field>
+        <field name="model">shuffle.webhook</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="url"/>
+                        </group>
+                        <group>
+                            <field name="source"/>
+                            <field name="destination"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_shuffle_webhook" model="ir.actions.act_window">
+        <field name="name">Webhooks</field>
+        <field name="res_model">shuffle.webhook</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

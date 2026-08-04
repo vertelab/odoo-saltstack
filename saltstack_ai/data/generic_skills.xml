@@ -1,0 +1,527 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- GENERIC SKILLS — educational SaltStack & Zabbix knowledge        -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <!-- 1: SaltStack Fundamentals -->
+    <record id="skill_saltstack_fundamentals" model="ai.skill">
+        <field name="name">SaltStack Fundamentals</field>
+        <field name="description">SaltStack grunder: states, pillar, grains, top.sls och Jinja2. Lär ut arkitekturen och bästa praxis för infrastrukturautomation.</field>
+        <field name="category">infrastructure</field>
+        <field name="source_type">odoo</field>
+        <field name="compatibility">any</field>
+        <field name="trigger_keywords">
+            salt, saltstack, state, pillar, grains, top.sls, sls, jinja2,
+            salt master, salt minion, highstate
+        </field>
+        <field name="recipe_text"><![CDATA[
+# SaltStack Fundamentals
+
+SaltStack is an infrastructure automation platform. This skill covers the core concepts.
+
+## Architecture
+- **Salt Master**: Central server that controls minions. Stores states in `/srv/salt/`.
+- **Salt Minion**: Agent running on each managed machine. Connects to master on ports 4505-4506.
+- **Salt API**: REST interface to Salt (port 8377 default). Used by Odoo tools.
+
+## Core Concepts
+
+### States (.sls files)
+YAML files defining desired system state. Use Jinja2 for templating.
+```yaml
+install_nginx:
+  pkg.installed:
+    - name: nginx
+  service.running:
+    - name: nginx
+    - enable: True
+    - require:
+      - pkg: install_nginx
+```
+
+### Pillar
+Key/value data assigned to minions. Secrets live here, never in states.
+```yaml
+# pillar/odoo.sls
+odoo:
+  admin_password: "secret123"
+  version: "18"
+```
+
+### Grains
+System information about each minion (OS, CPU, IP, roles). Auto-detected.
+Common grains: id, os, osrelease, ipv4, roles, dc, customer.
+
+### top.sls
+Maps states and pillars to minions.
+```yaml
+base:
+  'gw*':
+    - caddy
+  'lxd-odoo-*':
+    - odoo.18
+```
+
+### Requisites
+- `require`: Run this AFTER another state
+- `watch_in`: Restart service when config changes
+- `unless`: Only run if condition is false
+
+### Jinja2 in States
+```yaml
+{% set version = pillar.get('odoo.version', '18') %}
+install_odoo_{{ version }}:
+  pkg.installed:
+    - name: odoo-{{ version }}
+```
+
+## Best Practices
+1. Secrets in pillar, NEVER in state files
+2. Use `test.ping` before applying states
+3. Preview with `state.show_sls` before `state.apply`
+4. Use `unless` guards for idempotency
+5. Group by function in subdirectories: caddy/, odoo/, postgres/
+]]></field>
+    </record>
+
+    <!-- 2: Salt Remote Execution -->
+    <record id="skill_salt_remote_execution" model="ai.skill">
+        <field name="name">Salt Remote Execution</field>
+        <field name="description">Salt remote execution: test.ping, cmd.run, service, grains, pillar och state-moduler för att köra kommandon över infrastrukturen.</field>
+        <field name="category">infrastructure</field>
+        <field name="source_type">odoo</field>
+        <field name="compatibility">any</field>
+        <field name="trigger_keywords">
+            salt execution, test.ping, cmd.run, service, grains, pillar,
+            salt-call, remote execution
+        </field>
+        <field name="recipe_text"><![CDATA[
+# Salt Remote Execution
+
+Execute commands and modules across your infrastructure.
+
+## Execution Modules
+
+### test.ping
+Check if minions are reachable.
+```bash
+salt '*' test.ping              # All minions
+salt 'gw*' test.ping            # Gateways only
+salt 'sparv' test.ping          # Single minion
+```
+
+### cmd.run
+Execute shell commands remotely.
+```bash
+salt '*' cmd.run 'uptime'
+salt 'sparv' cmd.run 'df -h'
+salt 'lxd-*' cmd.run 'free -m'
+```
+
+### service
+Manage systemd services.
+```bash
+salt 'sparv' service.status odoo
+salt 'gw0' service.restart caddy
+salt '*' service.status salt-minion
+```
+
+### grains
+Read system information.
+```bash
+salt '*' grains.items           # All grains
+salt 'sparv' grains.get os     # Specific grain
+salt 'gw*' grains.get roles   # Roles on gateways
+```
+
+### pillar
+Read configuration data.
+```bash
+salt 'sparv' pillar.items      # All pillar data
+salt 'gw0' pillar.get caddy   # Caddy config
+```
+
+### state
+Manage configuration.
+```bash
+salt 'sparv' state.apply odoo.update
+salt 'gw0' state.show_sls caddy.service  # Preview
+salt '*' state.highstate       # Apply everything
+```
+
+## Targeting
+- `*` — all minions
+- `gw*` — glob (starts with gw)
+- `G@os:Ubuntu` — grain filter
+- `L@sparv,gw0` — list
+- `E@sparv\d+` — regex
+]]></field>
+    </record>
+
+    <!-- 3: Salt State Management -->
+    <record id="skill_salt_state_management" model="ai.skill">
+        <field name="name">Salt State Management</field>
+        <field name="description">Skriva Salt states (.sls): filstruktur, state-funktioner, requisites, Jinja2-mönster och idempotens.</field>
+        <field name="category">infrastructure</field>
+        <field name="source_type">odoo</field>
+        <field name="compatibility">any</field>
+        <field name="trigger_keywords">
+            sls, state file, state management, state.apply, jinja2,
+            requisites, idempotent, state tree
+        </field>
+        <field name="recipe_text"><![CDATA[
+# Salt State Management
+
+Writing effective Salt states.
+
+## State File Structure
+```
+/srv/salt/
+├── top.sls              # Orchestration entry point
+├── caddy/
+│   ├── init.sls         # Include other states
+│   ├── install.sls      # Package installation
+│   ├── service.sls      # Service management
+│   └── sites/
+│       └── example.yaml # Site config
+├── odoo/
+│   ├── 18.sls           # Odoo 18 installation
+│   ├── config.sls       # Configuration
+│   └── repos/           # Repository files
+└── lxd/
+    └── init.sls         # Container management
+```
+
+## State Functions
+Common state functions:
+- `pkg.installed` — install package
+- `pkg.purged` — remove package
+- `file.managed` — create/manage file
+- `file.directory` — create directory
+- `service.running` — ensure service runs
+- `service.dead` — ensure service stops
+- `cmd.run` — execute command
+- `cron.present` — schedule cron job
+
+## Requisites (Dependencies)
+```yaml
+service_running:
+  service.running:
+    - name: nginx
+    - require:
+      - pkg: install_nginx       # Must install first
+    - watch:
+      - file: nginx_config       # Restart if config changes
+```
+
+## Jinja2 Patterns
+```yaml
+# Conditional
+{% if grains['os'] == 'Ubuntu' %}
+install_ubuntu_pkg:
+  pkg.installed:
+    - name: my-package
+{% endif %}
+
+# Loops
+{% for user in pillar['users'] %}
+create_user_{{ user }}:
+  user.present:
+    - name: {{ user }}
+{% endfor %}
+
+# Default values
+{% set port = pillar.get('app.port', 8080) %}
+```
+
+## Idempotency
+States must be safe to re-run:
+- Use `unless:` for one-time operations
+- Use `onlyif:` for conditional execution
+- Check before creating
+]]></field>
+    </record>
+
+    <!-- 4: Salt Pillar & Secrets -->
+    <record id="skill_salt_pillar_secrets" model="ai.skill">
+        <field name="name">Salt Pillar &amp; Secrets</field>
+        <field name="description">Salt pillar och hemligheter: pillar-struktur, pillar.get, extern pillar, och säker hantering av secrets (aldrig i git).</field>
+        <field name="category">infrastructure</field>
+        <field name="source_type">odoo</field>
+        <field name="compatibility">any</field>
+        <field name="trigger_keywords">
+            pillar, secrets, pillar.get, pillar.items, external pillar,
+            secret management, vault, encryption
+        </field>
+        <field name="recipe_text"><![CDATA[
+# Salt Pillar & Secrets
+
+Managing configuration data and secrets in SaltStack.
+
+## Pillar Structure
+```
+/srv/salt/pillar/
+├── top.sls              # Pillar assignment
+├── servers.sls          # Server config
+├── odoo.sls            # Odoo passwords
+├── bifrost.sls         # AI gateway config
+└── caddy/
+    └── sites.sls       # Site-specific config
+```
+
+## Pillar Assignment (pillar/top.sls)
+```yaml
+base:
+  'gw*':
+    - caddy
+    - caddy.sites
+  'odoo-*':
+    - odoo
+  '*':
+    - servers
+```
+
+## Accessing Pillar in States
+```yaml
+{% set admin_password = pillar['odoo']['admin_password'] %}
+{% set version = pillar.get('odoo.version', '18') %}
+
+configure_odoo:
+  file.managed:
+    - name: /etc/odoo/odoo.conf
+    - template: jinja
+    - defaults:
+        admin_password: {{ admin_password }}
+        version: {{ version }}
+```
+
+## Secret Management
+
+### NEVER commit secrets to Git
+Secrets belong in protected pillar or external pillar:
+```yaml
+# /srv/salt/pillar/protected/secrets.sls (NOT in git)
+bifrost:
+  secrets:
+    providers:
+      openrouter: "sk-or-..."
+      openai: "sk-..."
+```
+
+### Secret Reference Pattern
+Use symbolic references in public pillar:
+```yaml
+bifrost:
+  providers:
+    openrouter:
+      secret_ref: bifrost:secrets:providers:openrouter
+      env: BIFROST_OPENROUTER_API_KEY
+```
+
+### Keykeep Integration
+Pillar secrets can sync to keykeep.credential for auditing and rotation:
+- `salt.pillar` with data_type='secret'
+- Sync creates `keykeep.credential` with encryption
+- Version history tracks rotations
+]]></field>
+    </record>
+
+    <!-- 5: Salt Minion Lifecycle -->
+    <record id="skill_salt_minion_lifecycle" model="ai.skill">
+        <field name="name">Salt Minion Lifecycle</field>
+        <field name="description">Salt minion-livscykel: onboarding, nyckelhantering, grains, felsökning och avveckling.</field>
+        <field name="category">infrastructure</field>
+        <field name="source_type">odoo</field>
+        <field name="compatibility">any</field>
+        <field name="trigger_keywords">
+            minion, minion key, salt-key, minion onboarding, grains,
+            salt-minion service, minion restart
+        </field>
+        <field name="recipe_text"><![CDATA[
+# Salt Minion Lifecycle
+
+Managing Salt minions from creation to decommission.
+
+## Onboarding
+
+### Install Salt Minion
+```bash
+# On new machine:
+curl -fsSL https://repo.saltproject.io/salt/py3/ubuntu/24.04/amd64/SALT-PROJECT-GPG-PUBKEY-2023.gpg | sudo gpg --dearmor -o /usr/share/keyrings/salt-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/salt-archive-keyring.gpg] https://repo.saltproject.io/salt/py3/ubuntu/24.04/amd64 latest main" | sudo tee /etc/apt/sources.list.d/salt.list
+sudo apt update && sudo apt install salt-minion
+```
+
+### Configure Minion
+```bash
+# Edit /etc/salt/minion
+master: saltmaster.example.com
+id: my-minion-name
+```
+
+### Accept Key
+```bash
+# On master:
+salt-key -L              # List pending keys
+salt-key -a my-minion -y # Accept key
+salt 'my-minion' test.ping # Verify
+```
+
+## Grain Management
+```bash
+# Auto-detected (from system)
+salt '*' grains.items
+
+# Custom grains in /etc/salt/grains
+roles:
+  - odoo
+  - postgres
+dc: ska
+```
+
+## Troubleshooting
+
+### Minion won't connect
+```bash
+salt 'my-minion' test.ping
+salt 'my-minion' cmd.run 'systemctl status salt-minion'
+salt 'my-minion' cmd.run 'journalctl -u salt-minion -n 50'
+```
+
+### Key mismatch
+```bash
+# On master:
+salt-key -d my-minion -y   # Remove old key
+# On minion:
+rm -f /etc/salt/pki/minion/minion.pem /etc/salt/pki/minion/minion.pub
+systemctl restart salt-minion
+# Back on master:
+salt-key -a my-minion -y
+```
+
+### Restart patterns
+```bash
+salt '*' service.restart salt-minion         # All
+salt 'lxd-*' service.restart salt-minion    # Containers
+salt-call service.restart salt-minion        # Local
+```
+
+## Decommissioning
+```bash
+salt-key -d my-minion -y    # Remove from master
+# On minion:
+systemctl stop salt-minion
+apt purge salt-minion
+```
+]]></field>
+    </record>
+
+    <!-- 6: Zabbix Monitoring Concepts -->
+    <record id="skill_zabbix_monitoring_concepts" model="ai.skill">
+        <field name="name">Zabbix Monitoring Concepts</field>
+        <field name="description">Zabbix-grunder: hosts, items, triggers, problem, events och API-operationer för övervakning och larmhantering.</field>
+        <field name="category">infrastructure</field>
+        <field name="source_type">odoo</field>
+        <field name="compatibility">any</field>
+        <field name="trigger_keywords">
+            zabbix, monitoring, alerts, triggers, items, hosts,
+            problems, events, dashboard, template
+        </field>
+        <field name="recipe_text"><![CDATA[
+# Zabbix Monitoring Concepts
+
+Zabbix is an enterprise monitoring platform. This skill covers the core concepts for AI-driven infrastructure operations.
+
+## Architecture
+- **Zabbix Server**: Central poller and alert engine
+- **Zabbix Agent2**: Lightweight agent on each host (port 10050)
+- **Zabbix Frontend**: Web UI at https://zabbix.example.com
+- **Zabbix API**: JSON-RPC at /api_jsonrpc.php
+
+## Core Concepts
+
+### Hosts
+Machines being monitored. Each host has:
+- Hostname, IP, DNS
+- Host groups (e.g., "Linux servers", "Gateways")
+- Templates (inherited monitoring config)
+
+### Items
+Individual metrics being collected:
+- `system.cpu.load` — CPU load
+- `vm.memory.size[available]` — Available memory
+- `net.tcp.listen[22]` — SSH port
+- `odoo.http.status[...]` — Odoo HTTP status
+- `salt.minion.running` — Salt-minion process
+
+### Triggers
+Conditions that create problems:
+- "CPU load > 5 for 5 minutes" → Warning
+- "Odoo HTTP endpoint not responding" → Disaster
+- "No free disk space" → High
+
+### Problems
+Active issues. Severity levels:
+- 0: Not classified
+- 1: Information
+- 2: Warning
+- 3: Average
+- 4: High
+- 5: Disaster
+
+### Events
+Everything that happens:
+- Problem created/resolved
+- Auto-discovery events
+- Agent auto-registration
+
+### Actions
+Automated responses:
+- Send email/SMS
+- Execute remote command
+- POST webhook (→ Odoo Infrastructure Operator)
+
+## Common API Operations
+
+### Get active problems
+```python
+api.call("problem.get", {
+    "output": "extend",
+    "severities": [4, 5],
+    "recent": True,
+})
+```
+
+### Acknowledge event
+```python
+api.call("event.acknowledge", {
+    "eventids": ["12345"],
+    "action": 1,
+    "message": "Restarted odoo service"
+})
+```
+
+### Get host info
+```python
+api.call("host.get", {
+    "output": "extend",
+    "filter": {"host": ["sparv"]},
+    "selectItems": "extend",
+})
+```
+
+### Get history
+```python
+api.call("history.get", {
+    "output": "extend",
+    "itemids": ["54321"],
+    "sortfield": "clock",
+    "sortorder": "DESC",
+    "limit": 100,
+})
+```
+]]></field>
+    </record>
+
+</odoo>

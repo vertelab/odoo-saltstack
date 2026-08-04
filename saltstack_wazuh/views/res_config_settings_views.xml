@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_saltstack_wazuh_settings" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.saltstack.wazuh</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="saltstack.view_saltstack_settings"/>
+        <field name="arch" type="xml">
+            <xpath expr="//app[@name='saltstack']" position="inside">
+                <block title="SIEM / Wazuh">
+                    <setting id="siem_api_url_setting"
+                             title="Wazuh API URL"
+                             help="Adress till Wazuh Manager API. t.ex. https://siem.vertel.se">
+                        <field name="siem_api_url"
+                               placeholder="https://siem.vertel.se"
+                               class="w-50"/>
+                    </setting>
+                    <setting id="siem_api_token_setting"
+                             title="Wazuh API Token"
+                             help="Autentiseringstoken mot Wazuh API.">
+                        <field name="siem_api_token"
+                               
+                               class="w-50"/>
+                    </setting>
+                    <setting id="siem_manager_minion_setting"
+                             title="Wazuh Manager Minion"
+                             help="Salt minion-ID för Wazuh Manager-servern. Används av SIEM-verktygen för att köra agent_control etc.">
+                        <field name="siem_manager_minion"
+                               placeholder="siem.vertel.se"
+                               class="w-50"/>
+                    </setting>
+                    <setting id="siem_auth_method_setting"
+                             title="Wazuh Auth Method"
+                             help="token = direkt från inställningen. keykeep = läses från keykeep.credential (purpose=siem_api)">
+                        <field name="siem_auth_method"/>
+                    </setting>
+                    <setting id="siem_test_setting"
+                             title="Testa anslutningen">
+                        <button name="action_test_wazuh" type="object"
+                                string="Testa Wazuh-anslutning"
+                                class="btn btn-primary" icon="fa-plug"/>
+                        <div class="text-muted mt8">
+                            Kontrollerar att Wazuh API autentiserar korrekt.
+                        </div>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo>

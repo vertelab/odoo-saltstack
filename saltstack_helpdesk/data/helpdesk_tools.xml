@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="tool_create_helpdesk_ticket" model="ai.tool">
+        <field name="name">create_helpdesk_ticket</field>
+        <field name="risk_level">write</field>
+        <field name="executor">local</field>
+        <field name="description">
+            Skapa ett helpdesk-ärende. Använd vid incidenter, anomalier och åtgärder
+            som behöver spårbarhet. Ärendet får automatiskt taggarna "infrastructure"
+            och det angivna tjänstenamnet.
+        </field>
+        <field name="parameters">{"type":"object","properties":{
+            "title":{"type":"string","description":"Ärendets titel"},
+            "description":{"type":"string","description":"Detaljerad beskrivning av incidenten"},
+            "priority":{"type":"string","description":"low, medium, high, urgent","default":"medium"},
+            "minion":{"type":"string","description":"Berörd maskin/minion","default":""},
+            "service":{"type":"string","description":"Berörd tjänst: odoo, caddy, postgres, postfix, dovecot, garage, bifrost, etc.","default":""}
+        },"required":["title","description"]}</field>
+        <field name="code"><![CDATA[
+async def execute(title, description, priority="medium", minion="", service=""):
+    """Skapa ett helpdesk-ärende med infrastrukturkontext."""
+    priority_map = {"low": "0", "medium": "1", "high": "2", "urgent": "3"}
+    
+    ticket_vals = {
+        "name": title,
+        "description": description,
+        "priority": priority_map.get(priority, "1"),
+    }
+    
+    # Add infrastructure context to description
+    context_lines = []
+    if minion:
+        context_lines.append(f"Minion: {minion}")
+    if service:
+        context_lines.append(f"Service: {service}")
+    if context_lines:
+        ticket_vals["description"] = (
+            description + "\n\n--- Infrastructure Context ---\n" +
+            "\n".join(context_lines)
+        )
+    
+    ticket = env["helpdesk.ticket"].create(ticket_vals)
+    return f"Helpdesk ticket created: {ticket.name} (ID: {ticket.id})"
+]]></field>
+    </record>
+
+    <record id="tool_document_anomaly" model="ai.tool">
+        <field name="name">document_anomaly</field>
+        <field name="risk_level">write</field>
+        <field name="executor">local</field>
+        <field name="description">
+            Dokumentera en infrastrukturanomali. Använd för avvikelser som inte är
+            akuta larm men som bör spåras — t.ex. ovanliga CPU-mönster, växande
+            diskutrymme, eller återkommande varningar.
+        </field>
+        <field name="parameters">{"type":"object","properties":{
+            "title":{"type":"string","description":"Kort beskrivning av anomalin"},
+            "description":{"type":"string","description":"Detaljerad beskrivning"},
+            "minion":{"type":"string","description":"Berörd maskin","default":""},
+            "metric":{"type":"string","description":"Vilket mätvärde avvek (CPU, disk, memory, etc.)","default":""}
+        },"required":["title","description"]}</field>
+        <field name="code"><![CDATA[
+async def execute(title, description, minion="", metric=""):
+    """Dokumentera en anomali som helpdesk-ärende med låg prioritet."""
+    anomaly_desc = description
+    if minion:
+        anomaly_desc += f"\n\nMinion: {minion}"
+    if metric:
+        anomaly_desc += f"\nMetric: {metric}"
+    anomaly_desc += "\n\nType: Infrastructure Anomaly (non-critical)"
+    
+    ticket = env["helpdesk.ticket"].create({
+        "name": f"[ANOMALY] {title}",
+        "description": anomaly_desc,
+        "priority": "0",  # Low priority for anomalies
+    })
+    return f"Anomaly documented: {ticket.name} (ID: {ticket.id})"
+]]></field>
+    </record>
+</odoo>

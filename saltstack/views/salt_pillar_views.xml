@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ── Tree View ──────────────────────────────────────────────────── -->
+    <record id="view_salt_pillar_tree" model="ir.ui.view">
+        <field name="name">salt.pillar.tree</field>
+        <field name="model">salt.pillar</field>
+        <field name="arch" type="xml">
+            <list editable="bottom" decoration-danger="active == False">
+                <header>
+                    <button name="action_sync_from_salt" type="object"
+                            string="Sync with Salt Master"
+                            class="btn-primary" icon="fa-refresh"/>
+                </header>
+                <field name="sequence" widget="handle"/>
+                <field name="key"/>
+                <field name="data_type"/>
+                <field name="value" optional="show"/>
+                <field name="pillar_file" optional="show"/>
+                <field name="minion_target" optional="show"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ── Form View ──────────────────────────────────────────────────── -->
+    <record id="view_salt_pillar_form" model="ir.ui.view">
+        <field name="name">salt.pillar.form</field>
+        <field name="model">salt.pillar</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <field name="active"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="key" placeholder="pillar.key.name"/>
+                        </h1>
+                        <group>
+                            <field name="data_type"/>
+                        </group>
+                    </div>
+                    <notebook>
+                        <page string="Value">
+                            <group>
+                                <field name="value"
+                                       nolabel="1"
+                                       colspan="2"
+                                       placeholder="Enter pillar value..."/>
+                            </group>
+                        </page>
+                        <page string="Details">
+                            <group>
+                                <group>
+                                    <field name="pillar_file"/>
+                                    <field name="minion_target"/>
+                                    <field name="sequence"/>
+                                </group>
+                                <group>
+                                    <field name="description"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                    <widget name="web_ribbon" title="Inaktiv"
+                            bg_color="text-bg-danger"
+                            invisible="active"/>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- ── Search View ────────────────────────────────────────────────── -->
+    <record id="view_salt_pillar_search" model="ir.ui.view">
+        <field name="name">salt.pillar.search</field>
+        <field name="model">salt.pillar</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="key"/>
+                <field name="value"/>
+                <field name="pillar_file"/>
+                <field name="minion_target"/>
+                <filter name="filter_secret"
+                        string="Secrets"
+                        domain="[('data_type', '=', 'secret')]"/>
+                <filter name="filter_active"
+                        string="Aktiva"
+                        domain="[('active', '=', True)]"/>
+                <filter name="filter_inactive"
+                        string="Inaktiverade"
+                        domain="[('active', '=', False)]"/>
+                <separator/>
+                <filter name="group_type"
+                        string="By Data Type"
+                        context="{'group_by': 'data_type'}"/>
+                <filter name="group_file"
+                        string="By Pillar File"
+                        context="{'group_by': 'pillar_file'}"/>
+                <filter name="group_target"
+                        string="By Minion Target"
+                        context="{'group_by': 'minion_target'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- ── Action ─────────────────────────────────────────────────────── -->
+    <record id="action_salt_pillar" model="ir.actions.act_window">
+        <field name="name">Salt Pillars</field>
+        <field name="res_model">salt.pillar</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_salt_pillar_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Manage SaltStack pillar data
+            </p>
+            <p>
+                Pillar data is key/value pairs assigned to minions.
+                Use <b>Secret</b> type for sensitive data.
+            </p>
+        </field>
+    </record>
+
+    <!-- ── Menu ───────────────────────────────────────────────────────── -->
+    <menuitem id="menu_salt_pillar"
+              name="Pillars"
+              parent="menu_saltstack_root"
+              action="action_salt_pillar"
+              groups="saltstack.group_saltstack_officer"
+              sequence="20"/>
+</odoo>

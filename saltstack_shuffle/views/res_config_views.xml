@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_saltstack_shuffle_settings" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.saltstack.shuffle</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="saltstack.view_saltstack_settings"/>
+        <field name="arch" type="xml">
+            <xpath expr="//app[@name='saltstack']" position="inside">
+                <block title="Shuffle SOAR">
+                    <setting id="shuffle_api_url_setting"
+                             title="Shuffle API URL"
+                             help="Base URL för Shuffle API. t.ex. https://siem.vertel.se">
+                        <field name="shuffle_api_url" class="w-50"
+                               placeholder="https://siem.vertel.se"/>
+                    </setting>
+                    <setting id="shuffle_api_token_setting"
+                             title="Shuffle API Token">
+                        <field name="shuffle_api_token" class="w-50"/>
+                    </setting>
+                    <setting id="shuffle_odoo_webhook_setting"
+                             title="Odoo Webhook URL"
+                             help="Webhook-URL som Shuffle anropar för att skicka driftlarm till Odoo.">
+                        <field name="shuffle_odoo_webhook_url" class="w-50"
+                               placeholder="http://luke18:8069/saltstack/webhook"/>
+                    </setting>
+                    <setting id="shuffle_odoo_apikey_setting"
+                             title="Odoo API-nyckel"
+                             help="API-nyckel (Bearer token) som Shuffle skickar med webhook-anropen.">
+                        <field name="shuffle_odoo_api_key" class="w-50"/>
+                    </setting>
+                    <setting id="shuffle_sync_setting"
+                             title="Auto-synca workflow-status">
+                        <field name="shuffle_sync_enabled"/>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo>

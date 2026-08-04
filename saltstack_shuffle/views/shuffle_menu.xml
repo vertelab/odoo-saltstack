@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ── Meny: Settings → Technical → Shuffle SOAR ────────────── -->
+    <menuitem id="menu_shuffle_root"
+              name="Shuffle SOAR"
+              parent="base.menu_custom"
+              sequence="90"
+              groups="base.group_system"/>
+    <menuitem id="menu_shuffle_workflow"
+              name="Workflows"
+              parent="menu_shuffle_root"
+              action="action_shuffle_workflow"
+              sequence="10"/>
+    <menuitem id="menu_shuffle_app"
+              name="Appar"
+              parent="menu_shuffle_root"
+              action="action_shuffle_app"
+              sequence="20"/>
+    <menuitem id="menu_shuffle_webhook"
+              name="Webhooks"
+              parent="menu_shuffle_root"
+              action="action_shuffle_webhook"
+              sequence="30"/>
+</odoo>

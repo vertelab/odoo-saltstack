@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Verktyg: uppdatera Driftlarm-record (bedömning + status) -->
+    <record id="tool_driftlarm_update" model="ai.tool">
+        <field name="name">driftlarm_update_bedömning</field>
+        <field name="risk_level">write</field>
+        <field name="executor">local</field>
+        <field name="description">
+            Uppdatera ett Driftlarm-record (saltstack.alert) med bedömning och status.
+            Använd för att spara AI-diagnosens slutsats, sätta status, markera löst,
+            och lämna åtgärdsplan.
+        </field>
+        <field name="parameters">{"type":"object","properties":{
+            "alert_id":{"type":"integer","description":"ID för saltstack.alert-recordet"},
+            "bedömning":{"type":"string","description":"Diagnosbedömning / slutsats","default":""},
+            "status":{"type":"string","description":"pending, running, done, error","default":""},
+            "resolved":{"type":"boolean","description":"Markera löst","default":false},
+            "åtgärdsplan":{"type":"string","description":"Åtgärdsplan att lägga i beskrivningen","default":""}
+        },"required":["alert_id"]}</field>
+        <field name="code"><![CDATA[
+async def execute(alert_id, bedömning="", status="", resolved=False, åtgärdsplan=""):
+    """Uppdatera Driftlarm-record med bedömning och status."""
+    if "saltstack.alert" not in env:
+        return "ERROR: saltstack.alert-modellen finns inte"
+    alert = env["saltstack.alert"].browse(alert_id)
+    if not alert.exists():
+        return f"ERROR: Driftlarm {alert_id} finns inte"
+    vals = {}
+    if bedömning:
+        vals["diagnosis_result"] = bedömning
+    if status:
+        vals["diagnosis_state"] = status
+    if resolved:
+        vals["resolved"] = True
+    if åtgärdsplan:
+        vals["description"] = (alert.description or "") + "\n\n## Åtgärdsplan (AI)\n" + åtgärdsplan
+    if vals:
+        alert.write(vals)
+    return f"Driftlarm {alert_id} uppdaterat: status={status or alert.diagnosis_state}, resolved={alert.resolved}"
+]]></field>
+    </record>
+
+</odoo>

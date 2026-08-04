@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ── salt.pillar ─────────────────────────────────────────────────── -->
+    <record id="access_salt_pillar_admin" model="ir.model.access">
+        <field name="name">salt.pillar.admin</field>
+        <field name="model_id" ref="model_salt_pillar"/>
+        <field name="group_id" ref="base.group_system"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    <record id="access_salt_pillar_user" model="ir.model.access">
+        <field name="name">salt.pillar.user</field>
+        <field name="model_id" ref="model_salt_pillar"/>
+        <field name="group_id" ref="base.group_user"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- ── salt.minion ─────────────────────────────────────────────────── -->
+    <record id="access_salt_minion_admin" model="ir.model.access">
+        <field name="name">salt.minion.admin</field>
+        <field name="model_id" ref="model_salt_minion"/>
+        <field name="group_id" ref="base.group_system"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    <record id="access_salt_minion_user" model="ir.model.access">
+        <field name="name">salt.minion.user</field>
+        <field name="model_id" ref="model_salt_minion"/>
+        <field name="group_id" ref="base.group_user"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- ── saltstack.alert ─────────────────────────────────────────── -->
+    <record id="access_saltstack_alert_admin" model="ir.model.access">
+        <field name="name">saltstack.alert.admin</field>
+        <field name="model_id" ref="model_saltstack_alert"/>
+        <field name="group_id" ref="base.group_system"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    <record id="access_saltstack_alert_user" model="ir.model.access">
+        <field name="name">saltstack.alert.user</field>
+        <field name="model_id" ref="model_saltstack_alert"/>
+        <field name="group_id" ref="base.group_user"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- ── Officer-access (read-only) ───────────────────────────────── -->
+    <record id="access_salt_pillar_officer" model="ir.model.access">
+        <field name="name">salt.pillar.officer</field>
+        <field name="model_id" ref="model_salt_pillar"/>
+        <field name="group_id" ref="group_saltstack_officer"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_salt_minion_officer" model="ir.model.access">
+        <field name="name">salt.minion.officer</field>
+        <field name="model_id" ref="model_salt_minion"/>
+        <field name="group_id" ref="group_saltstack_officer"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_saltstack_alert_officer" model="ir.model.access">
+        <field name="name">saltstack.alert.officer</field>
+        <field name="model_id" ref="model_saltstack_alert"/>
+        <field name="group_id" ref="group_saltstack_officer"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+</odoo>

@@ -1,0 +1,12 @@
+# Copyright (C) 2026 Vertel Sverige AB (<https://vertel.se>).
+
+{
+    'name': 'SaltStack Zabbix Keykeep',
+    'version': '18.0.1.0.0',
+    'category': 'Infrastructure',
+    'summary': 'Keykeep Managed för Zabbix-anslutningen',
+    'depends': ['saltstack_zabbix', 'keykeep'],
+    'installable': True,
+    'application': False,
+    'auto_install': False,
+}

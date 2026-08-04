@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="tool_maintenance_notify" model="ai.tool">
+        <field name="name">maintenance_notify</field>
+        <field name="risk_level">write</field>
+        <field name="executor">local</field>
+        <field name="description">
+            Flagga en maskin för underhåll. Används efter incidenter där
+            uppföljning behövs — t.ex. diskbyte, minneskontroll, eller
+            planerad service.
+        </field>
+        <field name="parameters">{"type":"object","properties":{
+            "machine":{"type":"string","description":"Maskinnamn eller minion-ID"},
+            "message":{"type":"string","description":"Vad som behöver göras"},
+            "severity":{"type":"string","description":"info, warning, critical","default":"warning"}
+        },"required":["machine","message"]}</field>
+        <field name="code"><![CDATA[
+async def execute(machine, message, severity="warning"):
+    """Flagga maskin för underhåll."""
+    # Find or create maintenance equipment record
+    Equipment = env.get("maintenance.equipment")
+    if not Equipment:
+        return "ERROR: maintenance.equipment model not available"
+    
+    equipment = Equipment.search([("name", "ilike", machine)], limit=1)
+    if not equipment:
+        equipment = Equipment.create({
+            "name": machine,
+            "category_id": env["maintenance.equipment.category"].search([
+                ("name", "=", "Infrastructure")
+            ], limit=1).id or False,
+        })
+    
+    # Post a message on the equipment
+    severity_icon = {"info": "ℹ️", "warning": "⚠️", "critical": "🔴"}.get(severity, "⚠️")
+    equipment.message_post(
+        body=f"{severity_icon} **Infrastructure Operator — Maintenance Notice**\n\n{message}",
+        message_type="notification",
+    )
+    
+    return f"Maintenance notice posted on {machine}: {message[:80]}..."
+]]></field>
+    </record>
+</odoo>

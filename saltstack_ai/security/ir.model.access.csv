@@ -1,0 +1,2 @@
+id,name,model_id/id,group_id/id,perm_read,perm_write,perm_create,perm_unlink
+access_saltstack_ai_config,saltstack.ai.config.access,model_saltstack_ai_config,base.group_system,1,1,1,1

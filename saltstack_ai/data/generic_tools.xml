@@ -1,0 +1,465 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- SALT API TOOLS — 18 generic SaltStack tools                      -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <!-- T1: salt_test_ping -->
+    <record id="tool_salt_test_ping" model="ai.tool">
+        <field name="name">salt_test_ping</field>
+        <field name="risk_level">safe</field>
+        <field name="executor">local</field>
+        <field name="description">Pinga en eller flera Salt-minions. Returnerar True/False per minion.</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-ID eller glob (t.ex. '*' för alla, 'gw*' för gateways)","default":"*"}},"required":[]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion="*"):
+    """Pinga Salt-minion(s)."""
+    api = env['saltstack.ai.config']
+    return api.salt_call("local", minion, "test.ping"))
+]]></field>
+    </record>
+
+    <!-- T2: salt_state_apply -->
+    <record id="tool_salt_state_apply" model="ai.tool">
+        <field name="name">salt_state_apply</field>
+        <field name="risk_level">destructive</field>
+        <field name="executor">local</field>
+        <field name="description">Applicera ett Salt state på en eller flera minions. Använd med försiktighet — detta ändrar systemkonfiguration.</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-glob"},"state":{"type":"string","description":"State att applicera (t.ex. 'caddy.service')"},"pillar":{"type":"string","description":"Extra pillar som JSON-sträng (valfritt)","default":""}},"required":["minion","state"]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion, state, pillar=""):
+    """Applicera Salt state."""
+    api = env['saltstack.ai.config']
+    kwargs = {}
+    if pillar:
+        import json
+        kwargs["pillar"] = json.loads(pillar)
+    return api.salt_call("local", minion, "state.apply", state, **kwargs))
+]]></field>
+    </record>
+
+    <!-- T3: salt_state_highstate -->
+    <record id="tool_salt_state_highstate" model="ai.tool">
+        <field name="name">salt_state_highstate</field>
+        <field name="risk_level">destructive</field>
+        <field name="executor">local</field>
+        <field name="description">Kör highstate på specificerade minions. Applicerar ALLA states enligt top.sls.</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-glob"}},"required":["minion"]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion):
+    """Kör highstate."""
+    api = env['saltstack.ai.config']
+    return api.salt_call("local", minion, "state.highstate", timeout=600))
+]]></field>
+    </record>
+
+    <!-- T4: salt_state_show_sls -->
+    <record id="tool_salt_state_show_sls" model="ai.tool">
+        <field name="name">salt_state_show_sls</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="description">Visa hur ett Salt state kompileras för en specifik minion. Används för felsökning och validering.</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-ID att kompilera för"},"state":{"type":"string","description":"State att visa (t.ex. 'caddy.service')"}},"required":["minion","state"]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion, state):
+    """Visa kompilerad SLS."""
+    api = env['saltstack.ai.config']
+    return api.salt_call("local", minion, "state.show_sls", state))
+]]></field>
+    </record>
+
+    <!-- T5: salt_cmd_run -->
+    <record id="tool_salt_cmd_run" model="ai.tool">
+        <field name="name">salt_cmd_run</field>
+        <field name="risk_level">destructive</field>
+        <field name="executor">local</field>
+        <field name="description">Kör ett shell-kommando på en eller flera minions. Använd för diagnostik och enkla operationer.</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-glob"},"command":{"type":"string","description":"Shell-kommando att köra"}},"required":["minion","command"]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion, command):
+    """Kör shell-kommando på minion."""
+    api = env['saltstack.ai.config']
+    return api.salt_call("local", minion, "cmd.run", command))
+]]></field>
+    </record>
+
+    <!-- T6: salt_pillar_get -->
+    <record id="tool_salt_pillar_get" model="ai.tool">
+        <field name="name">salt_pillar_get</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="description">Hämta specifik pillar-data från en minion.</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-ID"},"key":{"type":"string","description":"Pillar-nyckel (t.ex. 'bifrost', 'odoo')"}},"required":["minion","key"]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion, key):
+    """Hämta pillar-data."""
+    api = env['saltstack.ai.config']
+    return api.salt_call("local", minion, "pillar.get", key))
+]]></field>
+    </record>
+
+    <!-- T7: salt_pillar_items -->
+    <record id="tool_salt_pillar_items" model="ai.tool">
+        <field name="name">salt_pillar_items</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="description">Hämta ALL pillar-data från en minion. Returnerar komplett pillar-dictionary.</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-ID"}},"required":["minion"]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion):
+    """Hämta all pillar-data."""
+    api = env['saltstack.ai.config']
+    return api.salt_call("local", minion, "pillar.items"))
+]]></field>
+    </record>
+
+    <!-- T8: salt_grains_get -->
+    <record id="tool_salt_grains_get" model="ai.tool">
+        <field name="name">salt_grains_get</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="description">Hämta en specifik grain från en minion (t.ex. 'os', 'dc', 'roles').</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-ID"},"key":{"type":"string","description":"Grain-nyckel (t.ex. 'os', 'dc', 'roles', 'customer')"}},"required":["minion","key"]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion, key):
+    """Hämta specifik grain."""
+    api = env['saltstack.ai.config']
+    return api.salt_call("local", minion, "grains.get", key))
+]]></field>
+    </record>
+
+    <!-- T9: salt_grains_items -->
+    <record id="tool_salt_grains_items" model="ai.tool">
+        <field name="name">salt_grains_items</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="description">Hämta ALLA grains från en minion. Returnerar komplett systeminformation (OS, CPU, minne, nätverk, roller).</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-ID"}},"required":["minion"]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion):
+    """Hämta alla grains."""
+    api = env['saltstack.ai.config']
+    return api.salt_call("local", minion, "grains.items"))
+]]></field>
+    </record>
+
+    <!-- T10: salt_minion_list -->
+    <record id="tool_salt_minion_list" model="ai.tool">
+        <field name="name">salt_minion_list</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="description">Lista alla Salt-minions. Returnerar accepterade, oaccepterade och avvisade minions.</field>
+        <field name="parameters">{"type":"object","properties":{},"required":[]}</field>
+        <field name="code"><![CDATA[
+async def execute():
+    """Lista alla minions."""
+    api = env['saltstack.ai.config']
+    return api.salt_call("runner", None, "minions.list"))
+]]></field>
+    </record>
+
+    <!-- T11: salt_minion_accept -->
+    <record id="tool_salt_minion_accept" model="ai.tool">
+        <field name="name">salt_minion_accept</field>
+        <field name="risk_level">destructive</field>
+        <field name="executor">local</field>
+        <field name="description">Acceptera en ny Salt-minions nyckel. Krävs för att en ny minion ska kunna styras.</field>
+        <field name="parameters">{"type":"object","properties":{"minion_id":{"type":"string","description":"Minion-ID att acceptera"}},"required":["minion_id"]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion_id):
+    """Acceptera minion-nyckel."""
+    api = env['saltstack.ai.config']
+    return api.salt_call("wheel", None, "key.accept", minion_id))
+]]></field>
+    </record>
+
+    <!-- T12: salt_service_status -->
+    <record id="tool_salt_service_status" model="ai.tool">
+        <field name="name">salt_service_status</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="description">Kontrollera status för en systemd-tjänst på en minion. Returnerar 'active', 'inactive', 'failed', etc.</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID eller glob"},"service":{"type":"string","description":"Tjänstnamn (t.ex. 'caddy', 'odoo', 'postfix')"}},"required":["minion","service"]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion, service):
+    """Kolla tjänststatus."""
+    api = env['saltstack.ai.config']
+    return api.salt_call("local", minion, "service.status", service))
+]]></field>
+    </record>
+
+    <!-- T13: salt_service_restart -->
+    <record id="tool_salt_service_restart" model="ai.tool">
+        <field name="name">salt_service_restart</field>
+        <field name="risk_level">destructive</field>
+        <field name="executor">local</field>
+        <field name="description">Starta om en systemd-tjänst på en minion. Använd vid service-problem efter diagnos.</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID eller glob"},"service":{"type":"string","description":"Tjänstnamn (t.ex. 'caddy', 'odoo', 'salt-minion')"}},"required":["minion","service"]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion, service):
+    """Starta om tjänst."""
+    api = env['saltstack.ai.config']
+    return api.salt_call("local", minion, "service.restart", service))
+]]></field>
+    </record>
+
+    <!-- T14: salt_disk_usage -->
+    <record id="tool_salt_disk_usage" model="ai.tool">
+        <field name="name">salt_disk_usage</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="description">Kontrollera diskutrymme på en minion. Returnerar 'df -h' output.</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID eller glob"},"path":{"type":"string","description":"Specifik sökväg (valfritt, tom = alla)","default":""}},"required":["minion"]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion, path=""):
+    """Kontrollera diskutrymme."""
+    api = env['saltstack.ai.config']
+    cmd = f"df -h {path}" if path else "df -h"
+    return api.salt_call("local", minion, "cmd.run", cmd))
+]]></field>
+    </record>
+
+    <!-- T15: salt_memory_usage -->
+    <record id="tool_salt_memory_usage" model="ai.tool">
+        <field name="name">salt_memory_usage</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="description">Kontrollera minnesanvändning på en minion. Returnerar 'free -m'.</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID eller glob"}},"required":["minion"]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion):
+    """Kontrollera minne."""
+    api = env['saltstack.ai.config']
+    return api.salt_call("local", minion, "cmd.run", "free -m"))
+]]></field>
+    </record>
+
+    <!-- T16: salt_system_load -->
+    <record id="tool_salt_system_load" model="ai.tool">
+        <field name="name">salt_system_load</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="description">Kontrollera systemlast (load average) på en minion. Returnerar 'uptime'.</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID eller glob"}},"required":["minion"]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion):
+    """Kontrollera systemlast."""
+    api = env['saltstack.ai.config']
+    return api.salt_call("local", minion, "cmd.run", "uptime"))
+]]></field>
+    </record>
+
+    <!-- T17: salt_journal_errors -->
+    <record id="tool_salt_journal_errors" model="ai.tool">
+        <field name="name">salt_journal_errors</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="description">Hämta senaste felen från systemd journal på en minion. Används för felsökning.</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID"},"unit":{"type":"string","description":"Specifik tjänst (t.ex. 'odoo', 'caddy'). Tom = alla.","default":""},"lines":{"type":"integer","description":"Antal rader","default":50}},"required":["minion"]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion, unit="", lines=50):
+    """Hämta journal errors."""
+    api = env['saltstack.ai.config']
+    cmd = f"journalctl -p err -n {lines}"
+    if unit:
+        cmd += f" -u {unit}"
+    cmd += " --no-pager"
+    return api.salt_call("local", minion, "cmd.run", cmd))
+]]></field>
+    </record>
+
+    <!-- T18: salt_process_list -->
+    <record id="tool_salt_process_list" model="ai.tool">
+        <field name="name">salt_process_list</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="description">Lista processer på en minion, filtrerat på namn. Används för att hitta och diagnostisera processer.</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID"},"filter":{"type":"string","description":"Filtrera på processnamn (t.ex. 'odoo', 'postgres'). Tom = topp 20 processer.","default":""}},"required":["minion"]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion, filter=""):
+    """Lista processer."""
+    api = env['saltstack.ai.config']
+    if filter:
+        cmd = f"ps aux | grep -v grep | grep {filter} || echo 'No matching processes'"
+    else:
+        cmd = "ps aux --sort=-%mem | head -20"
+    return api.salt_call("local", minion, "cmd.run", cmd))
+]]></field>
+    </record>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- ZABBIX API TOOLS — 8 generic Zabbix tools                       -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <!-- Z1: zabbix_get_alerts -->
+    <record id="tool_zabbix_get_alerts" model="ai.tool">
+        <field name="name">zabbix_get_alerts</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="description">Hämta aktiva larm/problem från Zabbix. Filtrera på allvarlighetsgrad.</field>
+        <field name="parameters">{"type":"object","properties":{"severity":{"type":"string","description":"Allvarlighetsgrad: high, medium, low, all","default":"high"},"limit":{"type":"integer","description":"Max antal resultat","default":20}},"required":[]}</field>
+        <field name="code"><![CDATA[
+async def execute(severity="high", limit=20):
+    """Hämta Zabbix-alerts."""
+    api = env['saltstack.ai.config']
+    sev_map = {"high":[4,5],"medium":[3],"low":[0,1,2],"all":[0,1,2,3,4,5]}
+    sev = sev_map.get(severity, [4,5])
+    result = api.call("problem.get", {
+        "output": "extend",
+        "severities": sev,
+        "recent": True,
+        "sortfield": ["eventid"],
+        "sortorder": "DESC",
+        "limit": limit,
+    })
+    return str(result)
+]]></field>
+    </record>
+
+    <!-- Z2: zabbix_get_host -->
+    <record id="tool_zabbix_get_host" model="ai.tool">
+        <field name="name">zabbix_get_host</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="description">Hämta information om en specifik Zabbix-host.</field>
+        <field name="parameters">{"type":"object","properties":{"host":{"type":"string","description":"Hostnamn i Zabbix"}},"required":["host"]}</field>
+        <field name="code"><![CDATA[
+async def execute(host):
+    """Hämta Zabbix-host info."""
+    api = env['saltstack.ai.config']
+    result = api.call("host.get", {
+        "output": "extend",
+        "filter": {"host": [host]},
+        "selectInterfaces": "extend",
+        "selectItems": "extend",
+    })
+    return str(result)
+]]></field>
+    </record>
+
+    <!-- Z3: zabbix_get_problems -->
+    <record id="tool_zabbix_get_problems" model="ai.tool">
+        <field name="name">zabbix_get_problems</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="description">Hämta alla problem från Zabbix, inklusive historiska. Mer detaljerad än get_alerts.</field>
+        <field name="parameters">{"type":"object","properties":{"host":{"type":"string","description":"Filtrera på host (tom = alla)","default":""},"recent":{"type":"string","description":"Endast nyliga (true/false)","default":"true"},"limit":{"type":"integer","default":50}},"required":[]}</field>
+        <field name="code"><![CDATA[
+async def execute(host="", recent="true", limit=50):
+    """Hämta Zabbix-problems."""
+    api = env['saltstack.ai.config']
+    params = {
+        "output": "extend",
+        "recent": recent == "true",
+        "sortfield": ["eventid"],
+        "sortorder": "DESC",
+        "limit": limit,
+    }
+    if host:
+        params["hostids"] = host
+    return api.zabbix_call("problem.get", params))
+]]></field>
+    </record>
+
+    <!-- Z4: zabbix_acknowledge -->
+    <record id="tool_zabbix_acknowledge" model="ai.tool">
+        <field name="name">zabbix_acknowledge</field>
+        <field name="risk_level">write</field>
+        <field name="executor">local</field>
+        <field name="description">Kvittera ett Zabbix-larm. Ange event_id och en kommentar om vad som gjorts.</field>
+        <field name="parameters">{"type":"object","properties":{"event_id":{"type":"string","description":"Zabbix event ID att kvittera"},"message":{"type":"string","description":"Kommentar om åtgärd","default":"Acknowledged by Infrastructure Operator"}},"required":["event_id"]}</field>
+        <field name="code"><![CDATA[
+async def execute(event_id, message="Acknowledged by Infrastructure Operator"):
+    """Kvittera Zabbix-larm."""
+    api = env['saltstack.ai.config']
+    result = api.call("event.acknowledge", {
+        "eventids": [event_id],
+        "action": 1,
+        "message": message,
+    })
+    return str(result)
+]]></field>
+    </record>
+
+    <!-- Z5: zabbix_get_history -->
+    <record id="tool_zabbix_get_history" model="ai.tool">
+        <field name="name">zabbix_get_history</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="description">Hämta historiska mätvärden från Zabbix. Använd för trendanalys och felsökning.</field>
+        <field name="parameters">{"type":"object","properties":{"item_id":{"type":"string","description":"Item ID i Zabbix"},"limit":{"type":"integer","description":"Antal mätpunkter","default":100}},"required":["item_id"]}</field>
+        <field name="code"><![CDATA[
+async def execute(item_id, limit=100):
+    """Hämta historiska mätvärden."""
+    api = env['saltstack.ai.config']
+    result = api.call("history.get", {
+        "output": "extend",
+        "itemids": [item_id],
+        "sortfield": "clock",
+        "sortorder": "DESC",
+        "limit": limit,
+    })
+    return str(result)
+]]></field>
+    </record>
+
+    <!-- Z6: zabbix_get_item -->
+    <record id="tool_zabbix_get_item" model="ai.tool">
+        <field name="name">zabbix_get_item</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="description">Hämta information om en Zabbix-item (mätvärdesdefinition).</field>
+        <field name="parameters">{"type":"object","properties":{"host":{"type":"string","description":"Hostnamn"},"key_pattern":{"type":"string","description":"Item key eller pattern (t.ex. 'odoo.process.count')"}},"required":["host"]}</field>
+        <field name="code"><![CDATA[
+async def execute(host, key_pattern=""):
+    """Hämta Zabbix-item."""
+    api = env['saltstack.ai.config']
+    params = {"output": "extend", "host": host}
+    if key_pattern:
+        params["search"] = {"key_": key_pattern}
+    result = api.call("item.get", params)
+    return str(result)
+]]></field>
+    </record>
+
+    <!-- Z7: zabbix_get_host_groups -->
+    <record id="tool_zabbix_get_host_groups" model="ai.tool">
+        <field name="name">zabbix_get_host_groups</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="description">Hämta alla host-grupper från Zabbix. Används för att förstå infrastrukturorganisationen.</field>
+        <field name="parameters">{"type":"object","properties":{},"required":[]}</field>
+        <field name="code"><![CDATA[
+async def execute():
+    """Hämta Zabbix host-grupper."""
+    api = env['saltstack.ai.config']
+    return api.zabbix_call("hostgroup.get", {"output": "extend"}))
+]]></field>
+    </record>
+
+    <!-- Z8: zabbix_get_triggers -->
+    <record id="tool_zabbix_get_triggers" model="ai.tool">
+        <field name="name">zabbix_get_triggers</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="description">Hämta Zabbix-triggers med status. Använd för att se vilka triggers som är aktiva, larmade eller ok.</field>
+        <field name="parameters">{"type":"object","properties":{"host":{"type":"string","description":"Filtrera på host (tom = alla)","default":""},"only_problem":{"type":"string","description":"Endast triggers med problem (true/false)","default":"true"}},"required":[]}</field>
+        <field name="code"><![CDATA[
+async def execute(host="", only_problem="true"):
+    """Hämta Zabbix-triggers."""
+    api = env['saltstack.ai.config']
+    params = {
+        "output": "extend",
+        "selectHosts": ["hostid", "host"],
+        "sortfield": "priority",
+        "sortorder": "DESC",
+    }
+    if only_problem == "true":
+        params["filter"] = {"value": 1}
+    if host:
+        params["hostids"] = [host]
+    return api.zabbix_call("trigger.get", params))
+]]></field>
+    </record>
+
+</odoo>

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ── Sync actions (server) — kör på alla records ─────────────── -->
+    <record id="action_sync_minions_all" model="ir.actions.server">
+        <field name="name">Synka minions</field>
+        <field name="model_id" ref="model_salt_minion"/>
+        <field name="state">code</field>
+        <field name="code">result = env['salt.minion'].sudo().search([]).action_sync_all_minions()
+if isinstance(result, dict) and 'error' in result:
+    message = 'Fel: %s' % result['error']
+    msg_type = 'danger'
+else:
+    message = 'Skapade: %(created)s, uppdaterade: %(updated)s, inaktiverade: %(deactivated)s' % result
+    msg_type = 'success'
+action = {'type': 'ir.actions.client', 'tag': 'display_notification', 'params': {'title': 'Minion-synk', 'message': message, 'type': msg_type, 'sticky': False}}</field>
+    </record>
+
+    <record id="action_sync_pillars_all" model="ir.actions.server">
+        <field name="name">Synka pillars</field>
+        <field name="model_id" ref="model_salt_pillar"/>
+        <field name="state">code</field>
+        <field name="code">result = env['salt.pillar'].sudo().search([]).action_sync_from_salt()
+if isinstance(result, dict) and 'error' in result:
+    message = 'Fel: %s' % result['error']
+    msg_type = 'danger'
+else:
+    message = 'Skapade: %(created)s, uppdaterade: %(updated)s, inaktiverade: %(deactivated)s' % result
+    msg_type = 'success'
+action = {'type': 'ir.actions.client', 'tag': 'display_notification', 'params': {'title': 'Pillar-synk', 'message': message, 'type': msg_type, 'sticky': False}}</field>
+    </record>
+
+    <!-- ── Menyval under Konfiguration ─────────────────────────────── -->
+    <menuitem id="menu_sync_minions"
+              name="Synka minions"
+              parent="menu_saltstack_config"
+              action="action_sync_minions_all"
+              sequence="20"
+              groups="saltstack.group_saltstack_admin"/>
+
+    <menuitem id="menu_sync_pillars"
+              name="Synka pillars"
+              parent="menu_saltstack_config"
+              action="action_sync_pillars_all"
+              sequence="30"
+              groups="saltstack.group_saltstack_admin"/>
+</odoo>

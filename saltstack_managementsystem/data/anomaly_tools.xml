@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="tool_document_nonconformity" model="ai.tool">
+        <field name="name">document_nonconformity</field>
+        <field name="risk_level">write</field>
+        <field name="executor">local</field>
+        <field name="description">
+            Dokumentera en infrastrukturavvikelse som en nonconformity i
+            ledningssystemet. Används för avvikelser som behöver hanteras
+            enligt ISO-processer — root cause analysis, corrective actions.
+        </field>
+        <field name="parameters">{"type":"object","properties":{
+            "title":{"type":"string","description":"Avvikelsens titel"},
+            "description":{"type":"string","description":"Detaljerad beskrivning av avvikelsen och dess påverkan"},
+            "minion":{"type":"string","description":"Berörd maskin/minion","default":""},
+            "service":{"type":"string","description":"Berörd tjänst","default":""},
+            "severity":{"type":"string","description":"major, minor, critical","default":"minor"}
+        },"required":["title","description"]}</field>
+        <field name="code"><![CDATA[
+async def execute(title, description, minion="", service="", severity="minor"):
+    """Skapa en nonconformity i ledningssystemet."""
+    Nonconformity = env.get("mgmtsystem.nonconformity")
+    if not Nonconformity:
+        return "ERROR: mgmtsystem.nonconformity model not available"
+    
+    nc_description = description
+    context = []
+    if minion:
+        context.append(f"Affected machine: {minion}")
+    if service:
+        context.append(f"Affected service: {service}")
+    if context:
+        nc_description += "\n\n--- Infrastructure Context ---\n" + "\n".join(context)
+    
+    nc = Nonconformity.create({
+        "name": title,
+        "description": nc_description,
+    })
+    
+    return f"Nonconformity documented: {nc.name} (ID: {nc.id})"
+]]></field>
+    </record>
+</odoo>

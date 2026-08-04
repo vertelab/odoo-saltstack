@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- noupdate="1": dessa defaults skrivs ENDAST vid första installation.
+     Vid moduluppgradering skrivs användarens ändrade värden inte över. -->
+<odoo noupdate="1">
+    <!-- Default Salt API configuration -->
+    <record id="saltstack_api_url" model="ir.config_parameter">
+        <field name="key">saltstack.api_url</field>
+        <field name="value">http://localhost:8377</field>
+    </record>
+    <record id="saltstack_auth_method" model="ir.config_parameter">
+        <field name="key">saltstack.auth_method</field>
+        <field name="value">token</field>
+    </record>
+
+    <!-- Default Zabbix API configuration -->
+    <record id="zabbix_api_url" model="ir.config_parameter">
+        <field name="key">zabbix.api_url</field>
+        <field name="value">https://zabbix.example.com</field>
+    </record>
+    <record id="zabbix_auth_method" model="ir.config_parameter">
+        <field name="key">zabbix.auth_method</field>
+        <field name="value">token</field>
+    </record>
+</odoo>

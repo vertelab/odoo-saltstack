@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ── Root menu ─────────────────────────────────────────────────── -->
+    <menuitem id="menu_saltstack_root"
+              name="Saltstack"
+              sequence="90"
+              groups="saltstack.group_saltstack_officer"/>
+
+    <!-- ── Konfiguration (parent, endast admin) ────────────────────── -->
+    <menuitem id="menu_saltstack_config"
+              name="Konfiguration"
+              parent="menu_saltstack_root"
+              sequence="100"
+              groups="saltstack.group_saltstack_admin"/>
+
+    <!-- ── Inställningar (första i Konfiguration) ──────────────────── -->
+    <record id="action_saltstack_settings" model="ir.actions.act_window">
+        <field name="name">Inställningar</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="target">inline</field>
+        <field name="context">{}</field>
+    </record>
+    <menuitem id="menu_saltstack_settings"
+              name="Inställningar"
+              parent="menu_saltstack_config"
+              action="action_saltstack_settings"
+              sequence="10"/>
+</odoo>

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_shuffle_workflow_list" model="ir.ui.view">
+        <field name="name">shuffle.workflow.list</field>
+        <field name="model">shuffle.workflow</field>
+        <field name="arch" type="xml">
+            <list decoration-danger="status == 'error'"
+                  decoration-muted="status == 'inactive'">
+                <field name="name"/>
+                <field name="playbook"/>
+                <field name="status"/>
+                <field name="execution_count"/>
+                <field name="last_execution"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shuffle_workflow_form" model="ir.ui.view">
+        <field name="name">shuffle.workflow.form</field>
+        <field name="model">shuffle.workflow</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="workflow_id"/>
+                            <field name="playbook"/>
+                            <field name="status"/>
+                        </group>
+                        <group>
+                            <field name="execution_count"/>
+                            <field name="last_execution"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <group string="Workflow-JSON (read-only)">
+                        <field name="json_definition" nolabel="1" colspan="2"
+                               readonly="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_shuffle_workflow" model="ir.actions.act_window">
+        <field name="name">Workflows</field>
+        <field name="res_model">shuffle.workflow</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+</odoo>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_saltstack_zabbix_settings" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.saltstack.zabbix</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="saltstack.view_saltstack_settings"/>
+        <field name="arch" type="xml">
+            <xpath expr="//app[@name='saltstack']" position="inside">
+                <block title="Zabbix">
+                    <setting id="zabbix_api_url_setting"
+                             title="Zabbix API URL"
+                             help="Adress till Zabbix JSON-RPC API (api_jsonrpc.php). t.ex. https://zabbix.vertel.se">
+                        <field name="zabbix_api_url"
+                               placeholder="https://zabbix.vertel.se"
+                               class="w-50"/>
+                    </setting>
+                    <setting id="zabbix_api_token_setting"
+                             title="Zabbix API Token"
+                             help="Autentiseringstoken mot Zabbix API.">
+                        <field name="zabbix_api_token"
+                               
+                               class="w-50"/>
+                    </setting>
+                    <setting id="zabbix_auth_method_setting"
+                             title="Zabbix Auth Method"
+                             help="token = direkt från inställningen. keykeep = läses från keykeep.credential (purpose=zabbix_api)">
+                        <field name="zabbix_auth_method"/>
+                    </setting>
+                    <setting id="zabbix_test_setting"
+                             title="Testa anslutningen">
+                        <button name="action_test_zabbix" type="object"
+                                string="Testa Zabbix-anslutning"
+                                class="btn-primary" icon="fa-plug"/>
+                        <div class="text-muted mt8">
+                            Kontrollerar att Zabbix API svarar och att token fungerar.
+                        </div>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo>

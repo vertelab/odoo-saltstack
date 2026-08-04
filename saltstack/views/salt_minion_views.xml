@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ── Kanban View ───────────────────────────────────────────── -->
+    <record id="view_salt_minion_kanban" model="ir.ui.view">
+        <field name="name">salt.minion.kanban</field>
+        <field name="model">salt.minion</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_mobile">
+                <field name="name"/>
+                <field name="ip"/>
+                <field name="dc"/>
+                <field name="roles"/>
+                <field name="customer"/>
+                <field name="odoo_version"/>
+                <field name="state"/>
+                <field name="image"/>
+                <field name="is_demo"/>
+                <field name="is_container"/>
+                <field name="host_machine"/>
+                <t t-name="card">
+                    <div t-attf-class="oe_kanban_global_click">
+                        <aside class="o_kanban_aside_full">
+                            <t t-if="record.image.raw_value">
+                                <field name="image" widget="background_image"
+                                       options="{'preview_image': 'image'}"
+                                       class="d-block position-relative"/>
+                            </t>
+                            <t t-else="">
+                                <div class="d-flex align-items-center justify-content-center bg-100 bg-gradient"
+                                     style="min-height: 100px;">
+                                    <i class="fa fa-server fa-3x text-secondary opacity-50"/>
+                                </div>
+                            </t>
+                        </aside>
+                        <div class="o_kanban_details">
+                            <strong class="o_kanban_record_title">
+                                <field name="name"/>
+                            </strong>
+                            <div class="text-muted">
+                                <field name="ip"/>
+                                <span t-if="record.dc.raw_value"> · <field name="dc"/></span>
+                                <span t-if="record.roles.raw_value"> · <field name="roles"/></span>
+                            </div>
+                            <div class="text-muted" t-if="record.customer.raw_value">
+                                <i class="fa fa-user"/> <field name="customer"/>
+                            </div>
+                            <div class="text-muted" t-if="record.odoo_version.raw_value">
+                                Odoo <field name="odoo_version"/>
+                            </div>
+                        </div>
+                        <div class="o_kanban_record_bottom">
+                            <field name="state" widget="badge"
+                                   decoration-success="state == 'online'"
+                                   decoration-warning="state == 'faulty'"
+                                   decoration-muted="state == 'offline'"/>
+                        </div>
+                    </div>
+                </t>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- ── List View ─────────────────────────────────────────────── -->
+    <record id="view_salt_minion_list" model="ir.ui.view">
+        <field name="name">salt.minion.list</field>
+        <field name="model">salt.minion</field>
+        <field name="arch" type="xml">
+            <list decoration-danger="active == False"
+                  decoration-warning="is_demo == True"
+                  decoration-info="state == 'offline' and active == True">
+                <header>
+                    <button name="action_sync_all_minions" type="object"
+                            string="Sync with Salt Master"
+                            class="btn-primary" icon="fa-refresh"/>
+                </header>
+                <field name="name"/>
+                <field name="ip"/>
+                <field name="dc"/>
+                <field name="os"/>
+                <field name="roles"/>
+                <field name="customer"/>
+                <field name="odoo_version"/>
+                <field name="host_machine"/>
+                <field name="state"/>
+                <field name="is_container" widget="boolean"/>
+                <field name="is_demo" widget="boolean"/>
+                <field name="last_seen"/>
+                <field name="active" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ── Form View ─────────────────────────────────────────────── -->
+    <record id="view_salt_minion_form" model="ir.ui.view">
+        <field name="name">salt.minion.form</field>
+        <field name="model">salt.minion</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_ping"
+                            string="Ping"
+                            type="object"
+                            icon="fa-plug"/>
+                    <button name="action_fault_cleanup"
+                            string="🧹 Rensa fel"
+                            type="object"
+                            icon="fa-broom"
+                            confirm="Rensa alla felinjektioner på denna minion?"/>
+                    <field name="state" widget="state_status"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <field name="image" widget="image" class="oe_avatar"/>
+                        <h1><field name="name" placeholder="Minion ID"/></h1>
+                    </div>
+                    <group>
+                        <group string="Identity">
+                            <field name="ip"/>
+                            <field name="os"/>
+                            <field name="os_version"/>
+                            <field name="dc"/>
+                            <field name="roles"/>
+                        </group>
+                        <group string="Context">
+                            <field name="customer"/>
+                            <field name="odoo_version"/>
+                            <field name="is_container"/>
+                            <field name="host_machine"
+                                   invisible="not is_container"/>
+                            <field name="is_demo"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Status">
+                            <group>
+                                <field name="state"/>
+                                <field name="last_seen"/>
+                                <field name="last_sync"/>
+                                <field name="active"/>
+                            </group>
+                        </page>
+                        <page string="Notes">
+                            <group>
+                                <field name="notes" nolabel="1" colspan="2"/>
+                            </group>
+                        </page>
+                        <page string="Grains">
+                            <group>
+                                <field name="grains_json" nolabel="1" colspan="2"/>
+                            </group>
+                        </page>
+                    </notebook>
+                    <widget name="web_ribbon" title="Inaktiv"
+                            bg_color="text-bg-danger"
+                            invisible="active"/>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- ── Search View ───────────────────────────────────────────── -->
+    <record id="view_salt_minion_search" model="ir.ui.view">
+        <field name="name">salt.minion.search</field>
+        <field name="model">salt.minion</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="ip"/>
+                <field name="customer"/>
+                <field name="dc"/>
+                <field name="roles"/>
+                <field name="host_machine"/>
+                <separator/>
+                <filter name="inactive" string="Inaktiverade"
+                        domain="[('active', '=', False)]"/>
+                <filter name="active_only" string="Aktiva"
+                        domain="[('active', '=', True)]"/>
+                <separator/>
+                <filter name="online" string="Online"
+                        domain="[('state', '=', 'online')]"/>
+                <filter name="offline" string="Offline"
+                        domain="[('state', '=', 'offline')]"/>
+                <filter name="faulty" string="Faulty"
+                        domain="[('state', '=', 'faulty')]"/>
+                <filter name="containers" string="Containers"
+                        domain="[('is_container', '=', True)]"/>
+                <separator/>
+                <filter name="demo" string="Demo/Test"
+                        domain="[('is_demo', '=', True)]"/>
+                <filter name="production" string="Production"
+                        domain="[('is_demo', '=', False)]"/>
+                <separator/>
+                <filter name="ska" string="SKA" domain="[('dc', '=', 'ska')]"/>
+                <filter name="sto" string="STO" domain="[('dc', '=', 'sto')]"/>
+                <separator/>
+                <group expand="0" string="Group By">
+                    <filter name="group_by_dc" string="Datacenter"
+                            context="{'group_by':'dc'}"/>
+                    <filter name="group_by_state" string="Status"
+                            context="{'group_by':'state'}"/>
+                    <filter name="group_by_os" string="OS"
+                            context="{'group_by':'os'}"/>
+                    <filter name="group_by_host" string="LXD Host"
+                            context="{'group_by':'host_machine'}"/>
+                    <filter name="group_by_customer" string="Customer"
+                            context="{'group_by':'customer'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ── Action ───────────────────────────────────────────────── -->
+    <record id="action_salt_minion" model="ir.actions.act_window">
+        <field name="name">Minions</field>
+        <field name="res_model">salt.minion</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="search_view_id" ref="view_salt_minion_search"/>
+    </record>
+
+    <!-- ── Menu ──────────────────────────────────────────────────── -->
+    <menuitem id="menu_salt_minion"
+              name="Minions"
+              parent="menu_saltstack_root"
+              action="action_salt_minion"
+              groups="saltstack.group_saltstack_officer"
+              sequence="30"/>
+
+</odoo>

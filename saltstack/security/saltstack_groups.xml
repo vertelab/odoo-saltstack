@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ── Rättighetsgrupper ─────────────────────────────────────────── -->
+    <record id="group_saltstack_officer" model="res.groups">
+        <field name="name">Saltstack-officer</field>
+        <field name="category_id" ref="base.module_category_hidden"/>
+        <field name="comment">
+            Saltstack-officer — ser Saltstack-menyn med Pillars, Minions och
+            Driftslarm, men INTE Konfiguration.
+        </field>
+    </record>
+
+    <record id="group_saltstack_admin" model="res.groups">
+        <field name="name">Saltstack-administratör</field>
+        <field name="category_id" ref="base.module_category_hidden"/>
+        <field name="comment">
+            Saltstack-administratör — ser även Konfiguration (Inställningar).
+            Ärver officer-rättigheterna. Alla i Settings-gruppen (base.group_system)
+            blir automatiskt saltstack-admin.
+        </field>
+        <field name="implied_ids" eval="[(4, ref('group_saltstack_officer'))]"/>
+    </record>
+
+    <!-- Alla i Settings-gruppen (admin) blir automatiskt saltstack-admin -->
+    <record id="base.group_system" model="res.groups">
+        <field name="implied_ids" eval="[(4, ref('group_saltstack_admin'))]"/>
+    </record>
+</odoo>
