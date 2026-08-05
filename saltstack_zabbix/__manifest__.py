@@ -3,6 +3,7 @@
 {
     'name': 'SaltStack Zabbix',
     'version': '18.0.1.0.0',
+    'license': 'AGPL-3',
     'category': 'Infrastructure',
     'summary': 'Zabbix-anslutning för SaltStack — settings + test',
     'depends': ['saltstack_ai'],
