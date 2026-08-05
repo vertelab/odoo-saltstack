@@ -5,6 +5,7 @@
     'version': '18.0.1.0.0',
     'category': 'Infrastructure',
     'summary': 'Keykeep Managed för Zabbix-anslutningen',
+    'license': 'AGPL-3',
     'depends': ['saltstack_zabbix', 'keykeep'],
     'installable': True,
     'application': False,
