@@ -2,7 +2,7 @@
 
 {
     'name': 'SaltStack AI Bridge',
-    'version': '18.0.1.6.0',
+    'version': '18.0.1.6.1',
     'category': 'Infrastructure',
     'summary': 'AI-powered SaltStack, Zabbix och Wazuh integration',
     'description': """
@@ -29,7 +29,7 @@ Contains zero infrastructure-specific knowledge — safe to open-source.
         'data/generic_tools.xml',
         'data/generic_skills.xml',
         'data/driftlarm_tool.xml',
-        'data/wazuh_hermes_coworker.xml',
+        'data/infrastructure_operator.xml',
         'data/agent_tools.xml',
     ],
     'installable': True,

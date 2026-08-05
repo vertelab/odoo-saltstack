@@ -299,9 +299,9 @@ diagnostiserar via SaltStack mot minioner. Du kan hantera:
     </record>
 
     <record id="agent_odoo_specialist" model="ai.agent">
-        <field name="name">Odoo Specialist</field>
+        <field name="name">Odoo Driftspecialist</field>
         <field name="description">Odoo-logg analys: tail, grep fel, cron-status, tolka tracebacks.</field>
-        <field name="ai_role">Odoo Specialist</field>
+        <field name="ai_role">Odoo Driftspecialist</field>
         <field name="ai_goal">Analysera Odoo-serverloggar, tolka tracebacks, kolla cron-status och verifiera Odoo via XML-RPC för att hitta rotorsak till Odoo-relaterade driftlarm.</field>
         <field name="ai_backstory">Du är en Odoo-driftsexpert. Du läser loggar, förstår tracebacks och vet hur Odoo-komponenter (cron, workers, longpolling) samverkar.</field>
         <field name="status">active</field>

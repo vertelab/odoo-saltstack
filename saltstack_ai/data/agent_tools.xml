@@ -95,7 +95,7 @@
 
     <!-- Övriga specialister får generella salt-diagnostikverktyg för sitt arbete -->
 
-    <!-- Odoo Specialist: logg + tjänst + process -->
+    <!-- Odoo Driftspecialist: logg + tjänst + process -->
     <record id="tool_salt_cmd_run" model="ai.tool">
         <field name="agent_ids" eval="[(4, ref('agent_odoo_specialist')), (4, ref('agent_postgres_specialist')), (4, ref('agent_system_specialist')), (4, ref('agent_caddy_specialist')), (4, ref('agent_wazuh_specialist'))]"/>
     </record>
