@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- ACCESS-GRUPPER (ai-tool-access-capabilities)                     -->
+    <!-- Operatorrollen styr vem som får använda salt/zabbix-verktygen.   -->
+    <!-- Alla verktyg binds till gruppen — även läsverktyg (pillar/grains -->
+    <!-- innehåller hemligheter). Destruktiva verktyg kräver dessutom     -->
+    <!-- alltid HITL via risk_level.                                      -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <record id="group_infra_operator" model="res.groups">
+        <field name="name">Infrastructure Operator</field>
+        <field name="category_id" ref="base.module_category_hidden"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+        <field name="comment">Roll för att använda Infrastructure Operator-coworkern och dess salt/zabbix-verktyg via AI.</field>
+    </record>
+
+    <!-- SaltStack-verktyg → operatorgruppen -->
+    <record id="tool_salt_test_ping" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_salt_state_apply" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_salt_state_highstate" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_salt_state_show_sls" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_salt_cmd_run" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_salt_pillar_get" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_salt_pillar_items" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_salt_grains_get" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_salt_grains_items" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_salt_minion_list" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_salt_minion_accept" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_salt_service_status" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_salt_service_restart" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_salt_disk_usage" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_salt_memory_usage" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_salt_system_load" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_salt_journal_errors" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_salt_process_list" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+
+    <!-- Zabbix-verktyg → operatorgruppen -->
+    <record id="tool_zabbix_get_alerts" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_zabbix_get_host" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_zabbix_get_problems" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_zabbix_acknowledge" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_zabbix_get_history" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_zabbix_get_item" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_zabbix_get_host_groups" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+    <record id="tool_zabbix_get_triggers" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+
+    <!-- Driftlarm-verktyget → operatorgruppen -->
+    <record id="tool_driftlarm_update" model="ai.tool">
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+    </record>
+</odoo>

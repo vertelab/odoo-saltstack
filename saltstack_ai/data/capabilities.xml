@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- FÖRMÅGOR (ai-tool-access-capabilities)                           -->
+    <!-- salt + zabbix som serialiseringsenheter. Access styrs av          -->
+    <!-- group_ids (access_groups.xml) — filtrering sker före              -->
+    <!-- serialisering, så otillåtna medlemmar döljs både som tool och     -->
+    <!-- som operation.                                                    -->
+    <!--                                                                   -->
+    <!-- salt (18 verktyg) > 8 → i enum-läge delas automatiskt i           -->
+    <!-- ≤8-operationers enheter (salt_1, salt_2, salt_3).                 -->
+    <!-- zabbix (8 verktyg) → ryms i ett enum.                             -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <record id="cap_salt_ops" model="ai.tool.capability">
+        <field name="name">salt</field>
+        <field name="description">
+syfte: SaltStack-drift — ping, diagnos (pillar/grains/minion/tjänst/disk/minne/last/journal/process) och åtgärd (state.apply/highstate, cmd.run, service.restart, minion-accept)
+när: allt arbete mot Salt-minioner — felsökning och åtgärd
+när inte: för Zabbix-data (använd zabbix-förmågan); för Odoo/webb (andra verktyg)
+exempel: {"operation": "salt_test_ping", "minion": "gw*"} → sedan {"operation": "salt_service_status", "minion": "gw1", "service": "caddy"}
+output: per operation — se respektive operations beskrivning
+guardrail: åtgärdsoperationer (state.apply, highstate, cmd.run, service.restart, minion_accept) kräver mänskligt godkännande; läsoperationer körs utan
+        </field>
+        <field name="member_ids" eval="[(6, 0, [
+            ref('tool_salt_test_ping'),
+            ref('tool_salt_state_show_sls'),
+            ref('tool_salt_pillar_get'),
+            ref('tool_salt_pillar_items'),
+            ref('tool_salt_grains_get'),
+            ref('tool_salt_grains_items'),
+            ref('tool_salt_minion_list'),
+            ref('tool_salt_service_status'),
+            ref('tool_salt_disk_usage'),
+            ref('tool_salt_memory_usage'),
+            ref('tool_salt_system_load'),
+            ref('tool_salt_journal_errors'),
+            ref('tool_salt_process_list'),
+            ref('tool_salt_state_apply'),
+            ref('tool_salt_state_highstate'),
+            ref('tool_salt_cmd_run'),
+            ref('tool_salt_service_restart'),
+            ref('tool_salt_minion_accept'),
+        ])]"/>
+    </record>
+
+    <record id="cap_zabbix_ops" model="ai.tool.capability">
+        <field name="name">zabbix</field>
+        <field name="description">
+syfte: Zabbix-övervakning — larm, problem, host, mätvärden, triggers, host-grupper och kvittering
+när: allt arbete mot Zabbix — driftlarm, trendanalys, kvittering efter åtgärd
+när inte: för SaltStack-data (använd salt-förmågan)
+exempel: {"operation": "zabbix_get_alerts", "severity": "high"} → {"operation": "zabbix_get_problems", "host": "gw1"} → {"operation": "zabbix_acknowledge", "event_id": "123", "message": "Restarted caddy"}
+output: per operation — se respektive operations beskrivning
+guardrail: zabbix_acknowledge kräver mänskligt godkännande (write — ändrar larmstatus); läsoperationer körs utan
+        </field>
+        <field name="member_ids" eval="[(6, 0, [
+            ref('tool_zabbix_get_alerts'),
+            ref('tool_zabbix_get_host'),
+            ref('tool_zabbix_get_problems'),
+            ref('tool_zabbix_get_history'),
+            ref('tool_zabbix_get_item'),
+            ref('tool_zabbix_get_host_groups'),
+            ref('tool_zabbix_get_triggers'),
+            ref('tool_zabbix_acknowledge'),
+        ])]"/>
+    </record>
+</odoo>

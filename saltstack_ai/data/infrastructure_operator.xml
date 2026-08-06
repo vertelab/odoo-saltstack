@@ -236,6 +236,7 @@ diagnostiserar via SaltStack mot minioner. Du kan hantera:
         <field name="orchestration_mode">supervisor</field>
         <field name="status">active</field>
         <field name="hitl_threshold">high_risk</field>
+        <field name="group_ids" eval="[(6, 0, [ref('saltstack_ai.group_infra_operator')])]"/>
         <field name="skill_ids" eval="[(6, 0, [
             ref('skill_saltstack_ops'),
             ref('skill_zabbix_ops'),
