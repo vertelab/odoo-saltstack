@@ -25,13 +25,17 @@ class ResConfigSettings(models.TransientModel):
         config_parameter='saltstack.auth_method',
         default='token',
         help='How to authenticate with the Salt API. '
+             '"Shared Secret" använder API-nyckeln via /login. '
              '"Keykeep Managed" is available when the saltstack_keykeep '
              'module is installed.',
     )
 
     def _selection_saltstack_auth_method(self):
         """Return auth method options. Keykeep only when module installed."""
-        selection = [('token', 'API Token')]
+        selection = [
+            ('token', 'API Token'),
+            ('sharedsecret', 'Shared Secret (API-nyckel)'),
+        ]
         if 'keykeep.credential' in self.env:
             selection.append(('keykeep', 'Keykeep Managed'))
         return selection
@@ -135,9 +139,9 @@ class ResConfigSettings(models.TransientModel):
 
     def action_test_salt(self):
         """Test Salt API connection. Returns a popup notification."""
+        import json
         params = self.env['ir.config_parameter']
         url = params.get_param('saltstack.api_url', '')
-        token = params.get_param('saltstack.api_token', '')
 
         if not url:
             return self._salt_test_result(
@@ -145,31 +149,10 @@ class ResConfigSettings(models.TransientModel):
                         'Sätt URL:en i Inställningar → Saltstack → Salt Master.')
 
         try:
-            import json
-            import ssl
-            import urllib.request
-
-            payload = {
-                'client': 'local',
-                'tgt': 'luke18',  # pinga en snabb lokal minion, inte alla
-                'fun': 'test.ping',
-                'timeout': 10,
-            }
-            data = json.dumps(payload).encode()
-            req = urllib.request.Request(
-                f'{url.rstrip("/")}/',
-                data=data,
-                headers={
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-Auth-Token': token,
-                },
-            )
-            ctx = ssl.create_default_context()
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
-            with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
-                result = json.loads(resp.read().decode())
+            # Återanvänd den fixade klienten (sharedsecret-login + rätt endpoint).
+            # Pingar SaltStack-mastern (alltid online) istället för en hårdkodad minion.
+            result = json.loads(self.env['saltstack.ai.config'].salt_call(
+                'local', 'SaltStack', 'test.ping', timeout=10))
 
             returned = result.get('return', [{}])
             if returned and isinstance(returned[0], dict):
