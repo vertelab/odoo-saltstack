@@ -284,46 +284,94 @@ class SaltPillar(models.Model):
         with _urllib.urlopen(req, timeout=timeout + 10, context=ctx) as resp:
             return _json.loads(resp.read().decode())
 
+    _SECRET_HINTS = (
+        'password', 'passwd', 'token', 'secret', 'credential',
+        'api_key', 'apikey', 'private_key', 'p12', 'pfx', 'pem',
+    )
+
+    @staticmethod
+    def _is_secret_key(key):
+        k = key.lower()
+        return any(h in k for h in SaltPillar._SECRET_HINTS)
+
     def action_sync_from_salt(self):
-        """Fetch pillar keys from Salt Master and create/update records.
+        """Fetch pillar keys from ALL minions and create/update records.
 
-        Uses the first reachable minion's pillar.items to discover keys.
-        Values are stored as metadata anchors; the authoritative values
-        stay in Salt (read via API on demand).
+        Hämtar pillar från ALLA minioner i ett bulk-anrop (tgt='*') och
+        registrerar unionen av alla nycklar — även nästlade (t.ex.
+        "servers.gw0.ipv4", "odoo.databases.dina"). Fångar därmed även
+        kundspecifik pillar, inte bara masterns globala.
+
+        Föredrar SaltStack-masterns värde (globala pillaren) när samma nyckel
+        finns på flera minioner. Maskerar hemlighetsliknande värden
+        (data_type='secret', value='*****') — interna användare ska inte kunna
+        läsa lösenord/API-nycklar.
         """
-        minion = self.env['salt.minion'].search([('state', '=', 'online')],
-                                                 limit=1)
-        if not minion:
-            minion = self.env['salt.minion'].search([], limit=1)
-        if not minion:
-            return {'error': 'No minion found to read pillar from'}
-
         try:
             result = self._call_salt_api(
-                'local', minion.name, 'pillar.items', timeout=120)
+                'local', '*', 'pillar.items', timeout=90)
         except Exception as e:
             return {'error': str(e)}
 
         returned = result.get('return', [{}])[0]
-        pillar_data = returned.get(minion.name, {})
-        if not pillar_data:
-            return {'error': 'No pillar data returned from %s' % minion.name}
+        if not isinstance(returned, dict) or not returned:
+            return {'error': 'Ingen pillar-data från minionerna'}
+
+        def _dtype(value):
+            if isinstance(value, bool):
+                return 'boolean'
+            if isinstance(value, int):
+                return 'integer'
+            if isinstance(value, float):
+                return 'float'
+            return 'string'
+
+        def _flatten(prefix, data):
+            """Platta ut pillar-dict till punktnycklar (alla nivåer)."""
+            for key, value in sorted(data.items()):
+                full = f'{prefix}.{key}' if prefix else key
+                if isinstance(value, dict):
+                    yield full, value, 'dict'
+                    yield from _flatten(full, value)
+                elif isinstance(value, list):
+                    yield full, value, 'list'
+                else:
+                    yield full, value, _dtype(value)
+
+        # Union av alla nycklar; föredra SaltStack-mastern (global pillar)
+        flattened = {}  # key -> (value, dtype, minion_name)
+        for minion_name, pillar_data in sorted(returned.items()):
+            if not isinstance(pillar_data, dict):
+                continue
+            for key, value, dtype in _flatten('', pillar_data):
+                if key == '_errors':
+                    continue
+                if key not in flattened or minion_name == 'SaltStack':
+                    flattened[key] = (value, dtype, minion_name)
 
         created = 0
         updated = 0
         deactivated = 0
-        seen_keys = set()
-        for key in sorted(pillar_data.keys()):
-            value = pillar_data[key]
-            # Only store scalar metadata; dicts/lists are too large to anchor
-            if isinstance(value, (dict, list)):
-                continue
-            seen_keys.add(key)
+        seen_keys = set(flattened.keys())
+        for key, (value, dtype, minion_name) in sorted(flattened.items()):
             existing = self.search([('key', '=', key)], limit=1)
+            if self._is_secret_key(key):
+                dtype = 'secret'
+                val_str = '*****'
+            elif dtype in ('dict', 'list'):
+                val_str = yaml.safe_dump(
+                    value, default_flow_style=False, allow_unicode=True).strip()
+                if len(val_str) > 10000:
+                    # Markör istället för trunkerad YAML — trunkerad YAML är
+                    # ogiltig och kraschar _check_value_type
+                    val_str = '# för stor att lagra (%d tecken)' % len(val_str)
+            else:
+                val_str = str(value)
             vals = {
                 'key': key,
-                'value': str(value),
-                'minion_target': minion.name,
+                'value': val_str,
+                'data_type': dtype,
+                'minion_target': minion_name,
                 'pillar_file': 'salt-master',
             }
             if existing:
@@ -346,5 +394,5 @@ class SaltPillar(models.Model):
             'created': created,
             'updated': updated,
             'deactivated': deactivated,
-            'source_minion': minion.name,
+            'source_minions': len(returned),
         }
