@@ -261,7 +261,7 @@ class SaltPillar(models.Model):
         if params.get_param('saltstack.auth_method', 'token') == 'sharedsecret':
             api_token = self._salt_login()
 
-        payload = {'client': client, 'fun': fun}
+        payload = {'client': client, 'fun': fun, 'timeout': timeout}
         if client in ('local', 'local_async', 'local_batch'):
             payload['tgt'] = tgt
         if args:
@@ -281,7 +281,7 @@ class SaltPillar(models.Model):
         ctx = _ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = _ssl.CERT_NONE
-        with _urllib.urlopen(req, timeout=timeout + 10, context=ctx) as resp:
+        with _urllib.urlopen(req, timeout=timeout + 30, context=ctx) as resp:
             return _json.loads(resp.read().decode())
 
     _SECRET_HINTS = (

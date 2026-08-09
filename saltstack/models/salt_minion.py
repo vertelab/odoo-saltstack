@@ -211,7 +211,7 @@ class SaltMinion(models.Model):
                 'saltstack.auth_method', 'token') == 'sharedsecret':
             api_token = self._salt_login()
 
-        payload = {'client': client, 'fun': fun}
+        payload = {'client': client, 'fun': fun, 'timeout': timeout}
         if client in ('local', 'local_async', 'local_batch'):
             payload['tgt'] = tgt
         if args:
@@ -234,7 +234,7 @@ class SaltMinion(models.Model):
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
 
-        with urllib.request.urlopen(req, timeout=timeout + 10, context=ctx) as resp:
+        with urllib.request.urlopen(req, timeout=timeout + 30, context=ctx) as resp:
             return json.loads(resp.read().decode())
 
     # ── Actions ──────────────────────────────────────────────────────────

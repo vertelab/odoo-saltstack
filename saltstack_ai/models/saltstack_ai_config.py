@@ -28,7 +28,7 @@ class SaltstackAiConfig(models.Model):
         api_url = params.get_param('saltstack.api_url', 'http://localhost:8377')
         api_token = self._get_salt_token()
 
-        payload = {'client': client, 'fun': fun}
+        payload = {'client': client, 'fun': fun, 'timeout': timeout}
         if client in ('local', 'local_async', 'local_batch'):
             payload['tgt'] = tgt
         if args:
@@ -52,7 +52,7 @@ class SaltstackAiConfig(models.Model):
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
 
-        with urllib.request.urlopen(req, timeout=timeout + 10, context=ctx) as resp:
+        with urllib.request.urlopen(req, timeout=timeout + 30, context=ctx) as resp:
             return json.dumps(json.loads(resp.read().decode()), indent=2, default=str)
 
     def _salt_login(self, timeout=15):

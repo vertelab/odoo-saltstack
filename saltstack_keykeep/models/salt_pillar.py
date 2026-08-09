@@ -1,6 +1,7 @@
 # Copyright (C) 2026 Vertel Sverige AB (<https://vertel.se>).
 """Extend salt.pillar with Keykeep sync."""
 
+import json
 import logging
 
 from odoo import _, fields, models
@@ -18,39 +19,93 @@ class SaltPillar(models.Model):
         help='Linked keykeep subscription for synced secrets',
     )
 
+    def _pillar_originals(self, timeout=90):
+        """Hämta OMASKERADE pillar-värden från alla minioner (bulk pillar.raw).
+
+        pillar.items maskerar hemligheter — pillar.raw gör det inte.
+        Returnerar platt {key_path: value}-dict och föredrar SaltStack-masterns
+        (globala) värde när samma nyckel finns på flera minioner.
+        """
+        api = self.env['saltstack.ai.config']
+        result = api.salt_call('local', '*', 'pillar.raw', timeout=timeout)
+        data = json.loads(result)
+        returned = (data.get('return') or [{}])[0]
+        if not isinstance(returned, dict):
+            return {}
+
+        def _flatten(prefix, d):
+            for key, value in sorted(d.items()):
+                full = f'{prefix}.{key}' if prefix else key
+                if isinstance(value, dict):
+                    yield full, value
+                    yield from _flatten(full, value)
+                elif isinstance(value, list):
+                    yield full, value
+                else:
+                    yield full, value
+
+        originals = {}
+        for minion_name, pillar_data in sorted(returned.items()):
+            if not isinstance(pillar_data, dict):
+                continue
+            for key, value in _flatten('', pillar_data):
+                if key == '_errors':
+                    continue
+                if key not in originals or minion_name == 'SaltStack':
+                    originals[key] = value
+        return originals
+
     def action_sync_to_keykeep(self):
         """Sync pillar secrets to keykeep credentials.
 
-        For each pillar record with data_type='secret':
-        - Creates or finds a keykeep.subscription based on pillar namespace
-        - Creates or updates a keykeep.credential with encrypted value
-        - Links the pillar record to the subscription
+        Hämtar ORIGINAL-värdena via Salt API pillar.raw (maskeras inte,
+        till skillnad från pillar.items) och lagrar dem krypterat i
+        keykeep.credential. För varje secret-post:
+        - hittar/skapar keykeep.subscription baserat på pillar-namespace
+        - skapar/uppdaterar keykeep.credential med det krypterade originalvärdet
+        - länkar pillar-posten till subscription
         """
+        records = self.filtered(lambda r: r.data_type == 'secret')
+        if not records:
+            return self._keykeep_notify(0, _('Inga hemligheter att synka'))
+
+        try:
+            originals = self._pillar_originals()
+        except Exception as e:
+            raise UserError(_('Misslyckades att hämta pillar.raw: %s') % str(e))
+
         synced = 0
-        for rec in self:
-            if rec.data_type != 'secret' or not rec.value:
+        skipped = 0
+        for rec in records:
+            original = originals.get(rec.key)
+            if original is None:
+                skipped += 1
                 continue
-
             sub = rec._get_or_create_keykeep_subscription()
-            cred = rec._get_or_create_keykeep_credential(sub)
-
-            # Rotate: create new version if value changed
-            if cred.key_value != rec.value:
-                try:
-                    cred._rotate(rec.value)
-                except AttributeError:
-                    # _rotate not available — update directly
-                    cred.write({'key_value': rec.value})
-
+            cred = rec._get_or_create_keykeep_credential(sub, original)
+            # Rotera/uppdatera om värdet ändrats (write krypterar key_value)
+            try:
+                if cred.key_value != str(original):
+                    cred.write({'key_value': str(original)})
+            except Exception:
+                _logger.exception(
+                    'Kunde inte uppdatera keykeep.credential för %s', rec.key)
+                continue
             rec.keykeep_subscription_id = sub.id
             synced += 1
 
+        message = _('%d hemligheter synkade till Keykeep') % synced
+        if skipped:
+            message += _('\n%d utan originalvärde (saknas i pillar.raw)') % skipped
+        return self._keykeep_notify(synced, message)
+
+    def _keykeep_notify(self, count, message=None):
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
                 'title': _('Keykeep Sync'),
-                'message': _('%d secrets synced to Keykeep') % synced,
+                'message': message or _('%d secrets synced to Keykeep') % count,
                 'type': 'success',
             },
         }
@@ -68,13 +123,13 @@ class SaltPillar(models.Model):
         if not sub:
             sub = self.env['keykeep.subscription'].create({
                 'name': f'Salt Pillar: {namespace}',
-                'description': _(
+                'notes': _(
                     'Auto-synced from Salt pillar namespace: %s'
                 ) % namespace,
             })
         return sub
 
-    def _get_or_create_keykeep_credential(self, subscription):
+    def _get_or_create_keykeep_credential(self, subscription, original_value):
         """Find or create a keykeep.credential for this pillar key."""
         purpose = f'pillar:{self.key}'
         cred = self.env['keykeep.credential'].search([
@@ -89,7 +144,7 @@ class SaltPillar(models.Model):
                 'credential_type': 'api_key',
                 'environment': 'production',
                 'purpose': purpose,
-                'key_value': self.value,
+                'key_value': str(original_value),
                 'notes': _(
                     'Auto-synced from Salt pillar: %s\nFile: %s\nMinion: %s'
                 ) % (self.key, self.pillar_file or 'N/A',

@@ -1,6 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- Add Keykeep buttons to pillar form -->
+    <!-- List-knapp: Sync to Keykeep per rad (endast secret) -->
+    <record id="view_salt_pillar_tree_keykeep" model="ir.ui.view">
+        <field name="name">salt.pillar.tree.keykeep</field>
+        <field name="model">salt.pillar</field>
+        <field name="inherit_id" ref="saltstack.view_salt_pillar_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="inside">
+                <button name="action_sync_to_keykeep" type="object"
+                        string="Keykeep" icon="fa-key"
+                        class="btn-secondary"
+                        invisible="data_type != 'secret'"
+                        help="Synka denna hemlighet till Keykeep (krypterad lagring + audit)"/>
+                <field name="keykeep_subscription_id" optional="show"
+                       string="Keykeep"/>
+            </xpath>
+        </field>
+    </record>
+
     <record id="view_salt_pillar_form_keykeep" model="ir.ui.view">
         <field name="name">salt.pillar.form.keykeep</field>
         <field name="model">salt.pillar</field>
@@ -10,14 +28,14 @@
                 <button name="action_sync_to_keykeep" type="object"
                         string="Sync to Keykeep" class="btn-secondary"
                         icon="fa-key"
-                        attrs="{'invisible': [('data_type', '!=', 'secret')]}"
+                        invisible="data_type != 'secret'"
                         help="Sync this secret to Keykeep for encrypted storage and audit trail"/>
                 <button name="action_sync_bifrost_to_keykeep" type="object"
                         string="Sync Bifrost → Keykeep" class="btn-secondary"
                         icon="fa-cloud-upload"
                         help="Read Bifrost pillar from Salt API and sync all provider keys to Keykeep"/>
                 <field name="keykeep_subscription_id"
-                       attrs="{'invisible': [('keykeep_subscription_id', '=', False)]}"/>
+                       invisible="keykeep_subscription_id == False"/>
             </xpath>
         </field>
     </record>
