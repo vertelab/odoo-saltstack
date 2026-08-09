@@ -27,10 +27,10 @@ Contains zero infrastructure-specific knowledge — safe to open-source.
     'data': [
         'security/ir.model.access.csv',
         'data/generic_tools.xml',
+        'data/driftlarm_tool.xml',
         'data/access_groups.xml',
         'data/capabilities.xml',
         'data/generic_skills.xml',
-        'data/driftlarm_tool.xml',
         'data/infrastructure_operator.xml',
         'data/agent_tools.xml',
     ],
