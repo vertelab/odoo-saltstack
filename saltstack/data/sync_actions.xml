@@ -28,19 +28,4 @@ else:
     msg_type = 'success'
 action = {'type': 'ir.actions.client', 'tag': 'display_notification', 'params': {'title': 'Pillar-synk', 'message': message, 'type': msg_type, 'sticky': False}}</field>
     </record>
-
-    <!-- ── Menyval under Konfiguration ─────────────────────────────── -->
-    <menuitem id="menu_sync_minions"
-              name="Synka minions"
-              parent="menu_saltstack_config"
-              action="action_sync_minions_all"
-              sequence="20"
-              groups="saltstack.group_saltstack_admin"/>
-
-    <menuitem id="menu_sync_pillars"
-              name="Synka pillars"
-              parent="menu_saltstack_config"
-              action="action_sync_pillars_all"
-              sequence="30"
-              groups="saltstack.group_saltstack_admin"/>
 </odoo>
