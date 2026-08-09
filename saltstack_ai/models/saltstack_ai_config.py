@@ -28,13 +28,13 @@ class SaltstackAiConfig(models.Model):
         api_url = params.get_param('saltstack.api_url', 'http://localhost:8377')
         api_token = self._get_salt_token()
 
-        payload = {
-            'client': client,
-            'tgt': tgt,
-            'fun': fun,
-            'arg': list(args),
-            'kwarg': kwargs,
-        }
+        payload = {'client': client, 'fun': fun}
+        if client in ('local', 'local_async', 'local_batch'):
+            payload['tgt'] = tgt
+        if args:
+            payload['arg'] = list(args)
+        if kwargs:
+            payload['kwarg'] = kwargs
 
         data = json.dumps(payload).encode()
         # OBS: POST ska till ROOT (/), inte /run — /run ger 401 även med

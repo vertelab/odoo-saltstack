@@ -90,13 +90,13 @@ class SaltAPI:
         Returns:
             dict: Parsed JSON response.
         """
-        payload = {
-            'client': client,
-            'tgt': tgt,
-            'fun': fun,
-            'arg': list(args),
-            'kwarg': kwargs,
-        }
+        payload = {'client': client, 'fun': fun}
+        if client in ('local', 'local_async', 'local_batch'):
+            payload['tgt'] = tgt
+        if args:
+            payload['arg'] = list(args)
+        if kwargs:
+            payload['kwarg'] = kwargs
 
         data = json.dumps(payload).encode()
         # OBS: POST ska till ROOT (/), inte /run — /run ger 401 även med

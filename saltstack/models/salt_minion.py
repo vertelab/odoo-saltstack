@@ -174,19 +174,50 @@ class SaltMinion(models.Model):
         token = params.get_param('saltstack.api_token', '')
         return url, token
 
+    def _salt_login(self, timeout=15):
+        """Exchange sharedsecret API key for a session token via /login.
+
+        API-nyckeln (saltstack.api_token med auth_method='sharedsecret')
+        är INTE en sessionstoken — den måste bytas via POST /login.
+        """
+        api_url, api_key = self._get_salt_api_config()
+        payload = {
+            'username': 'saltapi',
+            'password': api_key,
+            'eauth': 'sharedsecret',
+        }
+        data = json.dumps(payload).encode()
+        req = urllib.request.Request(
+            f'{api_url.rstrip("/")}/login',
+            data=data,
+            headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+        )
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
+            result = json.loads(resp.read().decode())
+        try:
+            return result['return'][0]['token']
+        except (KeyError, IndexError, TypeError):
+            raise ValueError('Salt login misslyckades: %s' % result)
+
     def _call_salt_api(self, client, tgt, fun, *args, timeout=120, **kwargs):
         """Call the Salt REST API. Returns dict or raises."""
         api_url, api_token = self._get_salt_api_config()
         if not api_url:
             raise ValueError('Salt API URL not configured')
+        if self.env['ir.config_parameter'].get_param(
+                'saltstack.auth_method', 'token') == 'sharedsecret':
+            api_token = self._salt_login()
 
-        payload = {
-            'client': client,
-            'tgt': tgt,
-            'fun': fun,
-            'arg': list(args),
-            'kwarg': kwargs,
-        }
+        payload = {'client': client, 'fun': fun}
+        if client in ('local', 'local_async', 'local_batch'):
+            payload['tgt'] = tgt
+        if args:
+            payload['arg'] = list(args)
+        if kwargs:
+            payload['kwarg'] = kwargs
 
         data = json.dumps(payload).encode()
         req = urllib.request.Request(
@@ -230,15 +261,14 @@ class SaltMinion(models.Model):
             return False
 
         grains = result.get('return', [{}])[0].get(self.name, {})
-        if not grains:
-            _logger.warning('No grains returned for %s', self.name)
+        if not grains or not isinstance(grains, dict):
+            _logger.warning('No grains returned for %s (got %r)', self.name, grains)
             return False
 
-        # Extract ip
-        ip = (
-            grains.get('fqdn_ip4', [None])[0]
-            or grains.get('ipv4', [None])[0]
-        )
+        # Extract ip (fqdn_ip4/ipv4 kan vara tomma listor — IndexError-säkert)
+        fqdn_ip4 = grains.get('fqdn_ip4') or []
+        ipv4 = grains.get('ipv4') or []
+        ip = (fqdn_ip4[0] if fqdn_ip4 else None) or (ipv4[0] if ipv4 else None)
         if not ip and grains.get('ip4_interfaces'):
             for iface, addrs in grains['ip4_interfaces'].items():
                 if iface != 'lo' and addrs:
@@ -268,7 +298,7 @@ class SaltMinion(models.Model):
     def action_sync_all_minions(self):
         """List all minions via Salt API and create/update records."""
         try:
-            result = self._call_salt_api('runner', None, 'minions.list')
+            result = self._call_salt_api('runner', None, 'manage.status')
         except Exception as e:
             _logger.warning('Minion list failed: %s', e)
             return {'error': str(e)}

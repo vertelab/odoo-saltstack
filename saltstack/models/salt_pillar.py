@@ -218,6 +218,35 @@ class SaltPillar(models.Model):
 
     # ── Salt Master Sync ────────────────────────────────────────────────────
 
+    def _salt_login(self, timeout=15):
+        """Exchange sharedsecret API key for a session token via /login."""
+        import json as _json
+        import ssl as _ssl
+        import urllib.request as _urllib
+        params = self.env['ir.config_parameter']
+        api_url = params.get_param('saltstack.api_url', '')
+        api_key = params.get_param('saltstack.api_token', '')
+        payload = {
+            'username': 'saltapi',
+            'password': api_key,
+            'eauth': 'sharedsecret',
+        }
+        data = _json.dumps(payload).encode()
+        req = _urllib.Request(
+            f'{api_url.rstrip("/")}/login',
+            data=data,
+            headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+        )
+        ctx = _ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = _ssl.CERT_NONE
+        with _urllib.urlopen(req, timeout=timeout, context=ctx) as resp:
+            result = _json.loads(resp.read().decode())
+        try:
+            return result['return'][0]['token']
+        except (KeyError, IndexError, TypeError):
+            raise ValueError('Salt login misslyckades: %s' % result)
+
     def _call_salt_api(self, client, tgt, fun, *args, timeout=120, **kwargs):
         """Call the Salt REST API. Returns dict or raises."""
         import json as _json
@@ -229,14 +258,16 @@ class SaltPillar(models.Model):
         api_token = params.get_param('saltstack.api_token', '')
         if not api_url:
             raise ValueError('Salt API URL not configured')
+        if params.get_param('saltstack.auth_method', 'token') == 'sharedsecret':
+            api_token = self._salt_login()
 
-        payload = {
-            'client': client,
-            'tgt': tgt,
-            'fun': fun,
-            'arg': list(args),
-            'kwarg': kwargs,
-        }
+        payload = {'client': client, 'fun': fun}
+        if client in ('local', 'local_async', 'local_batch'):
+            payload['tgt'] = tgt
+        if args:
+            payload['arg'] = list(args)
+        if kwargs:
+            payload['kwarg'] = kwargs
         data = _json.dumps(payload).encode()
         req = _urllib.Request(
             f'{api_url.rstrip("/")}/',
