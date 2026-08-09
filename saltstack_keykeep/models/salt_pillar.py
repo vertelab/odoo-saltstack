@@ -64,7 +64,11 @@ class SaltPillar(models.Model):
         - hittar/skapar keykeep.subscription baserat på pillar-namespace
         - skapar/uppdaterar keykeep.credential med det krypterade originalvärdet
         - länkar pillar-posten till subscription
+
+        Körs med sudo() — knappen ska fungera även för användare som bara har
+        läsrätt på salt.pillar (interna användare har read-only).
         """
+        self = self.sudo()
         records = self.filtered(lambda r: r.data_type == 'secret')
         if not records:
             return self._keykeep_notify(0, _('Inga hemligheter att synka'))
