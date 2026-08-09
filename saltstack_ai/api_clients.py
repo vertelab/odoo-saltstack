@@ -31,8 +31,41 @@ class SaltAPI:
         self.api_url = params.get_param('saltstack.api_url', 'http://localhost:8377')
         self.auth_method = params.get_param('saltstack.auth_method', 'token')
 
+    def _login(self, timeout=15):
+        """Exchange sharedsecret API key for a session token via /login.
+
+        Salt API-nyckeln (saltstack.api_token med auth_method='sharedsecret')
+        är INTE en sessionstoken — den måste bytas mot en token via POST /login.
+        """
+        api_key = self.env['ir.config_parameter'].get_param(
+            'saltstack.api_token', '')
+        payload = {
+            'username': 'saltapi',
+            'password': api_key,
+            'eauth': 'sharedsecret',
+        }
+        data = json.dumps(payload).encode()
+        req = urllib.request.Request(
+            f'{self.api_url.rstrip("/")}/login',
+            data=data,
+            headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+        )
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+
+        with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
+            result = json.loads(resp.read().decode())
+        try:
+            return result['return'][0]['token']
+        except (KeyError, IndexError, TypeError):
+            _logger.error('Salt login failed: %s', result)
+            raise
+
     def _get_token(self):
         """Resolve API token from config or keykeep."""
+        if self.auth_method == 'sharedsecret':
+            return self._login()
         if self.auth_method == 'keykeep':
             if 'keykeep.credential' in self.env:
                 cred = self.env['keykeep.credential'].search([
@@ -66,6 +99,8 @@ class SaltAPI:
         }
 
         data = json.dumps(payload).encode()
+        # OBS: POST ska till ROOT (/), inte /run — /run ger 401 även med
+        # giltig token i rest_cherrypy (verifierat 2026-08-09).
         req = urllib.request.Request(
             f'{self.api_url.rstrip("/")}/run',
             data=data,
