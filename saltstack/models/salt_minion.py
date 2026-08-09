@@ -174,13 +174,16 @@ class SaltMinion(models.Model):
         token = params.get_param('saltstack.api_token', '')
         return url, token
 
-    def _salt_login(self, timeout=15):
+    def _salt_login(self, api_key=None, timeout=15):
         """Exchange sharedsecret API key for a session token via /login.
 
-        API-nyckeln (saltstack.api_token med auth_method='sharedsecret')
-        är INTE en sessionstoken — den måste bytas via POST /login.
+        API-nyckeln (saltstack.api_token med auth_method='sharedsecret',
+        eller värdet i keykeep.credential purpose='saltstack_api') är INTE en
+        sessionstoken — den måste bytas via POST /login.
         """
-        api_url, api_key = self._get_salt_api_config()
+        api_url = self._get_salt_api_config()[0]
+        if api_key is None:
+            api_key = self._get_salt_api_config()[1]
         payload = {
             'username': 'saltapi',
             'password': api_key,
@@ -207,8 +210,15 @@ class SaltMinion(models.Model):
         api_url, api_token = self._get_salt_api_config()
         if not api_url:
             raise ValueError('Salt API URL not configured')
-        if self.env['ir.config_parameter'].get_param(
-                'saltstack.auth_method', 'token') == 'sharedsecret':
+        auth_method = self.env['ir.config_parameter'].get_param(
+            'saltstack.auth_method', 'token')
+        if auth_method == 'keykeep' and 'keykeep.credential' in self.env:
+            cred = self.env['keykeep.credential'].search([
+                ('purpose', '=', 'saltstack_api'),
+            ], limit=1)
+            if cred and cred._get_decrypted_value():
+                api_token = self._salt_login(cred._get_decrypted_value())
+        elif auth_method == 'sharedsecret':
             api_token = self._salt_login()
 
         payload = {'client': client, 'fun': fun, 'timeout': timeout}

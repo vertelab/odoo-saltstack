@@ -55,15 +55,17 @@ class SaltstackAiConfig(models.Model):
         with urllib.request.urlopen(req, timeout=timeout + 30, context=ctx) as resp:
             return json.dumps(json.loads(resp.read().decode()), indent=2, default=str)
 
-    def _salt_login(self, timeout=15):
+    def _salt_login(self, api_key=None, timeout=15):
         """Exchange sharedsecret API key for a session token via /login.
 
-        Salt API-nyckeln (saltstack.api_token med auth_method='sharedsecret')
-        är INTE en sessionstoken — den måste bytas mot en token via POST /login.
+        Salt API-nyckeln (saltstack.api_token med auth_method='sharedsecret',
+        eller värdet i keykeep.credential purpose='saltstack_api') är INTE en
+        sessionstoken — den måste bytas mot en token via POST /login.
         """
         params = self.env['ir.config_parameter']
         api_url = params.get_param('saltstack.api_url', 'http://localhost:8377')
-        api_key = params.get_param('saltstack.api_token', '')
+        if api_key is None:
+            api_key = params.get_param('saltstack.api_token', '')
         payload = {
             'username': 'saltapi',
             'password': api_key,
@@ -96,8 +98,8 @@ class SaltstackAiConfig(models.Model):
             cred = self.env['keykeep.credential'].search([
                 ('purpose', '=', 'saltstack_api'),
             ], limit=1)
-            if cred:
-                return cred._get_decrypted_value()
+            if cred and cred._get_decrypted_value():
+                return self._salt_login(cred._get_decrypted_value())
         return params.get_param('saltstack.api_token', '')
 
     # ── Zabbix API ──────────────────────────────────────────────────────

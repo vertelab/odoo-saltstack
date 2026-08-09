@@ -31,14 +31,16 @@ class SaltAPI:
         self.api_url = params.get_param('saltstack.api_url', 'http://localhost:8377')
         self.auth_method = params.get_param('saltstack.auth_method', 'token')
 
-    def _login(self, timeout=15):
+    def _login(self, api_key=None, timeout=15):
         """Exchange sharedsecret API key for a session token via /login.
 
-        Salt API-nyckeln (saltstack.api_token med auth_method='sharedsecret')
-        är INTE en sessionstoken — den måste bytas mot en token via POST /login.
+        Salt API-nyckeln (saltstack.api_token med auth_method='sharedsecret',
+        eller värdet i keykeep.credential purpose='saltstack_api') är INTE en
+        sessionstoken — den måste bytas mot en token via POST /login.
         """
-        api_key = self.env['ir.config_parameter'].get_param(
-            'saltstack.api_token', '')
+        if api_key is None:
+            api_key = self.env['ir.config_parameter'].get_param(
+                'saltstack.api_token', '')
         payload = {
             'username': 'saltapi',
             'password': api_key,
@@ -71,8 +73,8 @@ class SaltAPI:
                 cred = self.env['keykeep.credential'].search([
                     ('purpose', '=', 'saltstack_api'),
                 ], limit=1)
-                if cred:
-                    return cred._get_decrypted_value()
+                if cred and cred._get_decrypted_value():
+                    return self._login(cred._get_decrypted_value())
         return self.env['ir.config_parameter'].get_param(
             'saltstack.api_token', '')
 

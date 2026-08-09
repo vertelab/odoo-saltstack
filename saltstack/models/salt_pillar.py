@@ -218,14 +218,15 @@ class SaltPillar(models.Model):
 
     # ── Salt Master Sync ────────────────────────────────────────────────────
 
-    def _salt_login(self, timeout=15):
+    def _salt_login(self, api_key=None, timeout=15):
         """Exchange sharedsecret API key for a session token via /login."""
         import json as _json
         import ssl as _ssl
         import urllib.request as _urllib
         params = self.env['ir.config_parameter']
         api_url = params.get_param('saltstack.api_url', '')
-        api_key = params.get_param('saltstack.api_token', '')
+        if api_key is None:
+            api_key = params.get_param('saltstack.api_token', '')
         payload = {
             'username': 'saltapi',
             'password': api_key,
@@ -258,7 +259,14 @@ class SaltPillar(models.Model):
         api_token = params.get_param('saltstack.api_token', '')
         if not api_url:
             raise ValueError('Salt API URL not configured')
-        if params.get_param('saltstack.auth_method', 'token') == 'sharedsecret':
+        auth_method = params.get_param('saltstack.auth_method', 'token')
+        if auth_method == 'keykeep' and 'keykeep.credential' in self.env:
+            cred = self.env['keykeep.credential'].search([
+                ('purpose', '=', 'saltstack_api'),
+            ], limit=1)
+            if cred and cred._get_decrypted_value():
+                api_token = self._salt_login(cred._get_decrypted_value())
+        elif auth_method == 'sharedsecret':
             api_token = self._salt_login()
 
         payload = {'client': client, 'fun': fun, 'timeout': timeout}
