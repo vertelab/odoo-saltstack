@@ -9,12 +9,25 @@ It contains **zero** infrastructure-specific knowledge — safe to open-source.
 
 ## Features
 
-- **SaltAPI** — REST client for SaltStack API (port 8377)
+- **SaltAPI** — REST client for SaltStack API (port 8377, POST `/run`)
 - **ZabbixAPI** — JSON-RPC client for Zabbix API
 - **Settings** — Configurable API URLs, tokens, and auth methods
 - **26 Tools** — 18 SaltStack + 8 Zabbix tools for AI agents
 - **6 Skills** — Educational SaltStack and Zabbix knowledge
+- **Access Control** — all tools bound to the `Infrastructure Operator` group (`group_infra_operator`)
+- **Capabilities** — salt/zabbix tool serialization units via `ai.tool.capability`
 - **Extensible** — Bridge modules add infrastructure-specific tools
+
+## Access Control
+
+All salt/zabbix tools are bound to the **Infrastructure Operator** group
+(`saltstack_ai.group_infra_operator`). Users without this group cannot see
+or use the tools — even read-only tools (pillar/grains contain secrets).
+
+Tools are also organized into `ai.tool.capability` records (`cap_salt_ops`,
+`cap_zabbix_ops`) that define how the AI serializes tool usage. Access
+filtering happens **before** serialization, so unauthorized members are
+hidden both as tools and as operations.
 
 ## Installation
 

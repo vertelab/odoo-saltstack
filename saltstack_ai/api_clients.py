@@ -67,7 +67,7 @@ class SaltAPI:
 
         data = json.dumps(payload).encode()
         req = urllib.request.Request(
-            f'{self.api_url.rstrip("/")}/',
+            f'{self.api_url.rstrip("/")}/run',
             data=data,
             headers={
                 'Content-Type': 'application/json',

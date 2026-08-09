@@ -38,7 +38,7 @@ class SaltstackAiConfig(models.Model):
 
         data = json.dumps(payload).encode()
         req = urllib.request.Request(
-            f'{api_url.rstrip("/")}/',
+            f'{api_url.rstrip("/")}/run',
             data=data,
             headers={
                 'Content-Type': 'application/json',
