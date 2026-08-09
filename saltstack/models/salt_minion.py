@@ -251,18 +251,11 @@ class SaltMinion(models.Model):
             _logger.warning('Ping failed for %s: %s', self.name, e)
             return {'success': False, 'minion': self.name, 'error': str(e)}
 
-    def action_sync_from_grains(self):
-        """Fetch grains from Salt API and populate this record."""
+    def _apply_grains(self, grains):
+        """Write grains data onto this record (no API call)."""
         self.ensure_one()
-        try:
-            result = self._call_salt_api('local', self.name, 'grains.items')
-        except Exception as e:
-            _logger.warning('Grains sync failed for %s: %s', self.name, e)
-            return False
-
-        grains = result.get('return', [{}])[0].get(self.name, {})
         if not grains or not isinstance(grains, dict):
-            _logger.warning('No grains returned for %s (got %r)', self.name, grains)
+            _logger.warning('Inga grains för %s (got %r)', self.name, grains)
             return False
 
         # Extract ip (fqdn_ip4/ipv4 kan vara tomma listor — IndexError-säkert)
@@ -295,8 +288,25 @@ class SaltMinion(models.Model):
         self._set_default_image()
         return True
 
+    def action_sync_from_grains(self):
+        """Fetch grains from Salt API and populate this record."""
+        self.ensure_one()
+        try:
+            result = self._call_salt_api('local', self.name, 'grains.items')
+        except Exception as e:
+            _logger.warning('Grains sync failed for %s: %s', self.name, e)
+            return False
+        grains = result.get('return', [{}])[0].get(self.name, {})
+        return self._apply_grains(grains)
+
     def action_sync_all_minions(self):
-        """List all minions via Salt API and create/update records."""
+        """List all minions via Salt API and create/update records.
+
+        Optimerad (2026-08-09): hämtar grains för ALLA minioner i ETT anrop
+        (tgt='*') istället för ett anrop per minion. Tidigare kunde synken ta
+        många minuter — varje nere minion väntade ut 120 s timeout sekventiellt.
+        Nu tar hela synken max ~45 s oavsett antal nere minioner.
+        """
         try:
             result = self._call_salt_api('runner', None, 'manage.status')
         except Exception as e:
@@ -308,20 +318,29 @@ class SaltMinion(models.Model):
         for state in ('up', 'down', 'unaccepted'):
             all_minions.extend(returned.get(state, []))
 
+        # Bulk-grains: ett anrop mot alla minioner → {minion_id: grains}
+        bulk_grains = {}
+        try:
+            bulk_result = self._call_salt_api('local', '*', 'grains.items', timeout=45)
+            bulk_grains = bulk_result.get('return', [{}])[0] or {}
+        except Exception as e:
+            _logger.warning('Bulk grains hämtning misslyckades: %s', e)
+
         created = 0
         updated = 0
         deactivated = 0
         for minion_id in all_minions:
+            grains = bulk_grains.get(minion_id, {})
             existing = self.search([('name', '=', minion_id)], limit=1)
             if existing:
                 if not existing.active:
                     existing.active = True
                     updated += 1
-                existing.action_sync_from_grains()
+                existing._apply_grains(grains)
                 updated += 1
             else:
                 rec = self.create({'name': minion_id})
-                rec.action_sync_from_grains()
+                rec._apply_grains(grains)
                 created += 1
 
         # Deactivate minions no longer present on the Salt master
