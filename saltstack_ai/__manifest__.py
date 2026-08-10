@@ -2,7 +2,7 @@
 
 {
     'name': 'SaltStack AI Bridge',
-    'version': '18.0.1.9.0',
+    'version': '18.0.1.9.1',
     'category': 'Infrastructure',
     'summary': 'AI-powered SaltStack, Zabbix och Wazuh integration',
     'description': """
