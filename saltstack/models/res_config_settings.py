@@ -91,6 +91,7 @@ class ResConfigSettings(models.TransientModel):
 
     def get_values(self):
         res = super().get_values()
+        self._ensure_webhook_config()
         coworker_id = self.env['ir.config_parameter'].get_param(
             'saltstack.alert.coworker_id', False)
         if coworker_id and 'ai.coworker' in self.env:
@@ -174,6 +175,24 @@ class ResConfigSettings(models.TransientModel):
                 'sticky': False,
             },
         }
+
+    def _ensure_webhook_config(self):
+        """Ensure webhook URL + API key exist (idempotent).
+
+        The post_init_hook only runs at first install — on upgrade of an
+        existing system these values would be missing. Called from
+        get_values() so they are created the first time Settings opens.
+        """
+        import secrets
+        params = self.env['ir.config_parameter']
+        if not params.get_param('saltstack.alert.webhook_token'):
+            params.set_param('saltstack.alert.webhook_token',
+                             secrets.token_urlsafe(32))
+        if not params.get_param('saltstack.alert.webhook_url'):
+            base = params.get_param('web.base.url', 'http://localhost:8069')
+            params.set_param(
+                'saltstack.alert.webhook_url',
+                '%s/saltstack/alert' % base.rstrip('/'))
 
     def action_test_salt(self):
         """Test Salt API connection. Returns a popup notification."""
