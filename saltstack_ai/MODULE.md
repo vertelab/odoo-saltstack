@@ -9,7 +9,7 @@ It contains **zero** infrastructure-specific knowledge — safe to open-source.
 
 ## Features
 
-- **SaltAPI** — REST client for SaltStack API (port 8377, POST `/run`)
+- **SaltAPI** — REST client for SaltStack API (port 8377, POST till ROOT `/` — `/run` ger 401)
 - **ZabbixAPI** — JSON-RPC client for Zabbix API
 - **Settings** — Configurable API URLs, tokens, and auth methods
 - **26 Tools** — 18 SaltStack + 8 Zabbix tools for AI agents
