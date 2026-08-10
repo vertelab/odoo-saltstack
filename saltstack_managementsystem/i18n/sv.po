@@ -1,3 +1,4 @@
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 18.0\n"
@@ -13,5 +14,11 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #. module: saltstack_managementsystem
-msgid "Document an infrastructure deviation as a nonconformity in the management system. Use for deviations that need to be handled according to ISO processes — root cause analysis, corrective actions."
-msgstr "Dokumentera en infrastrukturavvikelse som en nonconformity i ledningssystemet. Används för avvikelser som behöver hanteras enligt ISO-processer — root cause analysis, corrective actions."
+msgid ""
+"Document an infrastructure deviation as a nonconformity in the management "
+"system. Use for deviations that need to be handled according to ISO "
+"processes — root cause analysis, corrective actions."
+msgstr ""
+"Dokumentera en infrastrukturavvikelse som en nonconformity i "
+"ledningssystemet. Används för avvikelser som behöver hanteras enligt ISO-"
+"processer — root cause analysis, corrective actions."

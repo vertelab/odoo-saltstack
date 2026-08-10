@@ -13,10 +13,14 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#. module: saltstack_maintenance
-msgid ""
-"Flag a machine for maintenance. Use after incidents where follow-up is "
-"needed — e.g. disk replacement, memory check, or planned service."
-msgstr ""
-"Flagga en maskin för underhåll. Används efter incidenter där uppföljning "
-"behövs — t.ex. diskbyte, minneskontroll, eller planerad service."
+#. module: saltstack_keykeep
+msgid "No secrets to sync"
+msgstr "Inga hemligheter att synka"
+
+#. module: saltstack_keykeep
+msgid "Failed to fetch pillar.raw: %s"
+msgstr "Misslyckades att hämta pillar.raw: %s"
+
+#. module: saltstack_keykeep
+msgid "%d without original value (missing in pillar.raw)"
+msgstr "%d utan originalvärde (saknas i pillar.raw)"

@@ -1,45 +1,323 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* saltstack_shuffle
+#
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 18.0\n"
+"Project-Id-Version: Odoo Server 18.0-20260810\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-10 12:00+0000\n"
-"PO-Revision-Date: 2026-08-10 12:00+0000\n"
-"Last-Translator: Vertel Sverige AB <info@vertel.se>\n"
-"Language-Team: Swedish\n"
-"Language: sv\n"
+"POT-Creation-Date: 2026-08-10 12:47+0000\n"
+"PO-Revision-Date: 2026-08-10 12:47+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
 
 #. module: saltstack_shuffle
-msgid "Source"
-msgstr "Källa"
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_app__api_key
+msgid "API-nyckel"
+msgstr ""
 
 #. module: saltstack_shuffle
-msgid "Last execution"
-msgstr "Senaste körning"
+#: model_terms:ir.ui.view,arch_db:saltstack_shuffle.view_saltstack_shuffle_settings
+msgid "API-nyckel (Bearer token) som Shuffle skickar med webhook-anropen."
+msgstr ""
 
 #. module: saltstack_shuffle
-msgid "Execution count"
-msgstr "Antal körningar"
+#: model:ir.model.fields,help:saltstack_shuffle.field_res_config_settings__shuffle_odoo_api_key
+msgid ""
+"API-nyckel (Bearer token) som Shuffle skickar tillsammans med webhook-"
+"anropen. Samma som Driftlarm-webhookens token."
+msgstr ""
 
 #. module: saltstack_shuffle
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_app__active
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_webhook__active
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_workflow__active
+#: model:ir.model.fields.selection,name:saltstack_shuffle.selection__shuffle_workflow__status__active
+msgid "Active"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.actions.act_window,name:saltstack_shuffle.action_shuffle_app
+#: model:ir.ui.menu,name:saltstack_shuffle.menu_shuffle_app
+msgid "Appar"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_res_config_settings__shuffle_sync_enabled
+#: model_terms:ir.ui.view,arch_db:saltstack_shuffle.view_saltstack_shuffle_settings
+msgid "Auto-synca workflow-status"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model_terms:ir.ui.view,arch_db:saltstack_shuffle.view_saltstack_shuffle_settings
 msgid "Base URL for the Shuffle API. e.g. https://siem.vertel.se"
 msgstr "Bas-URL för Shuffle API. t.ex. https://siem.vertel.se"
 
 #. module: saltstack_shuffle
-msgid "Webhook URL that Shuffle calls to send drift alerts to Odoo."
-msgstr "Webhook-URL som Shuffle anropar för att skicka driftlarm till Odoo."
+#: model:ir.model,name:saltstack_shuffle.model_res_config_settings
+msgid "Config Settings"
+msgstr "Inställningar"
 
 #. module: saltstack_shuffle
-msgid "Webhook URL that Shuffle calls to send drift alerts to Odoo (e.g. http://luke18:8069/saltstack/alert)."
-msgstr "Webhook-URL som Shuffle anropar för att skicka driftlarm till Odoo (t.ex. http://luke18:8069/saltstack/alert)."
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_app__create_uid
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_webhook__create_uid
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_workflow__create_uid
+msgid "Created by"
+msgstr ""
 
 #. module: saltstack_shuffle
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_app__create_date
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_webhook__create_date
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_workflow__create_date
+msgid "Created on"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_webhook__destination
+msgid "Destination"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_app__display_name
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_webhook__display_name
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_workflow__display_name
+msgid "Display Name"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,help:saltstack_shuffle.field_shuffle_app__api_key
+msgid "Encrypted at rest. For apps like abuseipdb, virustotal etc."
+msgstr "Krypteras vid lagring. För appar som abuseipdb, virustotal etc."
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields.selection,name:saltstack_shuffle.selection__shuffle_workflow__status__error
+msgid "Error"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_workflow__execution_count
+msgid "Execution count"
+msgstr "Antal körningar"
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_app__id
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_webhook__id
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_workflow__id
+msgid "ID"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields.selection,name:saltstack_shuffle.selection__shuffle_workflow__status__inactive
+msgid "Inactive"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_app__config_json
+#: model_terms:ir.ui.view,arch_db:saltstack_shuffle.view_shuffle_app_form
+msgid "Konfig (JSON)"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_app__write_uid
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_webhook__write_uid
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_workflow__write_uid
+msgid "Last Updated by"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_app__write_date
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_webhook__write_date
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_workflow__write_date
+msgid "Last Updated on"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_workflow__last_execution
+msgid "Last execution"
+msgstr "Senaste körning"
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_app__name
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_webhook__name
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_workflow__name
+msgid "Name"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields.selection,name:saltstack_shuffle.selection__shuffle_webhook__destination__odoo
+msgid "Odoo"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_res_config_settings__shuffle_odoo_api_key
+#: model_terms:ir.ui.view,arch_db:saltstack_shuffle.view_saltstack_shuffle_settings
+msgid "Odoo API-nyckel"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_res_config_settings__shuffle_odoo_webhook_url
+#: model_terms:ir.ui.view,arch_db:saltstack_shuffle.view_saltstack_shuffle_settings
+msgid "Odoo Webhook URL"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_workflow__playbook
+msgid "Playbook"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields.selection,name:saltstack_shuffle.selection__shuffle_webhook__destination__shuffle
+msgid "Shuffle"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_res_config_settings__shuffle_api_token
+#: model_terms:ir.ui.view,arch_db:saltstack_shuffle.view_saltstack_shuffle_settings
+msgid "Shuffle API Token"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_res_config_settings__shuffle_api_url
+#: model_terms:ir.ui.view,arch_db:saltstack_shuffle.view_saltstack_shuffle_settings
+msgid "Shuffle API URL"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,help:saltstack_shuffle.field_res_config_settings__shuffle_api_url
+msgid "Shuffle API base URL"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,help:saltstack_shuffle.field_res_config_settings__shuffle_api_token
+msgid "Shuffle API-token"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model,name:saltstack_shuffle.model_shuffle_app
+msgid "Shuffle App"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_app__app_id
+msgid "Shuffle App ID"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.ui.menu,name:saltstack_shuffle.menu_shuffle_root
+#: model_terms:ir.ui.view,arch_db:saltstack_shuffle.view_saltstack_shuffle_settings
+msgid "Shuffle SOAR"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model,name:saltstack_shuffle.model_shuffle_webhook
+msgid "Shuffle Webhook"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model,name:saltstack_shuffle.model_shuffle_workflow
+msgid "Shuffle Workflow"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_workflow__workflow_id
+msgid "Shuffle Workflow ID"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_webhook__source
+msgid "Source"
+msgstr "Källa"
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_workflow__status
+msgid "Status"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,help:saltstack_shuffle.field_res_config_settings__shuffle_sync_enabled
 msgid "Sync workflow status automatically from Shuffle"
 msgstr "Synca workflow-status automatiskt från Shuffle"
 
 #. module: saltstack_shuffle
-msgid "Encrypted at rest. For apps like abuseipdb, virustotal etc."
-msgstr "Krypteras vid lagring. För appar som abuseipdb, virustotal etc."
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_webhook__url
+msgid "Url"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields.selection,name:saltstack_shuffle.selection__shuffle_webhook__source__wazuh
+msgid "Wazuh"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,help:saltstack_shuffle.field_res_config_settings__shuffle_odoo_webhook_url
+msgid ""
+"Webhook URL that Shuffle calls to send drift alerts to Odoo (t.ex. "
+"http://luke18:8069/saltstack/alert)"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model_terms:ir.ui.view,arch_db:saltstack_shuffle.view_saltstack_shuffle_settings
+msgid "Webhook URL that Shuffle calls to send drift alerts to Odoo."
+msgstr "Webhook-URL som Shuffle anropar för att skicka driftlarm till Odoo."
+
+#. module: saltstack_shuffle
+#: model:ir.actions.act_window,name:saltstack_shuffle.action_shuffle_webhook
+#: model:ir.ui.menu,name:saltstack_shuffle.menu_shuffle_webhook
+msgid "Webhooks"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields,field_description:saltstack_shuffle.field_shuffle_workflow__json_definition
+#: model_terms:ir.ui.view,arch_db:saltstack_shuffle.view_shuffle_workflow_form
+msgid "Workflow-JSON (read-only)"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.actions.act_window,name:saltstack_shuffle.action_shuffle_workflow
+#: model:ir.ui.menu,name:saltstack_shuffle.menu_shuffle_workflow
+msgid "Workflows"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields.selection,name:saltstack_shuffle.selection__shuffle_webhook__source__zabbix
+msgid "Zabbix"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model_terms:ir.ui.view,arch_db:saltstack_shuffle.view_saltstack_shuffle_settings
+msgid "https://ledningssystem.vertel.se/saltstack/alert"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model_terms:ir.ui.view,arch_db:saltstack_shuffle.view_saltstack_shuffle_settings
+msgid "https://siem.vertel.se"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields.selection,name:saltstack_shuffle.selection__shuffle_workflow__playbook__pb1_brute_force
+msgid "pb1_brute_force"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields.selection,name:saltstack_shuffle.selection__shuffle_workflow__playbook__pb2_rootkit
+msgid "pb2_rootkit"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields.selection,name:saltstack_shuffle.selection__shuffle_workflow__playbook__pb3_drift
+msgid "pb3_drift"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields.selection,name:saltstack_shuffle.selection__shuffle_workflow__playbook__pb4_cve
+msgid "pb4_cve"
+msgstr ""
+
+#. module: saltstack_shuffle
+#: model:ir.model.fields.selection,name:saltstack_shuffle.selection__shuffle_workflow__playbook__pb5_compliance
+msgid "pb5_compliance"
+msgstr ""
