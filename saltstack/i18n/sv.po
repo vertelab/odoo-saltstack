@@ -1,7 +1,3 @@
-# Translation of Odoo Server.
-# Copyright (C) 2026 Vertel Sverige AB (<https://vertel.se>)
-# This file is distributed under the same license as the Odoo package.
-#
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 18.0\n"
@@ -16,239 +12,310 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-# ── saltstack.alert ────────────────────────────────────────────────
+#. module: saltstack
 msgid "Alert"
 msgstr "Larm"
 
+#. module: saltstack
 msgid "Source"
 msgstr "Källa"
 
+#. module: saltstack
 msgid "Source system (Wazuh, Zabbix...). Extended by bridge modules via selection_add."
 msgstr "Källsystem (Wazuh, Zabbix...). Utökas av bryggmoduler via selection_add."
 
+#. module: saltstack
 msgid "Category"
 msgstr "Kategori"
 
+#. module: saltstack
 msgid "Other"
 msgstr "Övrigt"
 
+#. module: saltstack
 msgid "Severity"
 msgstr "Allvarlighetsgrad"
 
+#. module: saltstack
 msgid "Description"
 msgstr "Beskrivning"
 
+#. module: saltstack
 msgid "Raw log"
 msgstr "Rå logg"
 
+#. module: saltstack
 msgid "Timestamp"
 msgstr "Larmtid"
 
+#. module: saltstack
 msgid "Correlated with Zabbix"
 msgstr "Korrelerat med Zabbix"
 
+#. module: saltstack
 msgid "Coworker session"
 msgstr "Coworker-session"
 
+#. module: saltstack
 msgid "Diagnosis result"
 msgstr "Diagnosresultat"
 
+#. module: saltstack
 msgid "Pending"
 msgstr "Väntar"
 
+#. module: saltstack
 msgid "Running"
 msgstr "Pågår"
 
+#. module: saltstack
 msgid "Done"
 msgstr "Klar"
 
+#. module: saltstack
 msgid "AI unavailable"
 msgstr "AI otillgänglig"
 
+#. module: saltstack
 msgid "Error"
 msgstr "Fel"
 
+#. module: saltstack
 msgid "Diagnosis status"
 msgstr "Diagnosstatus"
 
+#. module: saltstack
 msgid "Resolved"
 msgstr "Löst"
 
+#. module: saltstack
 msgid "Active"
 msgstr "Aktiv"
 
-# ── saltstack.alert views ──────────────────────────────────────────
+#. module: saltstack
 msgid "Run diagnosis"
 msgstr "Kör diagnos"
 
+#. module: saltstack
 msgid "Mark as resolved"
 msgstr "Markera löst"
 
+#. module: saltstack
 msgid "Mark this alert as resolved?"
 msgstr "Markera detta larm som löst?"
 
+#. module: saltstack
 msgid "CRITICAL"
 msgstr "KRITISKT"
 
+#. module: saltstack
 msgid "Alert"
 msgstr "Larm"
 
+#. module: saltstack
 msgid "Correlation & Diagnosis"
 msgstr "Korrelation & Diagnos"
 
+#. module: saltstack
 msgid "Diagnosis result"
 msgstr "Diagnosresultat"
 
+#. module: saltstack
 msgid "Critical (≥12)"
 msgstr "Kritiska (≥12)"
 
+#. module: saltstack
 msgid "Unresolved"
 msgstr "Olösta"
 
+#. module: saltstack
 msgid "Correlated"
 msgstr "Korrelerade"
 
+#. module: saltstack
 msgid "Group By"
 msgstr "Gruppera efter"
 
+#. module: saltstack
 msgid "Source"
 msgstr "Källa"
 
+#. module: saltstack
 msgid "Category"
 msgstr "Kategori"
 
+#. module: saltstack
 msgid "Diagnosis status"
 msgstr "Diagnosstatus"
 
+#. module: saltstack
 msgid "Drift Alerts"
 msgstr "Driftslarm"
 
-# ── res.config.settings ────────────────────────────────────────────
+#. module: saltstack
 msgid "Salt Master"
 msgstr "Salt Master"
 
+#. module: saltstack
 msgid "Address of the Salt master REST API (port 8377). e.g. http://192.168.11.22:8377"
 msgstr "Adress till Salt-masterns REST API (port 8377). t.ex. http://192.168.11.22:8377"
 
+#. module: saltstack
 msgid "Authentication token for the Salt REST API. The token can also be managed via Keykeep."
 msgstr "Autentiseringstoken mot Salt REST API. Token kan även hanteras via Keykeep."
 
+#. module: saltstack
 msgid "token = directly from the setting. keykeep = read from keykeep.credential (requires the saltstack_keykeep module)"
 msgstr "token = direkt från inställningen. keykeep = läses från keykeep.credential (kräver saltstack_keykeep-modulen)"
 
+#. module: saltstack
 msgid "Test the connection"
 msgstr "Testa anslutningen"
 
+#. module: saltstack
 msgid "Test Salt connection"
 msgstr "Testa Salt-anslutning"
 
+#. module: saltstack
 msgid "Pings the Salt master and shows the number of responding minions."
 msgstr "Pingar Salt-mastern och visar antal svarande minions."
 
+#. module: saltstack
 msgid "Automatic sync"
 msgstr "Automatisk synk"
 
+#. module: saltstack
 msgid "How often minions and pillars are synced automatically from the Salt Master."
 msgstr "Hur ofta minions och pillars synkas automatiskt från Salt Master."
 
+#. module: saltstack
 msgid "Sync every"
 msgstr "Synka var"
 
+#. module: saltstack
 msgid "hours"
 msgstr "timmar"
 
+#. module: saltstack
 msgid "Driftlarm (webhook)"
 msgstr "Driftlarm (webhook)"
 
+#. module: saltstack
 msgid "Shared webhook for Wazuh, Zabbix and Shuffle drift alerts."
 msgstr "Gemensam webhook för Wazuh, Zabbix och Shuffle-driftlarm."
 
+#. module: saltstack
 msgid "URL that Wazuh/Zabbix/Shuffle call to send drift alerts."
 msgstr "URL som Wazuh/Zabbix/Shuffle anropar för att skicka driftlarm till."
 
+#. module: saltstack
 msgid "Derive from web address"
 msgstr "Härled från webbadress"
 
+#. module: saltstack
 msgid "Fill in the URL from web.base.url (the server's public address)"
 msgstr "Fyll i URL:en från web.base.url (serverns publika adress)"
 
+#. module: saltstack
 msgid "API key"
 msgstr "API-nyckel"
 
+#. module: saltstack
 msgid "API key (Bearer token) sent in the Authorization header. Generated automatically at installation — press the button to create a new one."
 msgstr "API-nyckel (Bearer token) som skickas med Authorization-headern. Genereras automatiskt vid installation — tryck på knappen för att skapa en ny."
 
+#. module: saltstack
 msgid "Generate new key"
 msgstr "Generera ny nyckel"
 
+#. module: saltstack
 msgid "Create a new random API key (Bearer token)"
 msgstr "Skapa en ny slumpmässig API-nyckel (Bearer token)"
 
+#. module: saltstack
 msgid "Webhook enabled"
 msgstr "Webhook aktiverad"
 
+#. module: saltstack
 msgid "Correlation window (s)"
 msgstr "Korrelationsfönster (s)"
 
+#. module: saltstack
 msgid "Time window for Zabbix correlation (±)."
 msgstr "Tidsfönster för Zabbix-korrelation (±)."
 
+#. module: saltstack
 msgid "Auto diagnosis on alert"
 msgstr "Auto-diagnos vid larm"
 
+#. module: saltstack
 msgid "AI Coworker"
 msgstr "AI Medarbetare"
 
+#. module: saltstack
 msgid "AI coworker that performs diagnosis on drift alerts. Default is the Infrastructure Operator (bundled with the module)."
 msgstr "AI Medarbetare som utför diagnos vid driftlarm. Default är Infrastructure Operator (följer med modulen)."
 
-# ── settings fields (model) ────────────────────────────────────────
+#. module: saltstack
 msgid "How to authenticate with the Salt API. \"Shared Secret\" uses the API key via /login. \"Keykeep Managed\" is available when the saltstack_keykeep module is installed."
 msgstr "Hur autentisering mot Salt API ska ske. \"Shared Secret\" använder API-nyckeln via /login. \"Keykeep Managed\" är tillgänglig när saltstack_keykeep-modulen är installerad."
 
+#. module: saltstack
 msgid "Shared Secret (API key)"
 msgstr "Shared Secret (API-nyckel)"
 
+#. module: saltstack
 msgid "Sync interval"
 msgstr "Synk-intervall"
 
+#. module: saltstack
 msgid "How often the minion and pillar sync runs (in hours)."
 msgstr "Hur ofta minion- och pillar-synkningen körs (i timmar)."
 
+#. module: saltstack
 msgid "URL that Wazuh/Zabbix call to send drift alerts (e.g. http://luke18:8069/saltstack/alert)."
 msgstr "URL som Wazuh/Zabbix anropar för att skicka driftlarm (t.ex. http://luke18:8069/saltstack/alert)."
 
+#. module: saltstack
 msgid "API key (Bearer token) that Wazuh/Zabbix send in the Authorization header to the webhook URL."
 msgstr "API-nyckel (Bearer token) som Wazuh/Zabbix skickar i Authorization-headern till webhook-URL:en."
 
+#. module: saltstack
 msgid "Enable/disable reception of drift alerts."
 msgstr "Aktivera/avaktivera mottagning av driftlarm."
 
+#. module: saltstack
 msgid "Time window in seconds for Zabbix correlation (±)."
 msgstr "Tidsfönster i sekunder för Zabbix-korrelation (±)."
 
+#. module: saltstack
 msgid "Start AI diagnosis automatically when an alert arrives."
 msgstr "Starta AI-diagnos automatiskt vid larm."
 
-# ── salt.minion ────────────────────────────────────────────────────
+#. module: saltstack
 msgid "Logo"
 msgstr "Logotyp"
 
+#. module: saltstack
 msgid "Logo for the minion. Filled automatically based on role at sync, but can be updated manually in the form."
 msgstr "Logotyp för minionen. Fylls automatiskt baserat på roll vid synk, men kan uppdateras manuellt i formuläret."
 
+#. module: saltstack
 msgid "Cleanup all fault injections on this minion?"
 msgstr "Rensa alla felinjektioner på denna minion?"
 
-# ── menus / groups ─────────────────────────────────────────────────
+#. module: saltstack
 msgid "Settings"
 msgstr "Inställningar"
 
+#. module: saltstack
 msgid "Saltstack Administrator"
 msgstr "Saltstack-administratör"
 
+#. module: saltstack
 msgid "Saltstack Administrator — also sees Configuration (Settings)."
 msgstr "Saltstack-administratör — ser även Konfiguration (Inställningar)."
 
+#. module: saltstack
 msgid "Inherits officer rights. Everyone in the Settings group (base.group_system)"
 msgstr "Ärver officer-rättigheterna. Alla i Settings-gruppen (base.group_system)"

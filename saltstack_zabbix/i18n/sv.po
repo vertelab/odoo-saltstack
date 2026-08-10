@@ -1,7 +1,3 @@
-# Translation of Odoo Server.
-# Copyright (C) 2026 Vertel Sverige AB (<https://vertel.se>)
-# This file is distributed under the same license as the Odoo package.
-#
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 18.0\n"
@@ -16,10 +12,10 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-# ── settings ───────────────────────────────────────────────────────
+#. module: saltstack_zabbix
 msgid "token = directly from the setting. keykeep = read from keykeep.credential (purpose=zabbix_api)"
 msgstr "token = direkt från inställningen. keykeep = läses från keykeep.credential (purpose=zabbix_api)"
 
-# ── manifest ───────────────────────────────────────────────────────
+#. module: saltstack_zabbix
 msgid "Zabbix connection for SaltStack — settings + test"
 msgstr "Zabbix-anslutning för SaltStack — settings + test"

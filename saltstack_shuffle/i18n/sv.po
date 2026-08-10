@@ -1,7 +1,3 @@
-# Translation of Odoo Server.
-# Copyright (C) 2026 Vertel Sverige AB (<https://vertel.se>)
-# This file is distributed under the same license as the Odoo package.
-#
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 18.0\n"
@@ -16,28 +12,34 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-# ── shuffle.workflow / webhook / app ───────────────────────────────
+#. module: saltstack_shuffle
 msgid "Source"
 msgstr "Källa"
 
+#. module: saltstack_shuffle
 msgid "Last execution"
 msgstr "Senaste körning"
 
+#. module: saltstack_shuffle
 msgid "Execution count"
 msgstr "Antal körningar"
 
-# ── settings ───────────────────────────────────────────────────────
+#. module: saltstack_shuffle
 msgid "Base URL for the Shuffle API. e.g. https://siem.vertel.se"
 msgstr "Bas-URL för Shuffle API. t.ex. https://siem.vertel.se"
 
+#. module: saltstack_shuffle
 msgid "Webhook URL that Shuffle calls to send drift alerts to Odoo."
 msgstr "Webhook-URL som Shuffle anropar för att skicka driftlarm till Odoo."
 
+#. module: saltstack_shuffle
 msgid "Webhook URL that Shuffle calls to send drift alerts to Odoo (e.g. http://luke18:8069/saltstack/alert)."
 msgstr "Webhook-URL som Shuffle anropar för att skicka driftlarm till Odoo (t.ex. http://luke18:8069/saltstack/alert)."
 
+#. module: saltstack_shuffle
 msgid "Sync workflow status automatically from Shuffle"
 msgstr "Synca workflow-status automatiskt från Shuffle"
 
+#. module: saltstack_shuffle
 msgid "Encrypted at rest. For apps like abuseipdb, virustotal etc."
 msgstr "Krypteras vid lagring. För appar som abuseipdb, virustotal etc."
