@@ -83,8 +83,8 @@ class SaltMinion(models.Model):
         string='Logo',
         max_width=256,
         max_height=256,
-        help='Logotyp för minionen. Fylls automatiskt baserat på roll vid '
-             'synk, men kan uppdateras manuellt i formuläret.',
+        help='Logo for the minion. Filled automatically based on role at '
+             'sync, but can be updated manually in the form.',
     )
     is_demo = fields.Boolean(
         string='Demo / Test',
@@ -140,7 +140,7 @@ class SaltMinion(models.Model):
         }
         for rec in self:
             if rec.image:
-                continue  # behåll manuellt uppsatt bild
+                continue  # keep manually set image
             roles = [r.strip().lower() for r in (rec.roles or '').split(',') if r.strip()]
             matched = next((role_logo[r] for r in roles if r in role_logo), None)
             rec.image = matched or role_logo.get('gateway')
@@ -177,9 +177,9 @@ class SaltMinion(models.Model):
     def _salt_login(self, api_key=None, timeout=15):
         """Exchange sharedsecret API key for a session token via /login.
 
-        API-nyckeln (saltstack.api_token med auth_method='sharedsecret',
-        eller värdet i keykeep.credential purpose='saltstack_api') är INTE en
-        sessionstoken — den måste bytas via POST /login.
+        The API key (saltstack.api_token with auth_method='sharedsecret',
+        or the value in keykeep.credential purpose='saltstack_api') is NOT a
+        session token — it must be exchanged via POST /login.
         """
         api_url = self._get_salt_api_config()[0]
         if api_key is None:
@@ -203,7 +203,7 @@ class SaltMinion(models.Model):
         try:
             return result['return'][0]['token']
         except (KeyError, IndexError, TypeError):
-            raise ValueError('Salt login misslyckades: %s' % result)
+            raise ValueError('Salt login failed: %s' % result)
 
     def _call_salt_api(self, client, tgt, fun, *args, timeout=120, **kwargs):
         """Call the Salt REST API. Returns dict or raises."""
@@ -265,10 +265,10 @@ class SaltMinion(models.Model):
         """Write grains data onto this record (no API call)."""
         self.ensure_one()
         if not grains or not isinstance(grains, dict):
-            _logger.warning('Inga grains för %s (got %r)', self.name, grains)
+            _logger.warning('No grains for %s (got %r)', self.name, grains)
             return False
 
-        # Extract ip (fqdn_ip4/ipv4 kan vara tomma listor — IndexError-säkert)
+        # Extract ip (fqdn_ip4/ipv4 can be empty lists — IndexError-safe)
         fqdn_ip4 = grains.get('fqdn_ip4') or []
         ipv4 = grains.get('ipv4') or []
         ip = (fqdn_ip4[0] if fqdn_ip4 else None) or (ipv4[0] if ipv4 else None)
@@ -312,10 +312,11 @@ class SaltMinion(models.Model):
     def action_sync_all_minions(self):
         """List all minions via Salt API and create/update records.
 
-        Optimerad (2026-08-09): hämtar grains för ALLA minioner i ETT anrop
-        (tgt='*') istället för ett anrop per minion. Tidigare kunde synken ta
-        många minuter — varje nere minion väntade ut 120 s timeout sekventiellt.
-        Nu tar hela synken max ~45 s oavsett antal nere minioner.
+        Optimized (2026-08-09): fetches grains for ALL minions in ONE call
+        (tgt='*') instead of one call per minion. Previously the sync could
+        take many minutes — each down minion waited out a 120 s timeout
+        sequentially. Now the whole sync takes max ~45 s regardless of the
+        number of down minions.
         """
         try:
             result = self._call_salt_api('runner', None, 'manage.status')
@@ -334,7 +335,7 @@ class SaltMinion(models.Model):
             bulk_result = self._call_salt_api('local', '*', 'grains.items', timeout=45)
             bulk_grains = bulk_result.get('return', [{}])[0] or {}
         except Exception as e:
-            _logger.warning('Bulk grains hämtning misslyckades: %s', e)
+            _logger.warning('Bulk grains fetch failed: %s', e)
 
         created = 0
         updated = 0
@@ -391,8 +392,8 @@ class SaltMinion(models.Model):
             result = self._call_salt_api(
                 'local', self.name, 'cmd.run', 'systemctl stop odoo', timeout=60)
             self.message_post(
-                body=('🛑 <b>Odoo stoppat</b> — felinjektion på %s.<br/>'
-                      'Zabbix bör larma "Odoo HTTP endpoint not responding".'
+                body=('🛑 <b>Odoo stopped</b> — fault injection on %s.<br/>'
+                      'Zabbix should alert "Odoo HTTP endpoint not responding".'
                       % self.name),
                 message_type='notification')
             return {'success': True, 'minion': self.name, 'result': result}
@@ -413,9 +414,9 @@ class SaltMinion(models.Model):
                 'dd if=/dev/zero of=/var/log/odoo/grow.log bs=1M count=2000',
                 timeout=300)
             self.message_post(
-                body=('💾 <b>Disk full-simulering</b> — %s.<br/>'
-                      'Fil: <code>/var/log/odoo/grow.log</code> (2000MB).'
-                      ' Zabbix bör larma "No free space".'
+                body=('💾 <b>Disk full simulation</b> — %s.<br/>'
+                      'File: <code>/var/log/odoo/grow.log</code> (2000MB).'
+                      ' Zabbix should alert "No free space".'
                       % self.name),
                 message_type='notification')
             return {'success': True, 'minion': self.name, 'result': result}
@@ -442,10 +443,10 @@ class SaltMinion(models.Model):
             result = self._call_salt_api(
                 'local', self.name, 'cmd.run', cmd, timeout=60)
             self.message_post(
-                body=('🚨 <b>Wazuh brute-force-simulering</b> — %s.<br/>'
-                      '30 st failed SSH-logins skrivna till '
-                      '<code>/var/log/auth.log</code> från IP 203.0.113.42.'
-                      ' Wazuh-agenten bör detektera och larma.'
+                body=('🚨 <b>Wazuh brute force simulation</b> — %s.<br/>'
+                      '30 failed SSH logins written to '
+                      '<code>/var/log/auth.log</code> from IP 203.0.113.42.'
+                      ' The Wazuh agent should detect and alert.'
                       % self.name),
                 message_type='notification')
             return {'success': True, 'minion': self.name, 'result': result}
@@ -471,7 +472,7 @@ class SaltMinion(models.Model):
         except Exception as e:
             results['odoo_started'] = {'error': str(e)}
         self.message_post(
-            body=('🧹 <b>Felinjektioner rensade</b> på %s.<br/>'
-                  'grow.log borttagen, odoo startad.' % self.name),
+            body=('🧹 <b>Fault injections cleaned up</b> on %s.<br/>'
+                  'grow.log removed, odoo started.' % self.name),
             message_type='notification')
         return {'success': True, 'minion': self.name, 'results': results}

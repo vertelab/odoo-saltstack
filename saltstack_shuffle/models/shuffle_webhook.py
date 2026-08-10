@@ -13,7 +13,7 @@ class ShuffleWebhook(models.Model):
     source = fields.Selection([
         ('wazuh', 'Wazuh'),
         ('zabbix', 'Zabbix'),
-    ], string='Källa')
+    ], string='Source')
     destination = fields.Selection([
         ('shuffle', 'Shuffle'),
         ('odoo', 'Odoo'),

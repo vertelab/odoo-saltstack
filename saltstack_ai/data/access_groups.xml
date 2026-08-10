@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- ═══════════════════════════════════════════════════════════════ -->
-    <!-- ACCESS-GRUPPER (ai-tool-access-capabilities)                     -->
-    <!-- Operatorrollen styr vem som får använda salt/zabbix-verktygen.   -->
-    <!-- Alla verktyg binds till gruppen — även läsverktyg (pillar/grains -->
-    <!-- innehåller hemligheter). Destruktiva verktyg kräver dessutom     -->
-    <!-- alltid HITL via risk_level.                                      -->
+    <!-- ACCESS GROUPS (ai-tool-access-capabilities)                     -->
+    <!-- The operator role controls who may use the salt/zabbix tools.   -->
+    <!-- All tools are bound to the group — including read tools        -->
+    <!-- (pillar/grains contain secrets). Destructive tools also require -->
+    <!-- HITL via risk_level at all times.                               -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
 
     <record id="group_infra_operator" model="res.groups">
         <field name="name">Infrastructure Operator</field>
         <field name="category_id" ref="base.module_category_hidden"/>
         <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
-        <field name="comment">Roll för att använda Infrastructure Operator-coworkern och dess salt/zabbix-verktyg via AI.</field>
+        <field name="comment">Role for using the Infrastructure Operator coworker and its salt/zabbix tools via AI.</field>
     </record>
 
     <!-- SaltStack-verktyg → operatorgruppen -->

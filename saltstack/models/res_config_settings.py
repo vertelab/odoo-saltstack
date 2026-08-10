@@ -25,7 +25,7 @@ class ResConfigSettings(models.TransientModel):
         config_parameter='saltstack.auth_method',
         default='token',
         help='How to authenticate with the Salt API. '
-             '"Shared Secret" använder API-nyckeln via /login. '
+             '"Shared Secret" uses the API key via /login. '
              '"Keykeep Managed" is available when the saltstack_keykeep '
              'module is installed.',
     )
@@ -34,7 +34,7 @@ class ResConfigSettings(models.TransientModel):
         """Return auth method options. Keykeep only when module installed."""
         selection = [
             ('token', 'API Token'),
-            ('sharedsecret', 'Shared Secret (API-nyckel)'),
+            ('sharedsecret', 'Shared Secret (API key)'),
         ]
         if 'keykeep.credential' in self.env:
             selection.append(('keykeep', 'Keykeep Managed'))
@@ -43,50 +43,50 @@ class ResConfigSettings(models.TransientModel):
     # ── Sync scheduling ────────────────────────────────────────────────
 
     sync_interval_number = fields.Integer(
-        string='Synk-intervall',
+        string='Sync interval',
         config_parameter='saltstack.sync_interval_number',
         default=24,
-        help='Hur ofta minion- och pillar-synkningen körs (i timmar).',
+        help='How often the minion and pillar sync runs (in hours).',
     )
 
-    # ── Driftlarm webhook (gemensam) ──────────────────────────────────
+    # ── Driftlarm webhook (shared) ─────────────────────────────────────
 
     alert_webhook_url = fields.Char(
         string='Webhook URL',
         config_parameter='saltstack.alert.webhook_url',
-        help='URL som Wazuh/Zabbix anropar för att skicka driftlarm '
-             '(t.ex. http://luke18:8069/saltstack/alert).',
+        help='URL that Wazuh/Zabbix call to send drift alerts '
+             '(e.g. http://luke18:8069/saltstack/alert).',
     )
     alert_webhook_token = fields.Char(
-        string='API-nyckel',
+        string='API key',
         config_parameter='saltstack.alert.webhook_token',
-        help='API-nyckel (Bearer token) som Wazuh/Zabbix skickar i '
-             'Authorization-headern till webhook-URL:en.',
+        help='API key (Bearer token) that Wazuh/Zabbix send in the '
+             'Authorization header to the webhook URL.',
     )
     alert_webhook_enabled = fields.Boolean(
-        string='Webhook aktiverad',
+        string='Webhook enabled',
         config_parameter='saltstack.alert.webhook_enabled',
         default=True,
-        help='Aktivera/avaktivera mottagning av driftlarm.',
+        help='Enable/disable reception of drift alerts.',
     )
     alert_correlation_window = fields.Integer(
-        string='Korrelationsfönster (s)',
+        string='Correlation window (s)',
         config_parameter='saltstack.alert.correlation_window',
         default=120,
-        help='Tidsfönster i sekunder för Zabbix-korrelation (±).',
+        help='Time window in seconds for Zabbix correlation (±).',
     )
     alert_auto_diagnose = fields.Boolean(
-        string='Auto-diagnos',
+        string='Auto diagnosis',
         config_parameter='saltstack.alert.auto_diagnose',
         default=True,
-        help='Starta AI-diagnos automatiskt vid larm.',
+        help='Start AI diagnosis automatically when an alert arrives.',
     )
     alert_coworker_id = fields.Many2one(
         'ai.coworker',
-        string='AI Medarbetare',
+        string='AI Coworker',
         config_parameter='saltstack.alert.coworker_id',
-        help='AI Medarbetare som utför diagnos vid driftlarm. '
-             'Default är den som följer med modulen (Infrastructure Operator).',
+        help='AI coworker that performs diagnosis on drift alerts. '
+             'Default is the one bundled with the module (Infrastructure Operator).',
     )
 
     def get_values(self):
@@ -149,8 +149,8 @@ class ResConfigSettings(models.TransientModel):
             'tag': 'display_notification',
             'params': {
                 'title': 'Ny API-nyckel genererad',
-                'message': 'Använd den nya nyckeln som Bearer-token för '
-                           'webhook-anropen.',
+                'message': 'Use the new key as the Bearer token for '
+                           'webhook calls.',
                 'type': 'success',
                 'sticky': False,
             },
@@ -183,12 +183,12 @@ class ResConfigSettings(models.TransientModel):
 
         if not url:
             return self._salt_test_result(
-                False, 'Salt API URL är inte konfigurerad.\n'
-                        'Sätt URL:en i Inställningar → Saltstack → Salt Master.')
+                False, 'Salt API URL is not configured.\n'
+                        'Set the URL in Settings → Saltstack → Salt Master.')
 
         try:
-            # Återanvänd den fixade klienten (sharedsecret-login + rätt endpoint).
-            # Pingar SaltStack-mastern (alltid online) istället för en hårdkodad minion.
+            # Reuse the fixed client (sharedsecret login + correct endpoint).
+            # Pings the SaltStack master (always online) instead of a hardcoded minion.
             result = json.loads(self.env['saltstack.ai.config'].salt_call(
                 'local', 'SaltStack', 'test.ping', timeout=10))
 
@@ -200,22 +200,22 @@ class ResConfigSettings(models.TransientModel):
                 if all_ok:
                     return self._salt_test_result(
                         True,
-                        f'Salt API nåbar. Ping OK mot: {names}')
+                        f'Salt API reachable. Ping OK against: {names}')
                 return self._salt_test_result(
                     True,
-                    f'Salt API nåbar. Svar: {str(minions)[:200]}')
+                    f'Salt API reachable. Response: {str(minions)[:200]}')
             return self._salt_test_result(
-                True, 'Salt API nåbar.\nSvar: %s' % str(result)[:200])
+                True, 'Salt API reachable.\nResponse: %s' % str(result)[:200])
 
         except Exception as e:
             return self._salt_test_result(
                 False,
-                f'Kunde inte nå Salt API på {url}.\n'
-                f'Fel: {str(e)}\n\nFelsökning:\n'
-                f'- Kontrollera att URL:en är rätt (t.ex. http://192.168.11.22:8377)\n'
-                f'- Kontrollera att Salt API körs (salt-api.service)\n'
-                f'- Kontrollera token (Salt API external_auth)\n'
-                f'- Kontrollera nätverksåtkomst (port 8377)')
+                f'Could not reach Salt API at {url}.\n'
+                f'Error: {str(e)}\n\nTroubleshooting:\n'
+                f'- Check that the URL is correct (e.g. http://192.168.11.22:8377)\n'
+                f'- Check that the Salt API is running (salt-api.service)\n'
+                f'- Check the token (Salt API external_auth)\n'
+                f'- Check network access (port 8377)')
 
     def _salt_test_result(self, ok, message):
         return {

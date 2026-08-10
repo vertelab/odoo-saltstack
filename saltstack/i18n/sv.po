@@ -1,0 +1,254 @@
+# Translation of Odoo Server.
+# Copyright (C) 2026 Vertel Sverige AB (<https://vertel.se>)
+# This file is distributed under the same license as the Odoo package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-10 12:00+0000\n"
+"PO-Revision-Date: 2026-08-10 12:00+0000\n"
+"Last-Translator: Vertel Sverige AB <info@vertel.se>\n"
+"Language-Team: Swedish\n"
+"Language: sv\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# ── saltstack.alert ────────────────────────────────────────────────
+msgid "Alert"
+msgstr "Larm"
+
+msgid "Source"
+msgstr "Källa"
+
+msgid "Source system (Wazuh, Zabbix...). Extended by bridge modules via selection_add."
+msgstr "Källsystem (Wazuh, Zabbix...). Utökas av bryggmoduler via selection_add."
+
+msgid "Category"
+msgstr "Kategori"
+
+msgid "Other"
+msgstr "Övrigt"
+
+msgid "Severity"
+msgstr "Allvarlighetsgrad"
+
+msgid "Description"
+msgstr "Beskrivning"
+
+msgid "Raw log"
+msgstr "Rå logg"
+
+msgid "Timestamp"
+msgstr "Larmtid"
+
+msgid "Correlated with Zabbix"
+msgstr "Korrelerat med Zabbix"
+
+msgid "Coworker session"
+msgstr "Coworker-session"
+
+msgid "Diagnosis result"
+msgstr "Diagnosresultat"
+
+msgid "Pending"
+msgstr "Väntar"
+
+msgid "Running"
+msgstr "Pågår"
+
+msgid "Done"
+msgstr "Klar"
+
+msgid "AI unavailable"
+msgstr "AI otillgänglig"
+
+msgid "Error"
+msgstr "Fel"
+
+msgid "Diagnosis status"
+msgstr "Diagnosstatus"
+
+msgid "Resolved"
+msgstr "Löst"
+
+msgid "Active"
+msgstr "Aktiv"
+
+# ── saltstack.alert views ──────────────────────────────────────────
+msgid "Run diagnosis"
+msgstr "Kör diagnos"
+
+msgid "Mark as resolved"
+msgstr "Markera löst"
+
+msgid "Mark this alert as resolved?"
+msgstr "Markera detta larm som löst?"
+
+msgid "CRITICAL"
+msgstr "KRITISKT"
+
+msgid "Alert"
+msgstr "Larm"
+
+msgid "Correlation & Diagnosis"
+msgstr "Korrelation & Diagnos"
+
+msgid "Diagnosis result"
+msgstr "Diagnosresultat"
+
+msgid "Critical (≥12)"
+msgstr "Kritiska (≥12)"
+
+msgid "Unresolved"
+msgstr "Olösta"
+
+msgid "Correlated"
+msgstr "Korrelerade"
+
+msgid "Group By"
+msgstr "Gruppera efter"
+
+msgid "Source"
+msgstr "Källa"
+
+msgid "Category"
+msgstr "Kategori"
+
+msgid "Diagnosis status"
+msgstr "Diagnosstatus"
+
+msgid "Drift Alerts"
+msgstr "Driftslarm"
+
+# ── res.config.settings ────────────────────────────────────────────
+msgid "Salt Master"
+msgstr "Salt Master"
+
+msgid "Address of the Salt master REST API (port 8377). e.g. http://192.168.11.22:8377"
+msgstr "Adress till Salt-masterns REST API (port 8377). t.ex. http://192.168.11.22:8377"
+
+msgid "Authentication token for the Salt REST API. The token can also be managed via Keykeep."
+msgstr "Autentiseringstoken mot Salt REST API. Token kan även hanteras via Keykeep."
+
+msgid "token = directly from the setting. keykeep = read from keykeep.credential (requires the saltstack_keykeep module)"
+msgstr "token = direkt från inställningen. keykeep = läses från keykeep.credential (kräver saltstack_keykeep-modulen)"
+
+msgid "Test the connection"
+msgstr "Testa anslutningen"
+
+msgid "Test Salt connection"
+msgstr "Testa Salt-anslutning"
+
+msgid "Pings the Salt master and shows the number of responding minions."
+msgstr "Pingar Salt-mastern och visar antal svarande minions."
+
+msgid "Automatic sync"
+msgstr "Automatisk synk"
+
+msgid "How often minions and pillars are synced automatically from the Salt Master."
+msgstr "Hur ofta minions och pillars synkas automatiskt från Salt Master."
+
+msgid "Sync every"
+msgstr "Synka var"
+
+msgid "hours"
+msgstr "timmar"
+
+msgid "Driftlarm (webhook)"
+msgstr "Driftlarm (webhook)"
+
+msgid "Shared webhook for Wazuh, Zabbix and Shuffle drift alerts."
+msgstr "Gemensam webhook för Wazuh, Zabbix och Shuffle-driftlarm."
+
+msgid "URL that Wazuh/Zabbix/Shuffle call to send drift alerts."
+msgstr "URL som Wazuh/Zabbix/Shuffle anropar för att skicka driftlarm till."
+
+msgid "Derive from web address"
+msgstr "Härled från webbadress"
+
+msgid "Fill in the URL from web.base.url (the server's public address)"
+msgstr "Fyll i URL:en från web.base.url (serverns publika adress)"
+
+msgid "API key"
+msgstr "API-nyckel"
+
+msgid "API key (Bearer token) sent in the Authorization header. Generated automatically at installation — press the button to create a new one."
+msgstr "API-nyckel (Bearer token) som skickas med Authorization-headern. Genereras automatiskt vid installation — tryck på knappen för att skapa en ny."
+
+msgid "Generate new key"
+msgstr "Generera ny nyckel"
+
+msgid "Create a new random API key (Bearer token)"
+msgstr "Skapa en ny slumpmässig API-nyckel (Bearer token)"
+
+msgid "Webhook enabled"
+msgstr "Webhook aktiverad"
+
+msgid "Correlation window (s)"
+msgstr "Korrelationsfönster (s)"
+
+msgid "Time window for Zabbix correlation (±)."
+msgstr "Tidsfönster för Zabbix-korrelation (±)."
+
+msgid "Auto diagnosis on alert"
+msgstr "Auto-diagnos vid larm"
+
+msgid "AI Coworker"
+msgstr "AI Medarbetare"
+
+msgid "AI coworker that performs diagnosis on drift alerts. Default is the Infrastructure Operator (bundled with the module)."
+msgstr "AI Medarbetare som utför diagnos vid driftlarm. Default är Infrastructure Operator (följer med modulen)."
+
+# ── settings fields (model) ────────────────────────────────────────
+msgid "How to authenticate with the Salt API. \"Shared Secret\" uses the API key via /login. \"Keykeep Managed\" is available when the saltstack_keykeep module is installed."
+msgstr "Hur autentisering mot Salt API ska ske. \"Shared Secret\" använder API-nyckeln via /login. \"Keykeep Managed\" är tillgänglig när saltstack_keykeep-modulen är installerad."
+
+msgid "Shared Secret (API key)"
+msgstr "Shared Secret (API-nyckel)"
+
+msgid "Sync interval"
+msgstr "Synk-intervall"
+
+msgid "How often the minion and pillar sync runs (in hours)."
+msgstr "Hur ofta minion- och pillar-synkningen körs (i timmar)."
+
+msgid "URL that Wazuh/Zabbix call to send drift alerts (e.g. http://luke18:8069/saltstack/alert)."
+msgstr "URL som Wazuh/Zabbix anropar för att skicka driftlarm (t.ex. http://luke18:8069/saltstack/alert)."
+
+msgid "API key (Bearer token) that Wazuh/Zabbix send in the Authorization header to the webhook URL."
+msgstr "API-nyckel (Bearer token) som Wazuh/Zabbix skickar i Authorization-headern till webhook-URL:en."
+
+msgid "Enable/disable reception of drift alerts."
+msgstr "Aktivera/avaktivera mottagning av driftlarm."
+
+msgid "Time window in seconds for Zabbix correlation (±)."
+msgstr "Tidsfönster i sekunder för Zabbix-korrelation (±)."
+
+msgid "Start AI diagnosis automatically when an alert arrives."
+msgstr "Starta AI-diagnos automatiskt vid larm."
+
+# ── salt.minion ────────────────────────────────────────────────────
+msgid "Logo"
+msgstr "Logotyp"
+
+msgid "Logo for the minion. Filled automatically based on role at sync, but can be updated manually in the form."
+msgstr "Logotyp för minionen. Fylls automatiskt baserat på roll vid synk, men kan uppdateras manuellt i formuläret."
+
+msgid "Cleanup all fault injections on this minion?"
+msgstr "Rensa alla felinjektioner på denna minion?"
+
+# ── menus / groups ─────────────────────────────────────────────────
+msgid "Settings"
+msgstr "Inställningar"
+
+msgid "Saltstack Administrator"
+msgstr "Saltstack-administratör"
+
+msgid "Saltstack Administrator — also sees Configuration (Settings)."
+msgstr "Saltstack-administratör — ser även Konfiguration (Inställningar)."
+
+msgid "Inherits officer rights. Everyone in the Settings group (base.group_system)"
+msgstr "Ärver officer-rättigheterna. Alla i Settings-gruppen (base.group_system)"

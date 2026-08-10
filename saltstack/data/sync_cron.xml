@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Sync cron — skapas vid installation, intervallet styrs från Settings -->
+    <!-- Sync cron — created at install, interval controlled from Settings -->
     <record id="cron_sync_minions_pillars" model="ir.cron">
         <field name="name">Saltstack: synk minions &amp; pillars</field>
         <field name="model_id" ref="saltstack.model_salt_minion"/>

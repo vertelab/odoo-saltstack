@@ -12,7 +12,7 @@ class ShuffleApp(models.Model):
     app_id = fields.Char(string='Shuffle App ID')
     api_key = fields.Char(
         string='API-nyckel',
-        help='Krypteras vid lagring. För appar som abuseipdb, virustotal etc.',
+        help='Encrypted at rest. For apps like abuseipdb, virustotal etc.',
     )
     config_json = fields.Text(string='Konfig (JSON)')
     active = fields.Boolean(default=True)

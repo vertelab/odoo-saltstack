@@ -15,17 +15,17 @@ class SaltAlert(models.Model):
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'create_date desc'
 
-    # ── Identitet ────────────────────────────────────────────────────────
+    # ── Identity ────────────────────────────────────────────────────────
     name = fields.Char(
-        string='Larm',
+        string='Alert',
         compute='_compute_name',
         store=True,
     )
     host = fields.Char(required=True, string='Host')
     source = fields.Selection(
         selection=[],
-        string='Källa',
-        help='Källsystem (Wazuh, Zabbix...). Utökas av bryggmoduler via selection_add.',
+        string='Source',
+        help='Source system (Wazuh, Zabbix...). Extended by bridge modules via selection_add.',
     )
     category = fields.Selection([
         ('kernel', 'Kernel'),
@@ -34,36 +34,36 @@ class SaltAlert(models.Model):
         ('proxy', 'Proxy'),
         ('odoo', 'Odoo'),
         ('system', 'System'),
-        ('other', 'Övrigt'),
-    ], string='Kategori', default='other')
-    severity = fields.Integer(string='Allvarlighetsgrad')
+        ('other', 'Other'),
+    ], string='Category', default='other')
+    severity = fields.Integer(string='Severity')
 
-    # ── Larmdetaljer ─────────────────────────────────────────────────────
+    # ── Alert details ────────────────────────────────────────────────────
     trigger_name = fields.Char(string='Trigger')
-    description = fields.Text(string='Beskrivning')
-    raw_log = fields.Text(string='Rå logg')
-    timestamp = fields.Datetime(string='Larmtid')
+    description = fields.Text(string='Description')
+    raw_log = fields.Text(string='Raw log')
+    timestamp = fields.Datetime(string='Timestamp')
     wazuh_rule_id = fields.Char(string='Wazuh Rule ID')
     zabbix_event_id = fields.Char(string='Zabbix Event ID')
 
-    # ── Korrelation & diagnos ────────────────────────────────────────────
+    # ── Correlation & diagnosis ──────────────────────────────────────────
     correlated_zabbix_alert = fields.Boolean(
-        string='Korrelerat med Zabbix',
+        string='Correlated with Zabbix',
         default=False,
     )
     zabbix_alert_id = fields.Char(string='Zabbix Alert ID')
-    coworker_session_id = fields.Char(string='Coworker-session')
-    diagnosis_result = fields.Text(string='Diagnosresultat')
+    coworker_session_id = fields.Char(string='Coworker session')
+    diagnosis_result = fields.Text(string='Diagnosis result')
     diagnosis_state = fields.Selection([
-        ('pending', 'Väntar'),
-        ('running', 'Pågår'),
-        ('done', 'Klar'),
-        ('unavailable', 'AI otillgänglig'),
-        ('error', 'Fel'),
-    ], string='Diagnosstatus', default='pending')
+        ('pending', 'Pending'),
+        ('running', 'Running'),
+        ('done', 'Done'),
+        ('unavailable', 'AI unavailable'),
+        ('error', 'Error'),
+    ], string='Diagnosis status', default='pending')
 
-    resolved = fields.Boolean(string='Löst', default=False)
-    active = fields.Boolean(string='Aktiv', default=True)
+    resolved = fields.Boolean(string='Resolved', default=False)
+    active = fields.Boolean(string='Active', default=True)
 
     # ── Computed ─────────────────────────────────────────────────────────
 
@@ -90,7 +90,7 @@ class SaltAlert(models.Model):
         for rec in self:
             source = dict(rec._fields['source'].selection).get(rec.source, rec.source or '')
             rec.name = '%s — %s (%s)' % (
-                rec.host or '?', rec.trigger_name or 'Larm',
+                rec.host or '?', rec.trigger_name or 'Alert',
                 source or rec.category or '?')
 
     # ── Webhook-processing ───────────────────────────────────────────────
@@ -120,10 +120,10 @@ class SaltAlert(models.Model):
                 'timestamp': self._parse_timestamp(payload.get('timestamp')),
             })
 
-            # Korrelation med Zabbix
+            # Correlate with Zabbix
             alert._correlate_zabbix()
 
-            # Notifiering för kritiska larm
+            # Notification for critical alerts
             if alert.severity >= 12:
                 alert._notify_channel()
 
@@ -165,11 +165,11 @@ class SaltAlert(models.Model):
             else:
                 self.correlated_zabbix_alert = False
         except Exception as e:
-            _logger.warning('Zabbix-korrelation misslyckades för %s: %s',
+            _logger.warning('Zabbix correlation failed for %s: %s',
                             self.host, e)
             self.correlated_zabbix_alert = False
 
-    # ── AI-diagnos ───────────────────────────────────────────────────────
+    # ── AI diagnosis ─────────────────────────────────────────────────────
 
     @api.model
     def _auto_diagnose_enabled(self):
@@ -182,14 +182,14 @@ class SaltAlert(models.Model):
         self.diagnosis_state = 'running'
         try:
             if 'ai.coworker' not in self.env:
-                self.diagnosis_result = 'AI coworker unavailable (saltstack_ai ej installerad)'
+                self.diagnosis_result = 'AI coworker unavailable (saltstack_ai not installed)'
                 self.diagnosis_state = 'unavailable'
                 return None
 
             Coworker = self.env['ai.coworker']
             coworker = self._get_diagnosis_coworker()
             if not coworker:
-                self.diagnosis_result = 'AI coworker unavailable (ingen coworker finns)'
+                self.diagnosis_result = 'AI coworker unavailable (no coworker exists)'
                 self.diagnosis_state = 'unavailable'
                 return None
 
@@ -203,7 +203,7 @@ class SaltAlert(models.Model):
 
             return result
         except Exception as e:
-            _logger.exception('AI-diagnos misslyckades: %s', e)
+            _logger.exception('AI diagnosis failed: %s', e)
             self.diagnosis_result = 'AI coworker unavailable: %s' % str(e)
             self.diagnosis_state = 'unavailable'
             return None
@@ -223,46 +223,46 @@ class SaltAlert(models.Model):
     def _build_diagnosis_prompt(self):
         """Build the diagnosis prompt from alert context + category mapping.
 
-        Inkluderar Driftlarm-recordet så coworkern kan skriva bedömning
-        och ändra status direkt på recordet.
+        Includes the Driftlarm record so the coworker can write its assessment
+        and change the status directly on the record.
         """
         instructions = {
-            'kernel': 'Kör: salt <host> cmd.run \'dmesg | tail -50\'. Letar OOM, kernel panic.',
-            'process': 'Kör: salt <host> cmd.run \'systemctl status odoo\'. Om nere, föreslå omstart.',
-            'database': 'Kör: salt <host> cmd.run \'pg_isready\'. Kolla replication-lag.',
-            'proxy': 'Kör: salt <host> cmd.run \'systemctl status caddy\'. Kolla upstream.',
-            'odoo': 'Kör: salt <host> cmd.run \'tail -100 /var/log/odoo/odoo-server.log\'. Tolka traceback.',
-            'system': 'Kör: uptime, free -m, df -h, dmesg, journalctl.',
-            'other': 'Diagnostisera generellt: systemstatus, tjänster, loggar.',
+            'kernel': 'Run: salt <host> cmd.run \'dmesg | tail -50\'. Look for OOM, kernel panic.',
+            'process': 'Run: salt <host> cmd.run \'systemctl status odoo\'. If down, suggest restart.',
+            'database': 'Run: salt <host> cmd.run \'pg_isready\'. Check replication lag.',
+            'proxy': 'Run: salt <host> cmd.run \'systemctl status caddy\'. Check upstream.',
+            'odoo': 'Run: salt <host> cmd.run \'tail -100 /var/log/odoo/odoo-server.log\'. Interpret traceback.',
+            'system': 'Run: uptime, free -m, df -h, dmesg, journalctl.',
+            'other': 'Diagnose generally: system status, services, logs.',
         }
         cat_instruction = instructions.get(self.category, instructions['other'])
         source_label = dict(self._fields['source'].selection).get(
-            self.source, self.source or 'okänt')
+            self.source, self.source or 'unknown')
 
         return (
-            f"Driftlarm på host '{self.host}'.\n"
-            f"Källa: {source_label}\n"
-            f"Kategori: {self.category}\n"
+            f"Driftlarm alert on host '{self.host}'.\n"
+            f"Source: {source_label}\n"
+            f"Category: {self.category}\n"
             f"Trigger: {self.trigger_name}\n"
-            f"Beskrivning: {self.description}\n"
+            f"Description: {self.description}\n"
             f"Severity: {self.severity}\n\n"
-            f"## Diagnosinstruktion ({self.category})\n{cat_instruction}\n\n"
-            f"## Rå logg (utdrag)\n{self.raw_log[:2000]}\n\n"
-            f"Analysera rotorsaken, verifiera mot systemet, och ge en "
-            f"konkret åtgärdsplan med kommandon.\n\n"
-            f"## Driftlarm-record\n"
-            f"Du arbetar mot Driftlarm-recordet med ID {self.id} "
-            f"(modell saltstack.alert). Du KAN skriva din bedömning och "
-            f"ändra status direkt på recordet via verktyget "
-            f"driftlarm_update_bedömning. Använd det för att:\n"
-            f"- Spara din bedömning (diagnosis_result)\n"
-            f"- Sätta status (pending/running/done/error)\n"
-            f"- Markera löst (resolved) när åtgärden är klar\n"
-            f"- Lämna en åtgärdsplan i beskrivningen\n"
-            f"\nRapportera även resultatet i ditt svar."
+            f"## Diagnosis instruction ({self.category})\n{cat_instruction}\n\n"
+            f"## Raw log (excerpt)\n{self.raw_log[:2000]}\n\n"
+            f"Analyze the root cause, verify against the system, and give a "
+            f"concrete action plan with commands.\n\n"
+            f"## Driftlarm record\n"
+            f"You are working on the Driftlarm record with ID {self.id} "
+            f"(model saltstack.alert). You CAN write your assessment and "
+            f"change the status directly on the record via the tool "
+            f"driftlarm_update_assessment. Use it to:\n"
+            f"- Save your assessment (diagnosis_result)\n"
+            f"- Set the status (pending/running/done/error)\n"
+            f"- Mark as resolved when the action is complete\n"
+            f"- Leave an action plan in the description\n"
+            f"\nAlso report the result in your answer."
         )
 
-    # ── Notifiering ──────────────────────────────────────────────────────
+    # ── Notification ─────────────────────────────────────────────────────
 
     def _get_or_create_channel(self):
         """Find or create the 'Driftlarm' discuss channel."""
@@ -273,7 +273,7 @@ class SaltAlert(models.Model):
                 self.env.ref('base.user_root')).create({
                     'name': 'Driftlarm',
                     'channel_type': 'channel',
-                    'description': 'Driftlarm från Wazuh/Zabbix (via webhook)',
+                    'description': 'Driftlarm alerts from Wazuh/Zabbix (via webhook)',
                 })
         return channel
 
@@ -283,14 +283,14 @@ class SaltAlert(models.Model):
         try:
             channel = self._get_or_create_channel()
             source_label = dict(self._fields['source'].selection).get(
-                self.source, self.source or 'okänt')
+                self.source, self.source or 'unknown')
             channel.with_user(
                 self.env.ref('base.user_root')).message_post(
                 body=(
                     f'🚨 <b>Driftlarm</b> (severity {self.severity})<br/>'
-                    f'<b>Källa:</b> {source_label}<br/>'
+                    f'<b>Source:</b> {source_label}<br/>'
                     f'<b>Host:</b> {self.host}<br/>'
-                    f'<b>Kategori:</b> {self.category}<br/>'
+                    f'<b>Category:</b> {self.category}<br/>'
                     f'<b>Trigger:</b> {self.trigger_name}<br/>'
                     f'{self.description or ""}'
                 ),
@@ -298,7 +298,7 @@ class SaltAlert(models.Model):
                 subtype_xmlid='mail.mt_comment',
             )
         except Exception as e:
-            _logger.warning('Kunde inte notifiera Driftlarm-kanalen: %s', e)
+            _logger.warning('Could not notify Driftlarm channel: %s', e)
 
     def _post_action_plan(self, action_plan):
         """Post the AI action plan to Driftlarm channel."""
@@ -308,15 +308,15 @@ class SaltAlert(models.Model):
             channel.with_user(
                 self.env.ref('base.user_root')).message_post(
                 body=(
-                    f'🧠 <b>Åtgärdsplan från AI-diagnos</b> '
-                    f'(larm {self.id}, {self.host})<br/>'
+                    f'🧠 <b>Action plan from AI diagnosis</b> '
+                    f'(alert {self.id}, {self.host})<br/>'
                     f'<pre>{action_plan[:4000]}</pre>'
                 ),
                 message_type='comment',
                 subtype_xmlid='mail.mt_comment',
             )
         except Exception as e:
-            _logger.warning('Kunde inte posta åtgärdsplan: %s', e)
+            _logger.warning('Could not post action plan: %s', e)
 
     # ── Actions ──────────────────────────────────────────────────────────
 

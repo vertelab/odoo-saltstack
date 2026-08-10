@@ -1,0 +1,24 @@
+# Translation of Odoo Server.
+# Copyright (C) 2026 Vertel Sverige AB (<https://vertel.se>)
+# This file is distributed under the same license as the Odoo package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-10 12:00+0000\n"
+"PO-Revision-Date: 2026-08-10 12:00+0000\n"
+"Last-Translator: Vertel Sverige AB <info@vertel.se>\n"
+"Language-Team: Swedish\n"
+"Language: sv\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# ── tools ──────────────────────────────────────────────────────────
+msgid "Create a helpdesk ticket. Use for incidents, anomalies and actions that need traceability. The ticket automatically gets the tags \"infrastructure\" and the given service name."
+msgstr "Skapa ett helpdesk-ärende. Använd vid incidenter, anomalier och åtgärder som behöver spårbarhet. Ärendet får automatiskt taggarna \"infrastructure\" och det angivna tjänstenamnet."
+
+msgid "Document an infrastructure anomaly. Use for deviations that are not acute alerts but should be tracked — e.g. unusual CPU patterns, growing disk usage, or recurring warnings."
+msgstr "Dokumentera en infrastrukturanomali. Använd för avvikelser som inte är akuta larm men som bör spåras — t.ex. ovanliga CPU-mönster, växande diskutrymme, eller återkommande varningar."

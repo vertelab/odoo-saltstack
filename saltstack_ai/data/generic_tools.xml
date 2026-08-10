@@ -10,17 +10,17 @@
         <field name="risk_level">safe</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: bekräfta att en eller flera minioner svarar på Salt
-när: första steget i all felsökning — verifiera anslutning innan vidare diagnos
-när inte: för att hämta data (använd pillar/grains/service-status i stället)
-exempel: {"minion": "gw*"} eller {"minion": "*"} för alla
-output: True/False per minion-ID
-guardrail: ingen — ren läsoperation, säker
+purpose: confirm that one or more minions respond on Salt
+when: first step in any troubleshooting — verify connectivity before further diagnosis
+when not: for fetching data (use pillar/grains/service-status instead)
+example: {"minion": "gw*"} or {"minion": "*"} for all
+output: True/False per minion ID
+guardrail: none — pure read operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-ID eller glob (t.ex. '*' för alla, 'gw*' för gateways)","default":"*"}},"required":[]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID or glob (e.g. '*' for all, 'gw*' for gateways)","default":"*"}},"required":[]}</field>
         <field name="code"><![CDATA[
 async def execute(minion="*"):
-    """Pinga Salt-minion(s)."""
+    """Ping Salt minion(s)."""
     api = env['saltstack.ai.config']
     return api.salt_call("local", minion, "test.ping")
 ]]></field>
@@ -32,17 +32,17 @@ async def execute(minion="*"):
         <field name="risk_level">destructive</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: applicera ett Salt state på minioner och ändra systemkonfiguration
-när: efter diagnos, när åtgärd är bekräftad och state finns (t.ex. 'caddy.service')
-när inte: för att inspektera (använd salt_state_show_sls först); kräv godkännande innan
-exempel: {"minion": "gw*", "state": "caddy.service"}
-output: state-resultat per minion (retcode, changes, comment)
-guardrail: kräver mänskligt godkännande (destructive)
+purpose: apply a Salt state on minions and change system configuration
+when: after diagnosis, when the action is confirmed and the state exists (e.g. 'caddy.service')
+when not: for inspection (use salt_state_show_sls first); require approval before
+example: {"minion": "gw*", "state": "caddy.service"}
+output: state result per minion (retcode, changes, comment)
+guardrail: requires human approval (destructive)
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-glob"},"state":{"type":"string","description":"State att applicera (t.ex. 'caddy.service')"},"pillar":{"type":"string","description":"Extra pillar som JSON-sträng (valfritt)","default":""}},"required":["minion","state"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion glob"},"state":{"type":"string","description":"State to apply (e.g. 'caddy.service')"},"pillar":{"type":"string","description":"Extra pillar as JSON string (optional)","default":""}},"required":["minion","state"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion, state, pillar=""):
-    """Applicera Salt state."""
+    """Apply Salt state."""
     api = env['saltstack.ai.config']
     kwargs = {}
     if pillar:
@@ -58,17 +58,17 @@ async def execute(minion, state, pillar=""):
         <field name="risk_level">destructive</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: applicera ALLA states enligt top.sls på minioner — full konvergens
-när: när en minion avvikit brett och normal state.apply inte räcker
-när inte: för enstaka ändringar (använd salt_state_apply); mycket bred påverkan
-exempel: {"minion": "gw*"}
-output: highstate-resultat per minion (retcode, changes per state)
-guardrail: kräver mänskligt godkännande (destructive, långkörare timeout 600s)
+purpose: apply ALL states according to top.sls on minions — full convergence
+when: when a minion has drifted broadly and normal state.apply is not enough
+when not: for single changes (use salt_state_apply); very broad impact
+example: {"minion": "gw*"}
+output: highstate result per minion (retcode, changes per state)
+guardrail: requires human approval (destructive, long-running timeout 600s)
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-glob"}},"required":["minion"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion glob"}},"required":["minion"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion):
-    """Kör highstate."""
+    """Run highstate."""
     api = env['saltstack.ai.config']
     return api.salt_call("local", minion, "state.highstate", timeout=600)
 ]]></field>
@@ -80,17 +80,17 @@ async def execute(minion):
         <field name="risk_level">read_only</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: visa hur ett state kompileras för en minion — validering före applicering
-när: före salt_state_apply, för att verifiera att statet gäller och kompilerar
-när inte: för att ändra något (read-only); för att köra statet (använd salt_state_apply)
-exempel: {"minion": "gw1", "state": "caddy.service"}
-output: kompilerad SLS per minion med ev. felmeddelanden
-guardrail: ingen — ren läsoperation, säker
+purpose: show how a state compiles for a minion — validation before applying
+when: before salt_state_apply, to verify the state applies and compiles
+when not: for changing anything (read-only); for running the state (use salt_state_apply)
+example: {"minion": "gw1", "state": "caddy.service"}
+output: compiled SLS per minion with any error messages
+guardrail: none — pure read operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-ID att kompilera för"},"state":{"type":"string","description":"State att visa (t.ex. 'caddy.service')"}},"required":["minion","state"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID to compile for"},"state":{"type":"string","description":"State to show (e.g. 'caddy.service')"}},"required":["minion","state"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion, state):
-    """Visa kompilerad SLS."""
+    """Show compiled SLS."""
     api = env['saltstack.ai.config']
     return api.salt_call("local", minion, "state.show_sls", state)
 ]]></field>
@@ -102,17 +102,17 @@ async def execute(minion, state):
         <field name="risk_level">destructive</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: köra ett shell-kommando på minioner — diagnos och enkla operationer
-när: när Salt-verktygen inte räcker (t.ex. 'df -h', 'systemctl list-units', 'ps aux')
-när inte: för standardfrågor (använd service/disk/memory/process-verktygen); full shell-åtkomst
-exempel: {"minion": "gw1", "command": "systemctl status caddy | head -20"}
-output: kommandots stdout/stderr per minion
-guardrail: kräver mänskligt godkännande (destructive — godtycklig exekvering)
+purpose: run a shell command on minions — diagnosis and simple operations
+when: when the Salt tools are not enough (e.g. 'df -h', 'systemctl list-units', 'ps aux')
+when not: for standard queries (use the service/disk/memory/process tools); full shell access
+example: {"minion": "gw1", "command": "systemctl status caddy | head -20"}
+output: command stdout/stderr per minion
+guardrail: requires human approval (destructive — arbitrary execution)
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-glob"},"command":{"type":"string","description":"Shell-kommando att köra"}},"required":["minion","command"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion glob"},"command":{"type":"string","description":"Shell command to run"}},"required":["minion","command"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion, command):
-    """Kör shell-kommando på minion."""
+    """Run shell command on minion."""
     api = env['saltstack.ai.config']
     return api.salt_call("local", minion, "cmd.run", command)
 ]]></field>
@@ -124,17 +124,17 @@ async def execute(minion, command):
         <field name="risk_level">read_only</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: hämta en specifik pillar-nyckel från en minion (konfiguration)
-när: för att läsa konfigurationsvärden (t.ex. bifrost, odoo, mail-inställningar)
-när inte: för systeminformation (använd grains); pillar kan innehålla hemligheter
-exempel: {"minion": "gw1", "key": "odoo"}
-output: pillar-värdet för nyckeln, eller null om saknad
-guardrail: ingen — men hantera utdata varsamt (hemligheter i pillar)
+purpose: fetch a specific pillar key from a minion (configuration)
+when: to read configuration values (e.g. bifrost, odoo, mail settings)
+when not: for system information (use grains); pillar may contain secrets
+example: {"minion": "gw1", "key": "odoo"}
+output: the pillar value for the key, or null if missing
+guardrail: none — but handle output carefully (secrets in pillar)
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-ID"},"key":{"type":"string","description":"Pillar-nyckel (t.ex. 'bifrost', 'odoo')"}},"required":["minion","key"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID"},"key":{"type":"string","description":"Pillar key (e.g. 'bifrost', 'odoo')"}},"required":["minion","key"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion, key):
-    """Hämta pillar-data."""
+    """Fetch pillar data."""
     api = env['saltstack.ai.config']
     return api.salt_call("local", minion, "pillar.get", key)
 ]]></field>
@@ -146,17 +146,17 @@ async def execute(minion, key):
         <field name="risk_level">read_only</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: hämta ALL pillar-data från en minion — komplett konfigurationsbild
-när: när helheten behövs (t.ex. felsökning av var en inställning kommer ifrån)
-när inte: för enstaka nycklar (använd salt_pillar_get); stor utdata
-exempel: {"minion": "gw1"}
-output: komplett pillar-dictionary
-guardrail: ingen — men hantera utdata varsamt (hemligheter i pillar)
+purpose: fetch ALL pillar data from a minion — complete configuration picture
+when: when the whole picture is needed (e.g. troubleshooting where a setting comes from)
+when not: for single keys (use salt_pillar_get); large output
+example: {"minion": "gw1"}
+output: complete pillar dictionary
+guardrail: none — but handle output carefully (secrets in pillar)
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-ID"}},"required":["minion"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID"}},"required":["minion"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion):
-    """Hämta all pillar-data."""
+    """Fetch all pillar data."""
     api = env['saltstack.ai.config']
     return api.salt_call("local", minion, "pillar.items")
 ]]></field>
@@ -168,17 +168,17 @@ async def execute(minion):
         <field name="risk_level">read_only</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: hämta en specifik grain (systemfakta) från en minion
-när: för OS/roll/nätverksinformation (t.ex. 'os', 'dc', 'roles', 'customer')
-när inte: för konfiguration (använd pillar); för all fakta (använd grains_items)
-exempel: {"minion": "gw1", "key": "roles"}
-output: grain-värdet för nyckeln
-guardrail: ingen — ren läsoperation, säker
+purpose: fetch a specific grain (system facts) from a minion
+when: for OS/role/network information (e.g. 'os', 'dc', 'roles', 'customer')
+when not: for configuration (use pillar); for all facts (use grains_items)
+example: {"minion": "gw1", "key": "roles"}
+output: the grain value for the key
+guardrail: none — pure read operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-ID"},"key":{"type":"string","description":"Grain-nyckel (t.ex. 'os', 'dc', 'roles', 'customer')"}},"required":["minion","key"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID"},"key":{"type":"string","description":"Grain key (e.g. 'os', 'dc', 'roles', 'customer')"}},"required":["minion","key"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion, key):
-    """Hämta specifik grain."""
+    """Fetch specific grain."""
     api = env['saltstack.ai.config']
     return api.salt_call("local", minion, "grains.get", key)
 ]]></field>
@@ -190,17 +190,17 @@ async def execute(minion, key):
         <field name="risk_level">read_only</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: hämta ALLA grains från en minion — OS, CPU, minne, nätverk, roller
-när: för att bygga en bild av en okänd minion (vilken roll, vilket OS, kund)
-när inte: för enstaka fakta (använd grains_get); stor utdata
-exempel: {"minion": "gw1"}
-output: komplett grain-dictionary
-guardrail: ingen — ren läsoperation, säker
+purpose: fetch ALL grains from a minion — OS, CPU, memory, network, roles
+when: to build a picture of an unknown minion (which role, which OS, customer)
+when not: for single facts (use grains_get); large output
+example: {"minion": "gw1"}
+output: complete grain dictionary
+guardrail: none — pure read operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-ID"}},"required":["minion"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID"}},"required":["minion"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion):
-    """Hämta alla grains."""
+    """Fetch all grains."""
     api = env['saltstack.ai.config']
     return api.salt_call("local", minion, "grains.items")
 ]]></field>
@@ -212,17 +212,17 @@ async def execute(minion):
         <field name="risk_level">read_only</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: lista alla Salt-minions — accepterade, oaccepterade, avvisade
-när: för att hitta minioner, se om en ny minion väntar på godkännande
-när inte: för status på enskilda minioner (använd test_ping/service)
-exempel: {} (inga parametrar)
-output: listor per status (accepted/unaccepted/rejected)
-guardrail: ingen — ren läsoperation, säker
+purpose: list all Salt minions — accepted, unaccepted, rejected
+when: to find minions, see if a new minion is waiting for approval
+when not: for status of individual minions (use test_ping/service)
+example: {} (no parameters)
+output: lists per status (accepted/unaccepted/rejected)
+guardrail: none — pure read operation, safe
 ]]></field>
         <field name="parameters">{"type":"object","properties":{},"required":[]}</field>
         <field name="code"><![CDATA[
 async def execute():
-    """Lista alla minions."""
+    """List all minions."""
     api = env['saltstack.ai.config']
     return api.salt_call("runner", None, "minions.list")
 ]]></field>
@@ -234,17 +234,17 @@ async def execute():
         <field name="risk_level">destructive</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: acceptera en ny minions nyckel så den kan styras
-när: när en ny minion dykt upp i minion_list under unaccepted och ska tas i drift
-när inte: för befintliga minioner; kräver bekräftelse innan (säkerhetspåverkan)
-exempel: {"minion_id": "gw3"}
-output: key.accept-resultat
-guardrail: kräver mänskligt godkännande (destructive — nyckelhantering)
+purpose: accept a new minion key so it can be managed
+when: when a new minion has appeared in minion_list under unaccepted and should be put into operation
+when not: for existing minions; requires confirmation first (security impact)
+example: {"minion_id": "gw3"}
+output: key.accept result
+guardrail: requires human approval (destructive — key management)
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion_id":{"type":"string","description":"Minion-ID att acceptera"}},"required":["minion_id"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion_id":{"type":"string","description":"Minion ID to accept"}},"required":["minion_id"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion_id):
-    """Acceptera minion-nyckel."""
+    """Accept minion key."""
     api = env['saltstack.ai.config']
     return api.salt_call("wheel", None, "key.accept", minion_id)
 ]]></field>
@@ -256,17 +256,17 @@ async def execute(minion_id):
         <field name="risk_level">read_only</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: kontrollera status för en systemd-tjänst på en minion
-när: vid driftstörning — är tjänsten active/inactive/failed?
-när inte: för att ändra tjänsten (använd service_restart); för andra tjänstverktyg
-exempel: {"minion": "gw1", "service": "caddy"}
-output: tjänststatus (active/inactive/failed m.m.)
-guardrail: ingen — ren läsoperation, säker
+purpose: check the status of a systemd service on a minion
+when: during an outage — is the service active/inactive/failed?
+when not: for changing the service (use service_restart); for other service tools
+example: {"minion": "gw1", "service": "caddy"}
+output: service status (active/inactive/failed etc.)
+guardrail: none — pure read operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID eller glob"},"service":{"type":"string","description":"Tjänstnamn (t.ex. 'caddy', 'odoo', 'postfix')"}},"required":["minion","service"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID or glob"},"service":{"type":"string","description":"Service name (e.g. 'caddy', 'odoo', 'postfix')"}},"required":["minion","service"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion, service):
-    """Kolla tjänststatus."""
+    """Check service status."""
     api = env['saltstack.ai.config']
     return api.salt_call("local", minion, "service.status", service)
 ]]></field>
@@ -278,17 +278,17 @@ async def execute(minion, service):
         <field name="risk_level">destructive</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: starta om en systemd-tjänst på minioner
-när: efter diagnos, när en tjänst är failed och omstart är rätt åtgärd
-när inte: utan diagnos först (kolla service_status + journal_errors); ofta
-exempel: {"minion": "gw1", "service": "caddy"}
-output: restart-resultat (active efter omstart)
-guardrail: kräver mänskligt godkännande (destructive — tjänsteavbrott)
+purpose: restart a systemd service on minions
+when: after diagnosis, when a service is failed and a restart is the right action
+when not: without diagnosis first (check service_status + journal_errors); frequently
+example: {"minion": "gw1", "service": "caddy"}
+output: restart result (active after restart)
+guardrail: requires human approval (destructive — service interruption)
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID eller glob"},"service":{"type":"string","description":"Tjänstnamn (t.ex. 'caddy', 'odoo', 'salt-minion')"}},"required":["minion","service"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID or glob"},"service":{"type":"string","description":"Service name (e.g. 'caddy', 'odoo', 'salt-minion')"}},"required":["minion","service"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion, service):
-    """Starta om tjänst."""
+    """Restart service."""
     api = env['saltstack.ai.config']
     return api.salt_call("local", minion, "service.restart", service)
 ]]></field>
@@ -300,17 +300,17 @@ async def execute(minion, service):
         <field name="risk_level">read_only</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: kontrollera diskutrymme på en minion (df -h)
-när: vid disk-varningar, utrymmesproblem, rensningsbehov
-när inte: för processer/minne (använd process_list/memory_usage)
-exempel: {"minion": "gw1", "path": "/var"} — path tom = alla
-output: df -h-utdata per minion
-guardrail: ingen — ren läsoperation, säker
+purpose: check disk space on a minion (df -h)
+when: on disk warnings, space problems, cleanup needs
+when not: for processes/memory (use process_list/memory_usage)
+example: {"minion": "gw1", "path": "/var"} — empty path = all
+output: df -h output per minion
+guardrail: none — pure read operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID eller glob"},"path":{"type":"string","description":"Specifik sökväg (valfritt, tom = alla)","default":""}},"required":["minion"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID or glob"},"path":{"type":"string","description":"Specific path (optional, empty = all)","default":""}},"required":["minion"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion, path=""):
-    """Kontrollera diskutrymme."""
+    """Check disk usage."""
     api = env['saltstack.ai.config']
     cmd = f"df -h {path}" if path else "df -h"
     return api.salt_call("local", minion, "cmd.run", cmd)
@@ -323,17 +323,17 @@ async def execute(minion, path=""):
         <field name="risk_level">read_only</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: kontrollera minnesanvändning på en minion (free -m)
-när: vid OOM-misstanke, minnesläckage, prestandaproblem
-när inte: för disk (använd disk_usage); för processer (använd process_list)
-exempel: {"minion": "gw1"}
-output: free -m-utdata per minion
-guardrail: ingen — ren läsoperation, säker
+purpose: check memory usage on a minion (free -m)
+when: on suspected OOM, memory leaks, performance problems
+when not: for disk (use disk_usage); for processes (use process_list)
+example: {"minion": "gw1"}
+output: free -m output per minion
+guardrail: none — pure read operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID eller glob"}},"required":["minion"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID or glob"}},"required":["minion"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion):
-    """Kontrollera minne."""
+    """Check memory usage."""
     api = env['saltstack.ai.config']
     return api.salt_call("local", minion, "cmd.run", "free -m")
 ]]></field>
@@ -345,17 +345,17 @@ async def execute(minion):
         <field name="risk_level">read_only</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: kontrollera systemlast (load average) via uptime
-när: vid hög last, prestandadiagnos, orsaksutredning
-när inte: för detaljerad CPU (använd cmd_run 'top -bn1'); för minne/disk
-exempel: {"minion": "gw1"}
-output: uptime-utdata (load 1/5/15) per minion
-guardrail: ingen — ren läsoperation, säker
+purpose: check system load (load average) via uptime
+when: on high load, performance diagnosis, root cause investigation
+when not: for detailed CPU (use cmd_run 'top -bn1'); for memory/disk
+example: {"minion": "gw1"}
+output: uptime output (load 1/5/15) per minion
+guardrail: none — pure read operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID eller glob"}},"required":["minion"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID or glob"}},"required":["minion"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion):
-    """Kontrollera systemlast."""
+    """Check system load."""
     api = env['saltstack.ai.config']
     return api.salt_call("local", minion, "cmd.run", "uptime")
 ]]></field>
@@ -367,17 +367,17 @@ async def execute(minion):
         <field name="risk_level">read_only</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: hämta senaste felen från systemd journal på en minion
-när: vid tjänstefel — vad loggade tjänsten innan den föll?
-när inte: för hela loggen (använd cmd_run 'journalctl'); för realtidsläsning
-exempel: {"minion": "gw1", "unit": "odoo", "lines": 50} — unit tom = alla
-output: senaste journal-rader med fel
-guardrail: ingen — ren läsoperation, säker
+purpose: fetch the latest errors from the systemd journal on a minion
+when: on service failure — what did the service log before it fell?
+when not: for the full log (use cmd_run 'journalctl'); for realtime reading
+example: {"minion": "gw1", "unit": "odoo", "lines": 50} — empty unit = all
+output: latest journal lines with errors
+guardrail: none — pure read operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID"},"unit":{"type":"string","description":"Specifik tjänst (t.ex. 'odoo', 'caddy'). Tom = alla.","default":""},"lines":{"type":"integer","description":"Antal rader","default":50}},"required":["minion"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID"},"unit":{"type":"string","description":"Specific service (e.g. 'odoo', 'caddy'). Empty = all.","default":""},"lines":{"type":"integer","description":"Number of lines","default":50}},"required":["minion"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion, unit="", lines=50):
-    """Hämta journal errors."""
+    """Fetch journal errors."""
     api = env['saltstack.ai.config']
     cmd = f"journalctl -p err -n {lines}"
     if unit:
@@ -393,17 +393,17 @@ async def execute(minion, unit="", lines=50):
         <field name="risk_level">read_only</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: lista processer på en minion, filtrerat på namn
-när: för att hitta processer (t.ex. odoo/postgres), dubbelstarter, zombies
-när inte: för resursanvändning (använd memory/load); för tjänstestatus
-exempel: {"minion": "gw1", "filter": "odoo"} — filter tom = topp 20
-output: processlista (PID, namn, ev. CPU/minne)
-guardrail: ingen — ren läsoperation, säker
+purpose: list processes on a minion, filtered by name
+when: to find processes (e.g. odoo/postgres), duplicate starts, zombies
+when not: for resource usage (use memory/load); for service status
+example: {"minion": "gw1", "filter": "odoo"} — empty filter = top 20
+output: process list (PID, name, possibly CPU/memory)
+guardrail: none — pure read operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID"},"filter":{"type":"string","description":"Filtrera på processnamn (t.ex. 'odoo', 'postgres'). Tom = topp 20 processer.","default":""}},"required":["minion"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID"},"filter":{"type":"string","description":"Filter by process name (e.g. 'odoo', 'postgres'). Empty = top 20 processes.","default":""}},"required":["minion"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion, filter=""):
-    """Lista processer."""
+    """List processes."""
     api = env['saltstack.ai.config']
     if filter:
         cmd = f"ps aux | grep -v grep | grep {filter} || echo 'No matching processes'"
@@ -423,17 +423,17 @@ async def execute(minion, filter=""):
         <field name="risk_level">read_only</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: hämta aktiva larm/problem från Zabbix, filtrerat på allvarlighetsgrad
-när: för att se aktuella driftlarm — vad larmar just nu?
-när inte: för historik (använd get_problems/get_history); för att kvittera (acknowledge)
-exempel: {"severity": "high", "limit": 20}
-output: lista över aktiva larm med host, trigger, allvarlighet
-guardrail: ingen — ren läsoperation, säker
+purpose: fetch active alerts/problems from Zabbix, filtered by severity
+when: to see current drift alerts — what is alerting right now?
+when not: for history (use get_problems/get_history); for acknowledging (acknowledge)
+example: {"severity": "high", "limit": 20}
+output: list of active alerts with host, trigger, severity
+guardrail: none — pure read operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"severity":{"type":"string","description":"Allvarlighetsgrad: high, medium, low, all","default":"high"},"limit":{"type":"integer","description":"Max antal resultat","default":20}},"required":[]}</field>
+        <field name="parameters">{"type":"object","properties":{"severity":{"type":"string","description":"Severity: high, medium, low, all","default":"high"},"limit":{"type":"integer","description":"Max number of results","default":20}},"required":[]}</field>
         <field name="code"><![CDATA[
 async def execute(severity="high", limit=20):
-    """Hämta Zabbix-alerts."""
+    """Fetch Zabbix alerts."""
     api = env['saltstack.ai.config']
     sev_map = {"high":[4,5],"medium":[3],"low":[0,1,2],"all":[0,1,2,3,4,5]}
     sev = sev_map.get(severity, [4,5])
@@ -455,17 +455,17 @@ async def execute(severity="high", limit=20):
         <field name="risk_level">read_only</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: hämta information om en specifik Zabbix-host
-när: för host-detaljer (interfaces, status, groups) vid utredning
-när inte: för problem på hosten (använd get_problems/get_alerts)
-exempel: {"host": "gw1"}
-output: host-information (namn, status, interfaces)
-guardrail: ingen — ren läsoperation, säker
+purpose: fetch information about a specific Zabbix host
+when: for host details (interfaces, status, groups) during investigation
+when not: for problems on the host (use get_problems/get_alerts)
+example: {"host": "gw1"}
+output: host information (name, status, interfaces)
+guardrail: none — pure read operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"host":{"type":"string","description":"Hostnamn i Zabbix"}},"required":["host"]}</field>
+        <field name="parameters">{"type":"object","properties":{"host":{"type":"string","description":"Hostname in Zabbix"}},"required":["host"]}</field>
         <field name="code"><![CDATA[
 async def execute(host):
-    """Hämta Zabbix-host info."""
+    """Fetch Zabbix host info."""
     api = env['saltstack.ai.config']
     result = api.call("host.get", {
         "output": "extend",
@@ -483,17 +483,17 @@ async def execute(host):
         <field name="risk_level">read_only</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: hämta alla Zabbix-problem inklusive historiska — djupare än get_alerts
-när: för hela problembilden, även äldre problem, per host
-när inte: för snabb överblick (använd get_alerts); för mätvärden (get_history)
-exempel: {"host": "gw1", "recent": "true", "limit": 50}
-output: problemlista med event, trigger, host, tider
-guardrail: ingen — ren läsoperation, säker
+purpose: fetch all Zabbix problems including historical — deeper than get_alerts
+when: for the full problem picture, including older problems, per host
+when not: for a quick overview (use get_alerts); for metrics (get_history)
+example: {"host": "gw1", "recent": "true", "limit": 50}
+output: problem list with event, trigger, host, times
+guardrail: none — pure read operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"host":{"type":"string","description":"Filtrera på host (tom = alla)","default":""},"recent":{"type":"string","description":"Endast nyliga (true/false)","default":"true"},"limit":{"type":"integer","default":50}},"required":[]}</field>
+        <field name="parameters">{"type":"object","properties":{"host":{"type":"string","description":"Filter by host (empty = all)","default":""},"recent":{"type":"string","description":"Only recent (true/false)","default":"true"},"limit":{"type":"integer","default":50}},"required":[]}</field>
         <field name="code"><![CDATA[
 async def execute(host="", recent="true", limit=50):
-    """Hämta Zabbix-problems."""
+    """Fetch Zabbix problems."""
     api = env['saltstack.ai.config']
     params = {
         "output": "extend",
@@ -514,17 +514,17 @@ async def execute(host="", recent="true", limit=50):
         <field name="risk_level">write</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: kvittera ett Zabbix-larm med kommentar om åtgärd
-när: EFTER att åtgärd vidtagits och verifierats — dokumentera vad som gjordes
-när inte: före åtgärd; för att dölja olösta problem
-exempel: {"event_id": "123456", "message": "Restarted caddy on gw1, verified active"}
-output: acknowledge-resultat
-guardrail: kräver mänskligt godkännande (write — ändrar larmstatus)
+purpose: acknowledge a Zabbix alert with a comment about the action
+when: AFTER the action has been taken and verified — document what was done
+when not: before the action; to hide unresolved problems
+example: {"event_id": "123456", "message": "Restarted caddy on gw1, verified active"}
+output: acknowledge result
+guardrail: requires human approval (write — changes alert status)
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"event_id":{"type":"string","description":"Zabbix event ID att kvittera"},"message":{"type":"string","description":"Kommentar om åtgärd","default":"Acknowledged by Infrastructure Operator"}},"required":["event_id"]}</field>
+        <field name="parameters">{"type":"object","properties":{"event_id":{"type":"string","description":"Zabbix event ID to acknowledge"},"message":{"type":"string","description":"Comment about the action","default":"Acknowledged by Infrastructure Operator"}},"required":["event_id"]}</field>
         <field name="code"><![CDATA[
 async def execute(event_id, message="Acknowledged by Infrastructure Operator"):
-    """Kvittera Zabbix-larm."""
+    """Acknowledge Zabbix alert."""
     api = env['saltstack.ai.config']
     result = api.call("event.acknowledge", {
         "eventids": [event_id],
@@ -541,17 +541,17 @@ async def execute(event_id, message="Acknowledged by Infrastructure Operator"):
         <field name="risk_level">read_only</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: hämta historiska mätvärden från en Zabbix-item — trendanalys
-när: för att se utveckling över tid (minne, last, disk) vid felsökning
-när inte: för aktuella värden (använd get_item/get_alerts)
-exempel: {"item_id": "34567", "limit": 100}
-output: tidsserie med mätpunkter
-guardrail: ingen — ren läsoperation, säker
+purpose: fetch historical metric values from a Zabbix item — trend analysis
+when: to see development over time (memory, load, disk) during troubleshooting
+when not: for current values (use get_item/get_alerts)
+example: {"item_id": "34567", "limit": 100}
+output: time series with measurement points
+guardrail: none — pure read operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"item_id":{"type":"string","description":"Item ID i Zabbix"},"limit":{"type":"integer","description":"Antal mätpunkter","default":100}},"required":["item_id"]}</field>
+        <field name="parameters">{"type":"object","properties":{"item_id":{"type":"string","description":"Item ID in Zabbix"},"limit":{"type":"integer","description":"Number of measurement points","default":100}},"required":["item_id"]}</field>
         <field name="code"><![CDATA[
 async def execute(item_id, limit=100):
-    """Hämta historiska mätvärden."""
+    """Fetch historical metric values."""
     api = env['saltstack.ai.config']
     result = api.call("history.get", {
         "output": "extend",
@@ -570,17 +570,17 @@ async def execute(item_id, limit=100):
         <field name="risk_level">read_only</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: hämta en Zabbix-item (mätvärdesdefinition) för en host
-när: för att hitta item-ID/key inför get_history eller förstå vad som mäts
-när inte: för mätvärden (använd get_history); för problem (get_alerts)
-exempel: {"host": "gw1", "key_pattern": "odoo.process.count"}
-output: item-information (key, type, senaste värde)
-guardrail: ingen — ren läsoperation, säker
+purpose: fetch a Zabbix item (metric definition) for a host
+when: to find an item ID/key before get_history or understand what is measured
+when not: for metric values (use get_history); for problems (get_alerts)
+example: {"host": "gw1", "key_pattern": "odoo.process.count"}
+output: item information (key, type, last value)
+guardrail: none — pure read operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"host":{"type":"string","description":"Hostnamn"},"key_pattern":{"type":"string","description":"Item key eller pattern (t.ex. 'odoo.process.count')"}},"required":["host"]}</field>
+        <field name="parameters">{"type":"object","properties":{"host":{"type":"string","description":"Hostname"},"key_pattern":{"type":"string","description":"Item key or pattern (e.g. 'odoo.process.count')"}},"required":["host"]}</field>
         <field name="code"><![CDATA[
 async def execute(host, key_pattern=""):
-    """Hämta Zabbix-item."""
+    """Fetch Zabbix item."""
     api = env['saltstack.ai.config']
     params = {"output": "extend", "host": host}
     if key_pattern:
@@ -596,17 +596,17 @@ async def execute(host, key_pattern=""):
         <field name="risk_level">read_only</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: hämta alla Zabbix host-grupper — infrastrukturorganisation
-när: för att förstå hur infrastrukturen är indelad (kund, miljö, tjänst)
-när inte: för host-detaljer (använd get_host/get_item)
-exempel: {} (inga parametrar)
-output: lista över host-grupper
-guardrail: ingen — ren läsoperation, säker
+purpose: fetch all Zabbix host groups — infrastructure organization
+when: to understand how the infrastructure is divided (customer, environment, service)
+when not: for host details (use get_host/get_item)
+example: {} (no parameters)
+output: list of host groups
+guardrail: none — pure read operation, safe
 ]]></field>
         <field name="parameters">{"type":"object","properties":{},"required":[]}</field>
         <field name="code"><![CDATA[
 async def execute():
-    """Hämta Zabbix host-grupper."""
+    """Fetch Zabbix host groups."""
     api = env['saltstack.ai.config']
     return api.zabbix_call("hostgroup.get", {"output": "extend"})
 ]]></field>
@@ -618,17 +618,17 @@ async def execute():
         <field name="risk_level">read_only</field>
         <field name="executor">local</field>
         <field name="description"><![CDATA[
-syfte: hämta Zabbix-triggers med status — vilka är aktiva/larmade/ok
-när: för triggerbilden per host, se vilka regler som är i problem
-när inte: för aktiva larm (använd get_alerts — snabbare); för mätvärden
-exempel: {"host": "gw1", "only_problem": "true"}
-output: triggerlista med status per trigger
-guardrail: ingen — ren läsoperation, säker
+purpose: fetch Zabbix triggers with status — which are active/alerting/ok
+when: for the trigger picture per host, see which rules are in problem
+when not: for active alerts (use get_alerts — faster); for metrics
+example: {"host": "gw1", "only_problem": "true"}
+output: trigger list with status per trigger
+guardrail: none — pure read operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"host":{"type":"string","description":"Filtrera på host (tom = alla)","default":""},"only_problem":{"type":"string","description":"Endast triggers med problem (true/false)","default":"true"}},"required":[]}</field>
+        <field name="parameters">{"type":"object","properties":{"host":{"type":"string","description":"Filter by host (empty = all)","default":""},"only_problem":{"type":"string","description":"Only triggers with problems (true/false)","default":"true"}},"required":[]}</field>
         <field name="code"><![CDATA[
 async def execute(host="", only_problem="true"):
-    """Hämta Zabbix-triggers."""
+    """Fetch Zabbix triggers."""
     api = env['saltstack.ai.config']
     params = {
         "output": "extend",

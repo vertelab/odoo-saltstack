@@ -5,20 +5,20 @@
         <field name="risk_level">write</field>
         <field name="executor">local</field>
         <field name="description">
-            Skapa ett helpdesk-ärende. Använd vid incidenter, anomalier och åtgärder
-            som behöver spårbarhet. Ärendet får automatiskt taggarna "infrastructure"
-            och det angivna tjänstenamnet.
+            Create a helpdesk ticket. Use for incidents, anomalies and actions
+            that need traceability. The ticket automatically gets the tags
+            "infrastructure" and the given service name.
         </field>
         <field name="parameters">{"type":"object","properties":{
-            "title":{"type":"string","description":"Ärendets titel"},
-            "description":{"type":"string","description":"Detaljerad beskrivning av incidenten"},
+            "title":{"type":"string","description":"Ticket title"},
+            "description":{"type":"string","description":"Detailed description of the incident"},
             "priority":{"type":"string","description":"low, medium, high, urgent","default":"medium"},
-            "minion":{"type":"string","description":"Berörd maskin/minion","default":""},
-            "service":{"type":"string","description":"Berörd tjänst: odoo, caddy, postgres, postfix, dovecot, garage, bifrost, etc.","default":""}
+            "minion":{"type":"string","description":"Affected machine/minion","default":""},
+            "service":{"type":"string","description":"Affected service: odoo, caddy, postgres, postfix, dovecot, garage, bifrost, etc.","default":""}
         },"required":["title","description"]}</field>
         <field name="code"><![CDATA[
 async def execute(title, description, priority="medium", minion="", service=""):
-    """Skapa ett helpdesk-ärende med infrastrukturkontext."""
+    """Create a helpdesk ticket with infrastructure context."""
     priority_map = {"low": "0", "medium": "1", "high": "2", "urgent": "3"}
     
     ticket_vals = {
@@ -49,19 +49,19 @@ async def execute(title, description, priority="medium", minion="", service=""):
         <field name="risk_level">write</field>
         <field name="executor">local</field>
         <field name="description">
-            Dokumentera en infrastrukturanomali. Använd för avvikelser som inte är
-            akuta larm men som bör spåras — t.ex. ovanliga CPU-mönster, växande
-            diskutrymme, eller återkommande varningar.
+            Document an infrastructure anomaly. Use for deviations that are not
+            acute alerts but should be tracked — e.g. unusual CPU patterns,
+            growing disk usage, or recurring warnings.
         </field>
         <field name="parameters">{"type":"object","properties":{
-            "title":{"type":"string","description":"Kort beskrivning av anomalin"},
-            "description":{"type":"string","description":"Detaljerad beskrivning"},
-            "minion":{"type":"string","description":"Berörd maskin","default":""},
-            "metric":{"type":"string","description":"Vilket mätvärde avvek (CPU, disk, memory, etc.)","default":""}
+            "title":{"type":"string","description":"Short description of the anomaly"},
+            "description":{"type":"string","description":"Detailed description"},
+            "minion":{"type":"string","description":"Affected machine","default":""},
+            "metric":{"type":"string","description":"Which metric deviated (CPU, disk, memory, etc.)","default":""}
         },"required":["title","description"]}</field>
         <field name="code"><![CDATA[
 async def execute(title, description, minion="", metric=""):
-    """Dokumentera en anomali som helpdesk-ärende med låg prioritet."""
+    """Document an anomaly as a low-priority helpdesk ticket."""
     anomaly_desc = description
     if minion:
         anomaly_desc += f"\n\nMinion: {minion}"

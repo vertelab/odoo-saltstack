@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-"""saltstack_ai — tester för ai-tool-access-capabilities (referensimpl.).
+"""saltstack_ai — tests for ai-tool-access-capabilities (reference impl.).
 
-Körs med: checkmodule -d <db> -m saltstack_ai -t
-Täcker: 5.7 körbarhet (kompilering), 5.8 access (operator vs icke-operatör),
-5.9 förmågeserialisering (salt enum-delning, zabbix namespace),
-5.10 access-filtrerad medlem dold i enum.
+Run with: checkmodule -d <db> -m saltstack_ai -t
+Covers: 5.7 executability (compilation), 5.8 access (operator vs non-operator),
+5.9 capability serialization (salt enum splitting, zabbix namespace),
+5.10 access-filtered member hidden in enum.
 """
 
 from odoo.tests.common import TransactionCase
@@ -27,7 +27,7 @@ ALL_TOOL_IDS = SALT_TOOL_IDS + ZABBIX_TOOL_IDS + ['tool_driftlarm_update']
 
 
 def _all_tool_records(env):
-    """Alla salt/zabbix/driftlarm ai.tool-poster via xmlid (namn är inte xmlid)."""
+    """All salt/zabbix/driftlarm ai.tool records via xmlid (name is not xmlid)."""
     return env['ai.tool'].browse([
         env.ref('saltstack_ai.%s' % x).id for x in ALL_TOOL_IDS])
 
@@ -56,7 +56,7 @@ class TestSaltstackAccessGroups(TransactionCase):
         self.tools = _all_tool_records(self.env)
 
     def test_tools_bound_to_operator_group(self):
-        """5.8: alla verktyg är bundna till operatorgruppen."""
+        """5.8: all tools are bound to the operator group."""
         self.assertEqual(len(self.tools), len(ALL_TOOL_IDS))
         for tool in self.tools:
             self.assertIn(
@@ -64,18 +64,18 @@ class TestSaltstackAccessGroups(TransactionCase):
                 '%s saknar operatorgrupp' % tool.name)
 
     def test_non_operator_sees_none(self):
-        """5.8: användare utan grupp ser inga salt/zabbix-verktyg."""
+        """5.8: user without the group sees no salt/zabbix tools."""
         visible = self.tools._filter_by_access_groups([])
         self.assertEqual(len(visible), 0)
 
     def test_operator_sees_all(self):
-        """5.8: operatör ser alla; läs utan HITL, destruktiva med."""
+        """5.8: operator sees all; read without HITL, destructive with."""
         visible = self.tools._filter_by_access_groups(
             [self.operator_group.id])
         self.assertEqual(len(visible), len(ALL_TOOL_IDS))
         read_tool = self.env.ref('saltstack_ai.tool_salt_test_ping')
         act_tool = self.env.ref('saltstack_ai.tool_salt_state_apply')
-        # Läs → ingen HITL; destruktiv → alltid godkännande
+        # Read → no HITL; destructive → always approval
         self.assertFalse(read_tool.risk_level in ('destructive', 'execute'))
         self.assertEqual(act_tool.risk_level, 'destructive')
 
@@ -96,7 +96,7 @@ class TestSaltstackCapabilities(TransactionCase):
             'saltstack_ai.group_infra_operator')
 
     def _registry_from_caps(self, cap, mode, group_ids):
-        """Bygg registry med access-filtrerade medlemmar + applicera läge."""
+        """Build registry with access-filtered members + apply mode."""
         from odoo.addons.ai_agent_core.core.tools import (
             ToolRegistry, apply_capability_serialization,
             ai_tool_records_to_tools)
@@ -139,14 +139,14 @@ class TestSaltstackCapabilities(TransactionCase):
 
     def test_access_filtered_member_hidden_in_enum(self):
         """5.10: medlem utan access dold som operation i enum."""
-        # Skapa en extra grupp och ersätt zabbix_acknowledge's grupper med den
+        # Create an extra group and replace zabbix_acknowledge's groups with it
         other = self.env['res.groups'].create({
             'name': 'Zabbix Ack Only',
             'category_id': self.env.ref('base.module_category_hidden').id,
         })
         ack = self.env.ref('saltstack_ai.tool_zabbix_acknowledge')
         ack.write({'group_ids': [(6, 0, [other.id])]})
-        # Användare i operatorgruppen men INTE i 'other' → ack dold
+        # User in the operator group but NOT in 'other' → ack hidden
         reg, _ = self._registry_from_caps(
             self.zabbix_cap, 'enum', [self.operator_group.id])
         enum_tool = reg.get('zabbix')

@@ -29,22 +29,22 @@
             <form>
                 <header>
                     <button name="action_diagnose" type="object"
-                            string="Kör diagnos" class="btn-primary"
+                            string="Run diagnosis" class="btn-primary"
                             icon="fa-stethoscope"/>
                     <button name="action_mark_resolved" type="object"
-                            string="Markera löst" icon="fa-check"
-                            confirm="Markera detta larm som löst?"/>
+                            string="Mark as resolved" icon="fa-check"
+                            confirm="Mark this alert as resolved?"/>
                     <field name="resolved" widget="boolean_toggle"/>
                 </header>
                 <sheet>
-                    <widget name="web_ribbon" title="KRITISKT"
+                    <widget name="web_ribbon" title="CRITICAL"
                             bg_color="text-bg-danger"
                             invisible="severity &lt; 12"/>
                     <div class="oe_title">
                         <h1><field name="name"/></h1>
                     </div>
                     <group>
-                        <group string="Larm">
+                        <group string="Alert">
                             <field name="host"/>
                             <field name="source"/>
                             <field name="category"/>
@@ -54,7 +54,7 @@
                             <field name="wazuh_rule_id"/>
                             <field name="zabbix_event_id"/>
                         </group>
-                        <group string="Korrelation &amp; Diagnos">
+                        <group string="Correlation &amp; Diagnosis">
                             <field name="correlated_zabbix_alert"/>
                             <field name="zabbix_alert_id"/>
                             <field name="coworker_session_id"/>
@@ -62,13 +62,13 @@
                             <field name="resolved"/>
                         </group>
                     </group>
-                    <group string="Beskrivning">
+                    <group string="Description">
                         <field name="description" nolabel="1" colspan="2"/>
                     </group>
-                    <group string="Diagnosresultat">
+                    <group string="Diagnosis result">
                         <field name="diagnosis_result" nolabel="1" colspan="2"/>
                     </group>
-                    <group string="Rå logg">
+                    <group string="Raw log">
                         <field name="raw_log" nolabel="1" colspan="2"/>
                     </group>
                 </sheet>
@@ -88,20 +88,20 @@
                 <field name="category"/>
                 <field name="source"/>
                 <separator/>
-                <filter name="critical" string="Kritiska (≥12)"
+                <filter name="critical" string="Critical (≥12)"
                         domain="[('severity', '>=', 12)]"/>
-                <filter name="unresolved" string="Olösta"
+                <filter name="unresolved" string="Unresolved"
                         domain="[('resolved', '=', False)]"/>
-                <filter name="correlated" string="Korrelerade"
+                <filter name="correlated" string="Correlated"
                         domain="[('correlated_zabbix_alert', '=', True)]"/>
                 <group expand="0" string="Group By">
                     <filter name="group_host" string="Host"
                             context="{'group_by': 'host'}"/>
-                    <filter name="group_source" string="Källa"
+                    <filter name="group_source" string="Source"
                             context="{'group_by': 'source'}"/>
-                    <filter name="group_category" string="Kategori"
+                    <filter name="group_category" string="Category"
                             context="{'group_by': 'category'}"/>
-                    <filter name="group_state" string="Diagnosstatus"
+                    <filter name="group_state" string="Diagnosis status"
                             context="{'group_by': 'diagnosis_state'}"/>
                 </group>
             </search>
@@ -110,13 +110,13 @@
 
     <!-- ── Action + Menu ─────────────────────────────────────────── -->
     <record id="action_salt_alert" model="ir.actions.act_window">
-        <field name="name">Driftslarm</field>
+        <field name="name">Drift Alerts</field>
         <field name="res_model">saltstack.alert</field>
         <field name="view_mode">list,form</field>
         <field name="search_view_id" ref="view_salt_alert_search"/>
     </record>
     <menuitem id="menu_salt_alert"
-              name="Driftslarm"
+              name="Drift Alerts"
               parent="menu_saltstack_root"
               action="action_salt_alert"
               groups="saltstack.group_saltstack_officer"

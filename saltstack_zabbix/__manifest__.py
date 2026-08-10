@@ -2,10 +2,10 @@
 
 {
     'name': 'SaltStack Zabbix',
-    'version': '18.0.1.0.0',
+    'version': '18.0.1.0.1',
     'license': 'AGPL-3',
     'category': 'Infrastructure',
-    'summary': 'Zabbix-anslutning för SaltStack — settings + test',
+    'summary': 'Zabbix connection for SaltStack — settings + test',
     'depends': ['saltstack_ai'],
     'data': [
         'security/ir.model.access.csv',

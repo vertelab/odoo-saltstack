@@ -50,7 +50,7 @@ class SaltAlertController(http.Controller):
             _logger.warning('Driftlarm-webhook: ogiltig JSON: %s', e)
             return {'status': 'error', 'error': 'Invalid JSON'}
 
-        _logger.info('Driftlarm-webhook: larm för %s (källa %s)',
+        _logger.info('Driftlarm webhook: alert for %s (source %s)',
                      payload.get('host'), payload.get('source'))
 
         result = request.env['saltstack.alert'].sudo().process_webhook(payload)

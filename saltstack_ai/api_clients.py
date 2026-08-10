@@ -35,8 +35,8 @@ class SaltAPI:
         """Exchange sharedsecret API key for a session token via /login.
 
         Salt API-nyckeln (saltstack.api_token med auth_method='sharedsecret',
-        eller värdet i keykeep.credential purpose='saltstack_api') är INTE en
-        sessionstoken — den måste bytas mot en token via POST /login.
+        or the value in keykeep.credential purpose='saltstack_api') is NOT a
+        session token — it must be exchanged for a token via POST /login.
         """
         if api_key is None:
             api_key = self.env['ir.config_parameter'].get_param(
@@ -101,8 +101,8 @@ class SaltAPI:
             payload['kwarg'] = kwargs
 
         data = json.dumps(payload).encode()
-        # OBS: POST ska till ROOT (/), inte /run — /run ger 401 även med
-        # giltig token i rest_cherrypy (verifierat 2026-08-09).
+        # NOTE: POST must go to ROOT (/), not /run — /run returns 401 even with
+        # a valid token in rest_cherrypy (verified 2026-08-09).
         req = urllib.request.Request(
             f'{self.api_url.rstrip("/")}/run',
             data=data,

@@ -20,7 +20,7 @@ class ResConfigSettings(models.TransientModel):
     shuffle_odoo_webhook_url = fields.Char(
         string='Odoo Webhook URL',
         config_parameter='saltstack_shuffle.odoo_webhook_url',
-        help='Webhook-URL som Shuffle anropar för att skicka driftlarm till Odoo '
+        help='Webhook URL that Shuffle calls to send drift alerts to Odoo '
              '(t.ex. http://luke18:8069/saltstack/alert)',
     )
     shuffle_odoo_api_key = fields.Char(
@@ -33,5 +33,5 @@ class ResConfigSettings(models.TransientModel):
         string='Auto-synca workflow-status',
         config_parameter='saltstack_shuffle.sync_enabled',
         default=True,
-        help='Synca workflow-status automatiskt från Shuffle',
+        help='Sync workflow status automatically from Shuffle',
     )

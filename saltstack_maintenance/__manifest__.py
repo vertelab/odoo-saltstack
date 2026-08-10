@@ -2,7 +2,7 @@
 
 {
     'name': 'SaltStack Maintenance Bridge',
-    'version': '18.0.1.0.0',
+    'version': '18.0.1.0.1',
     'license': 'AGPL-3',
     'category': 'Infrastructure',
     'summary': 'Notify maintenance system about infrastructure machines',

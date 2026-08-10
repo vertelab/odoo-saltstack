@@ -1,0 +1,21 @@
+# Translation of Odoo Server.
+# Copyright (C) 2026 Vertel Sverige AB (<https://vertel.se>)
+# This file is distributed under the same license as the Odoo package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-10 12:00+0000\n"
+"PO-Revision-Date: 2026-08-10 12:00+0000\n"
+"Last-Translator: Vertel Sverige AB <info@vertel.se>\n"
+"Language-Team: Swedish\n"
+"Language: sv\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# ── tool ───────────────────────────────────────────────────────────
+msgid "Document an infrastructure deviation as a nonconformity in the management system. Use for deviations that need to be handled according to ISO processes — root cause analysis, corrective actions."
+msgstr "Dokumentera en infrastrukturavvikelse som en nonconformity i ledningssystemet. Används för avvikelser som behöver hanteras enligt ISO-processer — root cause analysis, corrective actions."

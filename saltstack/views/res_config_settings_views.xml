@@ -13,7 +13,7 @@
                     <block title="Salt Master">
                         <setting id="saltstack_api_url_setting"
                                  title="Salt API URL"
-                                 help="Adress till Salt-masterns REST API (port 8377). t.ex. http://192.168.11.22:8377">
+                                 help="Address of the Salt master REST API (port 8377). e.g. http://192.168.11.22:8377">
                             <field name="saltstack_api_url"
                                    placeholder="http://192.168.11.22:8377"
                                    class="w-50"/>
@@ -21,7 +21,7 @@
 
                         <setting id="saltstack_api_token_setting"
                                  title="Salt API Token"
-                                 help="Autentiseringstoken mot Salt REST API. Token kan även hanteras via Keykeep.">
+                                 help="Authentication token for the Salt REST API. The token can also be managed via Keykeep.">
                             <field name="saltstack_api_token"
                                    
                                    class="w-50"/>
@@ -29,72 +29,72 @@
 
                         <setting id="saltstack_auth_method_setting"
                                  title="Salt Auth Method"
-                                 help="token = direkt från inställningen. keykeep = läses från keykeep.credential (kräver saltstack_keykeep-modulen)">
+                                 help="token = directly from the setting. keykeep = read from keykeep.credential (requires the saltstack_keykeep module)">
                             <field name="saltstack_auth_method"/>
                         </setting>
 
                         <setting id="saltstack_test_setting"
-                                 title="Testa anslutningen">
+                                 title="Test the connection">
                             <button name="action_test_salt" type="object"
-                                    string="Testa Salt-anslutning"
+                                    string="Test Salt connection"
                                     class="btn btn-primary" icon="fa-plug"/>
                             <div class="text-muted mt8">
-                                Pingar Salt-mastern och visar antal svarande minions.
+                                Pings the Salt master and shows the number of responding minions.
                             </div>
                         </setting>
 
                         <setting id="saltstack_sync_setting"
-                                 title="Automatisk synk"
-                                 help="Hur ofta minions och pillars synkas automatiskt från Salt Master.">
+                                 title="Automatic sync"
+                                 help="How often minions and pillars are synced automatically from the Salt Master.">
                             <div class="d-flex align-items-center gap-2">
-                                <span class="me-2">Synka var</span>
+                                <span class="me-2">Sync every</span>
                                 <field name="sync_interval_number" class="w-25"/>
-                                <span>timmar</span>
+                                <span>hours</span>
                             </div>
                         </setting>
                     </block>
 
                     <block title="Driftlarm (webhook)"
-                           help="Gemensam webhook för Wazuh, Zabbix och Shuffle-driftlarm.">
+                           help="Shared webhook for Wazuh, Zabbix and Shuffle drift alerts.">
                         <setting id="alert_webhook_url_setting"
                                  title="Webhook URL"
-                                 help="URL som Wazuh/Zabbix/Shuffle anropar för att skicka driftlarm till.">
+                                 help="URL that Wazuh/Zabbix/Shuffle call to send drift alerts.">
                             <div class="d-flex align-items-center gap-2">
                                 <field name="alert_webhook_url" class="flex-grow-1"
                                        placeholder="https://ledningssystem.vertel.se/saltstack/alert"/>
                                 <button name="action_fill_webhook_url" type="object"
-                                        string="Härled från webbadress"
+                                        string="Derive from web address"
                                         class="btn btn-secondary" icon="fa-globe"
-                                        title="Fyll i URL:en från web.base.url (serverns publika adress)"/>
+                                        title="Fill in the URL from web.base.url (the server's public address)"/>
                             </div>
                         </setting>
                         <setting id="alert_webhook_token_setting"
-                                 title="API-nyckel"
-                                 help="API-nyckel (Bearer token) som skickas med Authorization-headern. Genereras automatiskt vid installation — tryck på knappen för att skapa en ny.">
+                                 title="API key"
+                                 help="API key (Bearer token) sent in the Authorization header. Generated automatically at installation — press the button to create a new one.">
                             <div class="d-flex align-items-center gap-2">
                                 <field name="alert_webhook_token" class="flex-grow-1"/>
                                 <button name="action_generate_webhook_token" type="object"
-                                        string="Generera ny nyckel"
+                                        string="Generate new key"
                                         class="btn btn-secondary" icon="fa-key"
-                                        title="Skapa en ny slumpmässig API-nyckel (Bearer token)"/>
+                                        title="Create a new random API key (Bearer token)"/>
                             </div>
                         </setting>
                         <setting id="alert_webhook_enabled_setting"
-                                 title="Webhook aktiverad">
+                                 title="Webhook enabled">
                             <field name="alert_webhook_enabled"/>
                         </setting>
                         <setting id="alert_correlation_window_setting"
-                                 title="Korrelationsfönster (s)"
-                                 help="Tidsfönster för Zabbix-korrelation (±).">
+                                 title="Correlation window (s)"
+                                 help="Time window for Zabbix correlation (±).">
                             <field name="alert_correlation_window" class="w-25"/>
                         </setting>
                         <setting id="alert_auto_diagnose_setting"
-                                 title="Auto-diagnos vid larm">
+                                 title="Auto diagnosis on alert">
                             <field name="alert_auto_diagnose"/>
                         </setting>
                         <setting id="alert_coworker_setting"
-                                 title="AI Medarbetare"
-                                 help="AI Medarbetare som utför diagnos vid driftlarm. Default är Infrastructure Operator (följer med modulen).">
+                                 title="AI Coworker"
+                                 help="AI coworker that performs diagnosis on drift alerts. Default is the Infrastructure Operator (bundled with the module).">
                             <field name="alert_coworker_id"/>
                         </setting>
                     </block>

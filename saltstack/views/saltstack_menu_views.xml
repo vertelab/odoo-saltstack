@@ -13,21 +13,21 @@
               sequence="100"
               groups="saltstack.group_saltstack_admin"/>
 
-    <!-- ── Inställningar (första i Konfiguration) ──────────────────── -->
+    <!-- ── Settings (first in Configuration) ─────────────────────── -->
     <record id="action_saltstack_settings" model="ir.actions.act_window">
-        <field name="name">Inställningar</field>
+        <field name="name">Settings</field>
         <field name="res_model">res.config.settings</field>
         <field name="view_mode">form</field>
         <field name="target">inline</field>
         <field name="context">{}</field>
     </record>
     <menuitem id="menu_saltstack_settings"
-              name="Inställningar"
+              name="Settings"
               parent="menu_saltstack_config"
               action="action_saltstack_settings"
               sequence="10"/>
 
-    <!-- ── Synkåtgärder (server actions från data/sync_actions.xml) ── -->
+    <!-- ── Sync actions (server actions from data/sync_actions.xml) ── -->
     <menuitem id="menu_sync_minions"
               name="Synka minions"
               parent="menu_saltstack_config"

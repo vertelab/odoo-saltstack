@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- noupdate="1": dessa defaults skrivs ENDAST vid första installation.
-     Vid moduluppgradering skrivs användarens ändrade värden inte över. -->
+<!-- noupdate="1": these defaults are written ONLY at first install.
+     On module upgrade, user-changed values are not overwritten. -->
 <odoo noupdate="1">
     <!-- Default Salt API configuration -->
     <record id="saltstack_api_url" model="ir.config_parameter">

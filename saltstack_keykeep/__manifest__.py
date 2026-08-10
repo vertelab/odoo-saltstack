@@ -2,7 +2,7 @@
 
 {
     'name': 'SaltStack Keykeep Bridge',
-    'version': '18.0.1.0.0',
+    'version': '18.0.1.0.1',
     'category': 'Infrastructure',
     'summary': 'Sync Salt pillar secrets to Keykeep credentials',
     'description': """

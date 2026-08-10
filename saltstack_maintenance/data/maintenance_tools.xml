@@ -5,18 +5,18 @@
         <field name="risk_level">write</field>
         <field name="executor">local</field>
         <field name="description">
-            Flagga en maskin för underhåll. Används efter incidenter där
-            uppföljning behövs — t.ex. diskbyte, minneskontroll, eller
-            planerad service.
+            Flag a machine for maintenance. Use after incidents where
+            follow-up is needed — e.g. disk replacement, memory check, or
+            planned service.
         </field>
         <field name="parameters">{"type":"object","properties":{
-            "machine":{"type":"string","description":"Maskinnamn eller minion-ID"},
-            "message":{"type":"string","description":"Vad som behöver göras"},
+            "machine":{"type":"string","description":"Machine name or minion-ID"},
+            "message":{"type":"string","description":"What needs to be done"},
             "severity":{"type":"string","description":"info, warning, critical","default":"warning"}
         },"required":["machine","message"]}</field>
         <field name="code"><![CDATA[
 async def execute(machine, message, severity="warning"):
-    """Flagga maskin för underhåll."""
+    """Flag a machine for maintenance."""
     # Find or create maintenance equipment record
     Equipment = env.get("maintenance.equipment")
     if not Equipment:

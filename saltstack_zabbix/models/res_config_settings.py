@@ -42,13 +42,13 @@ class ResConfigSettings(models.TransientModel):
 
         if not url:
             return self._zabbix_test_result(
-                False, 'Zabbix API URL är inte konfigurerad.\n'
-                        'Sätt URL:en i Inställningar → Saltstack → Zabbix.')
+                False, 'Zabbix API URL is not configured.\n'
+                        'Set the URL in Settings → Saltstack → Zabbix.')
 
         if not token and params.get_param('zabbix.auth_method', 'token') != 'keykeep':
             return self._zabbix_test_result(
-                False, 'Zabbix API Token saknas.\n'
-                        'Sätt token i Inställningar → Saltstack → Zabbix.')
+                False, 'Zabbix API Token is missing.\n'
+                        'Set the token in Settings → Saltstack → Zabbix.')
 
         try:
             import json
@@ -75,22 +75,22 @@ class ResConfigSettings(models.TransientModel):
 
             if 'error' in result:
                 return self._zabbix_test_result(
-                    False, f'Zabbix API-fel: {result["error"].get("message", "okänt")}')
+                    False, f'Zabbix API error: {result["error"].get("message", "unknown")}')
 
             # Test auth with a real call
             payload['method'] = 'apiinfo.version'
             version = result.get('result', '?')
             return self._zabbix_test_result(
-                True, f'Zabbix API nåbar.\nVersion: {version}')
+                True, f'Zabbix API reachable.\nVersion: {version}')
 
         except Exception as e:
             return self._zabbix_test_result(
                 False,
-                f'Kunde inte nå Zabbix API på {url}.\n'
-                f'Fel: {str(e)}\n\nFelsökning:\n'
-                f'- Kontrollera att URL:en är rätt (t.ex. https://zabbix.vertel.se)\n'
-                f'- Kontrollera nätverksåtkomst (port 443)\n'
-                f'- Kontrollera att api_jsonrpc.php svarar')
+                f'Could not reach Zabbix API at {url}.\n'
+                f'Error: {str(e)}\n\nTroubleshooting:\n'
+                f'- Check that the URL is correct (e.g. https://zabbix.vertel.se)\n'
+                f'- Check network access (port 443)\n'
+                f'- Check that api_jsonrpc.php responds')
 
     def _zabbix_test_result(self, ok, message):
         """Return a popup notification."""
@@ -98,7 +98,7 @@ class ResConfigSettings(models.TransientModel):
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
-                'title': 'Zabbix-test: ' + ('OK' if ok else 'MISSLYCKADES'),
+                'title': 'Zabbix test: ' + ('OK' if ok else 'FAILED'),
                 'message': message,
                 'type': 'success' if ok else 'danger',
                 'sticky': True,

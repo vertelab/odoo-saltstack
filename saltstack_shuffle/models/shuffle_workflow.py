@@ -22,7 +22,7 @@ class ShuffleWorkflow(models.Model):
         ('inactive', 'Inactive'),
         ('error', 'Error'),
     ], default='active')
-    last_execution = fields.Datetime(string='Senaste körning')
-    execution_count = fields.Integer(string='Antal körningar', default=0)
+    last_execution = fields.Datetime(string='Last execution')
+    execution_count = fields.Integer(string='Execution count', default=0)
     json_definition = fields.Text(string='Workflow-JSON (read-only)')
     active = fields.Boolean(default=True)

@@ -1,42 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Verktyg: uppdatera Driftlarm-record (bedömning + status) -->
+    <!-- Tool: update Drift Alert record (assessment + status) -->
     <record id="tool_driftlarm_update" model="ai.tool">
-        <field name="name">driftlarm_update_bedömning</field>
+        <field name="name">driftlarm_update_assessment</field>
         <field name="risk_level">write</field>
         <field name="executor">local</field>
         <field name="description">
-            Uppdatera ett Driftlarm-record (saltstack.alert) med bedömning och status.
-            Använd för att spara AI-diagnosens slutsats, sätta status, markera löst,
-            och lämna åtgärdsplan.
+            Update a Drift Alert record (saltstack.alert) with assessment and status.
+            Use to save the AI diagnosis conclusion, set the status, mark as resolved,
+            and leave an action plan.
         </field>
         <field name="parameters">{"type":"object","properties":{
-            "alert_id":{"type":"integer","description":"ID för saltstack.alert-recordet"},
-            "bedömning":{"type":"string","description":"Diagnosbedömning / slutsats","default":""},
+            "alert_id":{"type":"integer","description":"ID of the saltstack.alert record"},
+            "assessment":{"type":"string","description":"Diagnosis assessment / conclusion","default":""},
             "status":{"type":"string","description":"pending, running, done, error","default":""},
-            "resolved":{"type":"boolean","description":"Markera löst","default":false},
-            "åtgärdsplan":{"type":"string","description":"Åtgärdsplan att lägga i beskrivningen","default":""}
+            "resolved":{"type":"boolean","description":"Mark as resolved","default":false},
+            "action_plan":{"type":"string","description":"Action plan to add to the description","default":""}
         },"required":["alert_id"]}</field>
         <field name="code"><![CDATA[
-async def execute(alert_id, bedömning="", status="", resolved=False, åtgärdsplan=""):
-    """Uppdatera Driftlarm-record med bedömning och status."""
+async def execute(alert_id, assessment="", status="", resolved=False, action_plan=""):
+    """Update a Drift Alert record with assessment and status."""
     if "saltstack.alert" not in env:
-        return "ERROR: saltstack.alert-modellen finns inte"
+        return "ERROR: saltstack.alert model not available"
     alert = env["saltstack.alert"].browse(alert_id)
     if not alert.exists():
-        return f"ERROR: Driftlarm {alert_id} finns inte"
+        return f"ERROR: Drift Alert {alert_id} does not exist"
     vals = {}
-    if bedömning:
-        vals["diagnosis_result"] = bedömning
+    if assessment:
+        vals["diagnosis_result"] = assessment
     if status:
         vals["diagnosis_state"] = status
     if resolved:
         vals["resolved"] = True
-    if åtgärdsplan:
-        vals["description"] = (alert.description or "") + "\n\n## Åtgärdsplan (AI)\n" + åtgärdsplan
+    if action_plan:
+        vals["description"] = (alert.description or "") + "\n\n## Action Plan (AI)\n" + action_plan
     if vals:
         alert.write(vals)
-    return f"Driftlarm {alert_id} uppdaterat: status={status or alert.diagnosis_state}, resolved={alert.resolved}"
+    return f"Drift Alert {alert_id} updated: status={status or alert.diagnosis_state}, resolved={alert.resolved}"
 ]]></field>
     </record>
 

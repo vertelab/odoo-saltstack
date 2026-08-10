@@ -9,7 +9,7 @@
                 <block title="Shuffle SOAR">
                     <setting id="shuffle_api_url_setting"
                              title="Shuffle API URL"
-                             help="Base URL för Shuffle API. t.ex. https://siem.vertel.se">
+                             help="Base URL for the Shuffle API. e.g. https://siem.vertel.se">
                         <field name="shuffle_api_url" class="w-50"
                                placeholder="https://siem.vertel.se"/>
                     </setting>
@@ -19,7 +19,7 @@
                     </setting>
                     <setting id="shuffle_odoo_webhook_setting"
                              title="Odoo Webhook URL"
-                             help="Webhook-URL som Shuffle anropar för att skicka driftlarm till Odoo.">
+                             help="Webhook URL that Shuffle calls to send drift alerts to Odoo.">
                         <field name="shuffle_odoo_webhook_url" class="w-50"
                                placeholder="https://ledningssystem.vertel.se/saltstack/alert"/>
                     </setting>

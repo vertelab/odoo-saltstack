@@ -20,11 +20,11 @@ class SaltPillar(models.Model):
     )
 
     def _pillar_originals(self, timeout=90):
-        """Hämta OMASKERADE pillar-värden från alla minioner (bulk pillar.raw).
+        """Fetch UNMASKED pillar values from all minions (bulk pillar.raw).
 
-        pillar.items maskerar hemligheter — pillar.raw gör det inte.
-        Returnerar platt {key_path: value}-dict och föredrar SaltStack-masterns
-        (globala) värde när samma nyckel finns på flera minioner.
+        pillar.items masks secrets — pillar.raw does not.
+        Returns a flat {key_path: value} dict and prefers the SaltStack
+        master's (global) value when the same key exists on several minions.
         """
         api = self.env['saltstack.ai.config']
         result = api.salt_call('local', '*', 'pillar.raw', timeout=timeout)
@@ -58,25 +58,25 @@ class SaltPillar(models.Model):
     def action_sync_to_keykeep(self):
         """Sync pillar secrets to keykeep credentials.
 
-        Hämtar ORIGINAL-värdena via Salt API pillar.raw (maskeras inte,
-        till skillnad från pillar.items) och lagrar dem krypterat i
-        keykeep.credential. För varje secret-post:
-        - hittar/skapar keykeep.subscription baserat på pillar-namespace
-        - skapar/uppdaterar keykeep.credential med det krypterade originalvärdet
-        - länkar pillar-posten till subscription
+        Fetches ORIGINAL values via the Salt API pillar.raw (not masked,
+        unlike pillar.items) and stores them encrypted in keykeep.credential.
+        For each secret record:
+        - finds/creates a keykeep.subscription based on the pillar namespace
+        - creates/updates a keykeep.credential with the encrypted original value
+        - links the pillar record to the subscription
 
-        Körs med sudo() — knappen ska fungera även för användare som bara har
-        läsrätt på salt.pillar (interna användare har read-only).
+        Runs with sudo() — the button should work even for users who only
+        have read access on salt.pillar (internal users are read-only).
         """
         self = self.sudo()
         records = self.filtered(lambda r: r.data_type == 'secret')
         if not records:
-            return self._keykeep_notify(0, _('Inga hemligheter att synka'))
+            return self._keykeep_notify(0, _('No secrets to sync'))
 
         try:
             originals = self._pillar_originals()
         except Exception as e:
-            raise UserError(_('Misslyckades att hämta pillar.raw: %s') % str(e))
+            raise UserError(_('Failed to fetch pillar.raw: %s') % str(e))
 
         synced = 0
         skipped = 0
@@ -87,20 +87,20 @@ class SaltPillar(models.Model):
                 continue
             sub = rec._get_or_create_keykeep_subscription()
             cred = rec._get_or_create_keykeep_credential(sub, original)
-            # Rotera/uppdatera om värdet ändrats (write krypterar key_value)
+            # Rotate/update if the value changed (write encrypts key_value)
             try:
                 if cred.key_value != str(original):
                     cred.write({'key_value': str(original)})
             except Exception:
                 _logger.exception(
-                    'Kunde inte uppdatera keykeep.credential för %s', rec.key)
+                    'Could not update keykeep.credential for %s', rec.key)
                 continue
             rec.keykeep_subscription_id = sub.id
             synced += 1
 
         message = _('%d hemligheter synkade till Keykeep') % synced
         if skipped:
-            message += _('\n%d utan originalvärde (saknas i pillar.raw)') % skipped
+            message += _('\n%d without original value (missing in pillar.raw)') % skipped
         return self._keykeep_notify(synced, message)
 
     def _keykeep_notify(self, count, message=None):

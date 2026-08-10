@@ -305,15 +305,15 @@ class SaltPillar(models.Model):
     def action_sync_from_salt(self):
         """Fetch pillar keys from ALL minions and create/update records.
 
-        Hämtar pillar från ALLA minioner i ett bulk-anrop (tgt='*') och
-        registrerar unionen av alla nycklar — även nästlade (t.ex.
-        "servers.gw0.ipv4", "odoo.databases.dina"). Fångar därmed även
-        kundspecifik pillar, inte bara masterns globala.
+        Fetches pillar from ALL minions in one bulk call (tgt='*') and
+        registers the union of all keys — including nested ones (e.g.
+        "servers.gw0.ipv4", "odoo.databases.dina"). This also captures
+        customer-specific pillar, not just the master's global pillar.
 
-        Föredrar SaltStack-masterns värde (globala pillaren) när samma nyckel
-        finns på flera minioner. Maskerar hemlighetsliknande värden
-        (data_type='secret', value='*****') — interna användare ska inte kunna
-        läsa lösenord/API-nycklar.
+        Prefers the SaltStack master's value (global pillar) when the same
+        key exists on several minions. Masks secret-like values
+        (data_type='secret', value='*****') — internal users must not be
+        able to read passwords/API keys.
         """
         try:
             result = self._call_salt_api(
@@ -323,7 +323,7 @@ class SaltPillar(models.Model):
 
         returned = result.get('return', [{}])[0]
         if not isinstance(returned, dict) or not returned:
-            return {'error': 'Ingen pillar-data från minionerna'}
+            return {'error': 'No pillar data from minions'}
 
         def _dtype(value):
             if isinstance(value, bool):
@@ -335,7 +335,7 @@ class SaltPillar(models.Model):
             return 'string'
 
         def _flatten(prefix, data):
-            """Platta ut pillar-dict till punktnycklar (alla nivåer)."""
+            """Flatten pillar dict into dotted keys (all levels)."""
             for key, value in sorted(data.items()):
                 full = f'{prefix}.{key}' if prefix else key
                 if isinstance(value, dict):
@@ -346,7 +346,7 @@ class SaltPillar(models.Model):
                 else:
                     yield full, value, _dtype(value)
 
-        # Union av alla nycklar; föredra SaltStack-mastern (global pillar)
+        # Union of all keys; prefer SaltStack master (global pillar)
         flattened = {}  # key -> (value, dtype, minion_name)
         for minion_name, pillar_data in sorted(returned.items()):
             if not isinstance(pillar_data, dict):
@@ -370,9 +370,9 @@ class SaltPillar(models.Model):
                 val_str = yaml.safe_dump(
                     value, default_flow_style=False, allow_unicode=True).strip()
                 if len(val_str) > 10000:
-                    # Markör istället för trunkerad YAML — trunkerad YAML är
-                    # ogiltig och kraschar _check_value_type
-                    val_str = '# för stor att lagra (%d tecken)' % len(val_str)
+                    # Marker instead of truncated YAML — truncated YAML is
+                    # invalid and would crash _check_value_type
+                    val_str = '# too large to store (%d chars)' % len(val_str)
             else:
                 val_str = str(value)
             vals = {

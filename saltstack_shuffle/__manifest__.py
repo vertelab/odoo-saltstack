@@ -2,7 +2,7 @@
 
 {
     'name': 'SaltStack Shuffle SOAR',
-    'version': '18.0.1.1.1',
+    'version': '18.0.1.1.2',
     'category': 'Infrastructure',
     'summary': 'Shuffle SOAR-hantering — workflows, appar, webhooks',
     'author': 'Vertel Sverige AB',

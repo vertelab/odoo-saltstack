@@ -7,7 +7,7 @@
     <!-- 1: SaltStack Fundamentals -->
     <record id="skill_saltstack_fundamentals" model="ai.skill">
         <field name="name">SaltStack Fundamentals</field>
-        <field name="description">SaltStack grunder: states, pillar, grains, top.sls och Jinja2. Lär ut arkitekturen och bästa praxis för infrastrukturautomation.</field>
+        <field name="description">SaltStack fundamentals: states, pillar, grains, top.sls and Jinja2. Teaches the architecture and best practices for infrastructure automation.</field>
         <field name="category">infrastructure</field>
         <field name="source_type">odoo</field>
         <field name="compatibility">any</field>
@@ -88,7 +88,7 @@ install_odoo_{{ version }}:
     <!-- 2: Salt Remote Execution -->
     <record id="skill_salt_remote_execution" model="ai.skill">
         <field name="name">Salt Remote Execution</field>
-        <field name="description">Salt remote execution: test.ping, cmd.run, service, grains, pillar och state-moduler för att köra kommandon över infrastrukturen.</field>
+        <field name="description">Salt remote execution: test.ping, cmd.run, service, grains, pillar and state modules to run commands across the infrastructure.</field>
         <field name="category">infrastructure</field>
         <field name="source_type">odoo</field>
         <field name="compatibility">any</field>
@@ -162,7 +162,7 @@ salt '*' state.highstate       # Apply everything
     <!-- 3: Salt State Management -->
     <record id="skill_salt_state_management" model="ai.skill">
         <field name="name">Salt State Management</field>
-        <field name="description">Skriva Salt states (.sls): filstruktur, state-funktioner, requisites, Jinja2-mönster och idempotens.</field>
+        <field name="description">Writing Salt states (.sls): file structure, state functions, requisites, Jinja2 patterns and idempotency.</field>
         <field name="category">infrastructure</field>
         <field name="source_type">odoo</field>
         <field name="compatibility">any</field>
@@ -246,7 +246,7 @@ States must be safe to re-run:
     <!-- 4: Salt Pillar & Secrets -->
     <record id="skill_salt_pillar_secrets" model="ai.skill">
         <field name="name">Salt Pillar &amp; Secrets</field>
-        <field name="description">Salt pillar och hemligheter: pillar-struktur, pillar.get, extern pillar, och säker hantering av secrets (aldrig i git).</field>
+        <field name="description">Salt pillar and secrets: pillar structure, pillar.get, external pillar, and secure handling of secrets (never in git).</field>
         <field name="category">infrastructure</field>
         <field name="source_type">odoo</field>
         <field name="compatibility">any</field>
@@ -330,7 +330,7 @@ Pillar secrets can sync to keykeep.credential for auditing and rotation:
     <!-- 5: Salt Minion Lifecycle -->
     <record id="skill_salt_minion_lifecycle" model="ai.skill">
         <field name="name">Salt Minion Lifecycle</field>
-        <field name="description">Salt minion-livscykel: onboarding, nyckelhantering, grains, felsökning och avveckling.</field>
+        <field name="description">Salt minion lifecycle: onboarding, key management, grains, troubleshooting and decommissioning.</field>
         <field name="category">infrastructure</field>
         <field name="source_type">odoo</field>
         <field name="compatibility">any</field>
@@ -420,7 +420,7 @@ apt purge salt-minion
     <!-- 6: Zabbix Monitoring Concepts -->
     <record id="skill_zabbix_monitoring_concepts" model="ai.skill">
         <field name="name">Zabbix Monitoring Concepts</field>
-        <field name="description">Zabbix-grunder: hosts, items, triggers, problem, events och API-operationer för övervakning och larmhantering.</field>
+        <field name="description">Zabbix fundamentals: hosts, items, triggers, problems, events and API operations for monitoring and alert management.</field>
         <field name="category">infrastructure</field>
         <field name="source_type">odoo</field>
         <field name="compatibility">any</field>

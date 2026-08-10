@@ -23,14 +23,14 @@
                     </setting>
                     <setting id="siem_manager_minion_setting"
                              title="Wazuh Manager Minion"
-                             help="Salt minion-ID för Wazuh Manager-servern. Används av SIEM-verktygen för att köra agent_control etc.">
+                             help="Salt minion-ID for the Wazuh Manager server. Used by SIEM tools to run agent_control etc.">
                         <field name="siem_manager_minion"
                                placeholder="siem.vertel.se"
                                class="w-50"/>
                     </setting>
                     <setting id="siem_auth_method_setting"
                              title="Wazuh Auth Method"
-                             help="token = direkt från inställningen. keykeep = läses från keykeep.credential (purpose=siem_api)">
+                             help="token = directly from the setting. keykeep = read from keykeep.credential (purpose=siem_api)">
                         <field name="siem_auth_method"/>
                     </setting>
                     <setting id="siem_test_setting"

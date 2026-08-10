@@ -14,7 +14,7 @@
     </record>
 
     <record id="action_fault_grow_log" model="ir.actions.server">
-        <field name="name">💾 Simulera disk full (växande loggfil)</field>
+        <field name="name">💾 Simulate disk full (growing log file)</field>
         <field name="model_id" ref="model_salt_minion"/>
         <field name="binding_model_id" ref="model_salt_minion"/>
         <field name="state">code</field>
@@ -23,7 +23,7 @@
     </record>
 
     <record id="action_fault_wazuh_bruteforce" model="ir.actions.server">
-        <field name="name">🚨 Simulera Wazuh-säkerhetshot (brute force)</field>
+        <field name="name">🚨 Simulate Wazuh security threat (brute force)</field>
         <field name="model_id" ref="model_salt_minion"/>
         <field name="binding_model_id" ref="model_salt_minion"/>
         <field name="state">code</field>

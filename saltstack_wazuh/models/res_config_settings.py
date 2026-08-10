@@ -48,8 +48,8 @@ class ResConfigSettings(models.TransientModel):
 
         if not url:
             return self._wazuh_test_result(
-                False, 'Wazuh API URL är inte konfigurerad.\n'
-                        'Sätt URL:en i Inställningar → Saltstack → Wazuh.')
+                False, 'Wazuh API URL is not configured.\n'
+                        'Set the URL in Settings → Saltstack → Wazuh.')
 
         try:
             import json
@@ -76,27 +76,27 @@ class ResConfigSettings(models.TransientModel):
 
             if 'data' in result and result.get('data', {}).get('token'):
                 return self._wazuh_test_result(
-                    True, 'Wazuh API autentisering lyckades.\n'
-                          'Token erhölls — agenthantering fungerar.')
+                    True, 'Wazuh API authentication succeeded.\n'
+                          'Token obtained — agent management works.')
             return self._wazuh_test_result(
-                False, 'Wazuh API svarade men token erhölls inte.\n'
-                        f'Svar: {str(result)[:200]}')
+                False, 'Wazuh API responded but no token was obtained.\n'
+                        f'Response: {str(result)[:200]}')
 
         except Exception as e:
             return self._wazuh_test_result(
                 False,
-                f'Kunde inte nå Wazuh API på {url}.\n'
-                f'Fel: {str(e)}\n\nFelsökning:\n'
-                f'- Kontrollera att URL:en är rätt (t.ex. https://siem.vertel.se)\n'
-                f'- Kontrollera API-token (Wazuh Dashboard → Security → API)\n'
-                f'- Kontrollera nätverksåtkomst')
+                f'Could not reach Wazuh API at {url}.\n'
+                f'Error: {str(e)}\n\nTroubleshooting:\n'
+                f'- Check that the URL is correct (e.g. https://siem.vertel.se)\n'
+                f'- Check the API token (Wazuh Dashboard → Security → API)\n'
+                f'- Check network access')
 
     def _wazuh_test_result(self, ok, message):
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
-                'title': 'Wazuh-test: ' + ('OK' if ok else 'MISSLYCKADES'),
+                'title': 'Wazuh test: ' + ('OK' if ok else 'FAILED'),
                 'message': message,
                 'type': 'success' if ok else 'danger',
                 'sticky': True,

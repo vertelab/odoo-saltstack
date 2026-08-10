@@ -2,9 +2,9 @@
 
 {
     'name': 'SaltStack Wazuh',
-    'version': '18.0.1.7.0',
+    'version': '18.0.1.7.1',
     'category': 'Infrastructure',
-    'summary': 'Wazuh-källa för Driftslarm — selection_add + settings',
+    'summary': 'Wazuh source for Drift Alerts — selection_add + settings',
     'author': 'Vertel Sverige AB',
     'license': 'AGPL-3',
     'website': 'https://vertel.se',

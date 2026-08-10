@@ -2,7 +2,7 @@
 <odoo>
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <!-- KOPPLA GLOBALA TOOLS TILL SPECIALIST-AGENTER                     -->
-    <!-- Varje agent får sina respektive tools (salt → salt-tools, etc).  -->
+    <!-- Each agent gets its respective tools (salt → salt tools, etc).  -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
 
     <!-- SaltStack Specialist → alla salt-tools -->
@@ -93,9 +93,9 @@
         <field name="agent_ids" eval="[(4, ref('agent_saltstack_specialist')), (4, ref('agent_zabbix_specialist')), (4, ref('agent_wazuh_specialist')), (4, ref('agent_odoo_specialist')), (4, ref('agent_postgres_specialist')), (4, ref('agent_system_specialist')), (4, ref('agent_caddy_specialist'))]"/>
     </record>
 
-    <!-- Övriga specialister får generella salt-diagnostikverktyg för sitt arbete -->
+    <!-- Other specialists get generic salt diagnostic tools for their work -->
 
-    <!-- Odoo Driftspecialist: logg + tjänst + process -->
+    <!-- Odoo Operations Specialist: log + service + process -->
     <record id="tool_salt_cmd_run" model="ai.tool">
         <field name="agent_ids" eval="[(4, ref('agent_odoo_specialist')), (4, ref('agent_postgres_specialist')), (4, ref('agent_system_specialist')), (4, ref('agent_caddy_specialist')), (4, ref('agent_wazuh_specialist'))]"/>
     </record>
