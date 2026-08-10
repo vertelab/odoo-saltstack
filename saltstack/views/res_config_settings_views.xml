@@ -55,17 +55,29 @@
                     </block>
 
                     <block title="Driftlarm (webhook)"
-                           help="Gemensam webhook för Wazuh och Zabbix-driftlarm.">
+                           help="Gemensam webhook för Wazuh, Zabbix och Shuffle-driftlarm.">
                         <setting id="alert_webhook_url_setting"
                                  title="Webhook URL"
-                                 help="URL som Wazuh/Zabbix anropar för att skicka driftlarm.">
-                            <field name="alert_webhook_url" class="w-50"
-                                   placeholder="http://luke18:8069/saltstack/webhook"/>
+                                 help="URL som Wazuh/Zabbix/Shuffle anropar för att skicka driftlarm till.">
+                            <div class="d-flex align-items-center gap-2">
+                                <field name="alert_webhook_url" class="flex-grow-1"
+                                       placeholder="https://ledningssystem.vertel.se/saltstack/alert"/>
+                                <button name="action_fill_webhook_url" type="object"
+                                        string="Härled från webbadress"
+                                        class="btn btn-secondary" icon="fa-globe"
+                                        title="Fyll i URL:en från web.base.url (serverns publika adress)"/>
+                            </div>
                         </setting>
                         <setting id="alert_webhook_token_setting"
                                  title="API-nyckel"
-                                 help="API-nyckel (Bearer token) som skickas med Authorization-headern.">
-                            <field name="alert_webhook_token" class="w-50"/>
+                                 help="API-nyckel (Bearer token) som skickas med Authorization-headern. Genereras automatiskt vid installation — tryck på knappen för att skapa en ny.">
+                            <div class="d-flex align-items-center gap-2">
+                                <field name="alert_webhook_token" class="flex-grow-1"/>
+                                <button name="action_generate_webhook_token" type="object"
+                                        string="Generera ny nyckel"
+                                        class="btn btn-secondary" icon="fa-key"
+                                        title="Skapa en ny slumpmässig API-nyckel (Bearer token)"/>
+                            </div>
                         </setting>
                         <setting id="alert_webhook_enabled_setting"
                                  title="Webhook aktiverad">

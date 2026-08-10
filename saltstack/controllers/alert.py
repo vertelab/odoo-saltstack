@@ -10,9 +10,9 @@ from odoo.http import request
 _logger = logging.getLogger(__name__)
 
 
-class SaltAlertWebhook(http.Controller):
+class SaltAlertController(http.Controller):
 
-    @http.route('/saltstack/webhook', type='json', auth='none',
+    @http.route('/saltstack/alert', type='json', auth='none',
                 methods=['POST'], csrf=False)
     def salt_alert_webhook(self):
         """Receive drift alerts (Wazuh, Zabbix) via webhook.

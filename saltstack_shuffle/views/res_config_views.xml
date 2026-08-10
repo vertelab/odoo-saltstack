@@ -21,7 +21,7 @@
                              title="Odoo Webhook URL"
                              help="Webhook-URL som Shuffle anropar för att skicka driftlarm till Odoo.">
                         <field name="shuffle_odoo_webhook_url" class="w-50"
-                               placeholder="http://luke18:8069/saltstack/webhook"/>
+                               placeholder="https://ledningssystem.vertel.se/saltstack/alert"/>
                     </setting>
                     <setting id="shuffle_odoo_apikey_setting"
                              title="Odoo API-nyckel"

@@ -55,7 +55,7 @@ class ResConfigSettings(models.TransientModel):
         string='Webhook URL',
         config_parameter='saltstack.alert.webhook_url',
         help='URL som Wazuh/Zabbix anropar för att skicka driftlarm '
-             '(t.ex. http://luke18:8069/saltstack/webhook).',
+             '(t.ex. http://luke18:8069/saltstack/alert).',
     )
     alert_webhook_token = fields.Char(
         string='API-nyckel',
@@ -136,6 +136,44 @@ class ResConfigSettings(models.TransientModel):
             cron.interval_number = self.sync_interval_number or 24
 
     # ── Test ───────────────────────────────────────────────────────────
+
+    def action_generate_webhook_token(self):
+        """Generate a new random API key for the Driftlarm webhook."""
+        import secrets
+        token = secrets.token_urlsafe(32)
+        self.env['ir.config_parameter'].set_param(
+            'saltstack.alert.webhook_token', token)
+        self.alert_webhook_token = token
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Ny API-nyckel genererad',
+                'message': 'Använd den nya nyckeln som Bearer-token för '
+                           'webhook-anropen.',
+                'type': 'success',
+                'sticky': False,
+            },
+        }
+
+    def action_fill_webhook_url(self):
+        """Fill the webhook URL from web.base.url."""
+        base = self.env['ir.config_parameter'].get_param(
+            'web.base.url', 'http://localhost:8069')
+        url = '%s/saltstack/alert' % base.rstrip('/')
+        self.env['ir.config_parameter'].set_param(
+            'saltstack.alert.webhook_url', url)
+        self.alert_webhook_url = url
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Webhook-URL uppdaterad',
+                'message': url,
+                'type': 'success',
+                'sticky': False,
+            },
+        }
 
     def action_test_salt(self):
         """Test Salt API connection. Returns a popup notification."""

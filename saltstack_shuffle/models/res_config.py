@@ -21,7 +21,7 @@ class ResConfigSettings(models.TransientModel):
         string='Odoo Webhook URL',
         config_parameter='saltstack_shuffle.odoo_webhook_url',
         help='Webhook-URL som Shuffle anropar för att skicka driftlarm till Odoo '
-             '(t.ex. http://luke18:8069/saltstack/webhook)',
+             '(t.ex. http://luke18:8069/saltstack/alert)',
     )
     shuffle_odoo_api_key = fields.Char(
         string='Odoo API-nyckel',

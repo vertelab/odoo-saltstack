@@ -2,7 +2,7 @@
 
 {
     'name': 'SaltStack Infrastructure',
-    'version': '18.0.1.11.0',
+    'version': '18.0.1.12.0',
     'category': 'Infrastructure',
     'summary': 'Manage SaltStack minions, pillar anchors and infrastructure',
     'description': """
@@ -15,6 +15,7 @@ Features:
 - Minion registry with sync from Salt Master
 - Pillar key/value anchors
 - Fault injection server actions for testing the monitoring chain
+- Driftlarm webhook (/saltstack/alert) med auto-genererad API-nyckel
 - SaltStack API configuration in Settings
     """,
     'author': 'Vertel Sverige AB',
@@ -35,6 +36,7 @@ Features:
         'views/salt_minion_views.xml',
         'views/salt_alert_views.xml',
     ],
+    'post_init_hook': '_ensure_webhook_config',
     'installable': True,
     'application': True,
     'auto_install': False,
