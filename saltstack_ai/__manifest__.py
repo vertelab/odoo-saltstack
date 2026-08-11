@@ -33,6 +33,7 @@ Contains zero infrastructure-specific knowledge — safe to open-source.
         'data/generic_skills.xml',
         'data/infrastructure_operator.xml',
         'data/agent_tools.xml',
+        'data/domain_tools.xml',
     ],
     'installable': True,
     'application': False,
