@@ -111,35 +111,6 @@ async def execute():
 ]]></field>
     </record>
 
-    <record id="tool_odoo_search" model="ai.tool">
-        <field name="name">odoo_search</field>
-        <field name="risk_level">read_only</field>
-        <field name="executor">local</field>
-        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
-        <field name="agent_ids" eval="[(4, ref('agent_odoo_specialist'))]"/>
-        <field name="description"><![CDATA[
-purpose: search records in an Odoo model (this instance) — verify that models/data respond
-when: to confirm that Odoo data is available during diagnosis
-when not: to read specific fields (use odoo_read); to count (use odoo_count)
-example: {"model": "res.partner", "domain": "[['is_company','=',True]]", "limit": 10}
-output: list of record IDs matching the domain
-guardrail: read-only operation, safe
-]]></field>
-        <field name="parameters">{"type":"object","properties":{"model":{"type":"string","description":"Odoo model (e.g. res.partner, salt.minion)"},"domain":{"type":"string","description":"Domain as JSON string","default":"[]"},"limit":{"type":"integer","description":"Max number of hits","default":50}},"required":["model"]}</field>
-        <field name="code"><![CDATA[
-async def execute(model, domain="[]", limit=50):
-    """Search records in an Odoo model."""
-    if model not in env:
-        return f"ERROR: model '{model}' does not exist"
-    try:
-        dom = json.loads(domain) if isinstance(domain, str) else domain
-    except Exception:
-        dom = []
-    ids = env[model].sudo().search(dom, limit=int(limit))
-    return json.dumps(ids, indent=2)
-]]></field>
-    </record>
-
     <record id="tool_odoo_read" model="ai.tool">
         <field name="name">odoo_read</field>
         <field name="risk_level">read_only</field>
@@ -442,7 +413,6 @@ guardrail: all diagnostics operations are read_only; actions are done with the s
             ref('tool_grep_odoo_errors'),
             ref('tool_odoo_cron_status'),
             ref('tool_odoo_login'),
-            ref('tool_odoo_search'),
             ref('tool_odoo_read'),
             ref('tool_odoo_count'),
             ref('tool_pg_isready'),
