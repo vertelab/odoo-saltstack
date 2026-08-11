@@ -21,7 +21,7 @@ Features:
     'author': 'Vertel Sverige AB',
     'license': 'AGPL-3',
     'website': 'https://vertel.se',
-    'depends': ['base', 'mail'],
+    'depends': ['base', 'mail', 'ai_agent_core'],
     'data': [
         'security/saltstack_groups.xml',
         'data/model_registry.xml',
@@ -29,8 +29,8 @@ Features:
         'data/config_data.xml',
         'data/fault_actions.xml',
         'data/sync_cron.xml',
-        'data/sync_actions.xml',
         'views/saltstack_menu_views.xml',
+        'data/sync_actions.xml',
         'views/res_config_settings_views.xml',
         'views/salt_pillar_views.xml',
         'views/salt_minion_views.xml',

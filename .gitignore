@@ -7,3 +7,5 @@ __pycache__/
 
 # Odoo
 *.pyo
+bifrost
+bifrost_saltstack
