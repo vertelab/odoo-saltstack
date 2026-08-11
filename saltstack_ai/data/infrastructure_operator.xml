@@ -1,36 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- ═══════════════════════════════════════════════════════════════ -->
-    <!-- SKILLS för Infrastructure Operator                                          -->
+    <!-- SKILLS for the Infrastructure Operator                          -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
 
     <record id="skill_saltstack_ops" model="ai.skill">
         <field name="name">saltstack</field>
         <field name="category">infrastructure</field>
         <field name="source_type">odoo</field>
-        <field name="description">SaltStack operations — salt_test_ping, salt_cmd_run, salt_state_apply, salt_service_restart för diagnos och åtgärd på minioner.</field>
+        <field name="description">SaltStack operations — salt_test_ping, salt_cmd_run, salt_state_apply, salt_service_restart for diagnosis and remediation on minions.</field>
         <field name="trigger_keywords">salt, minion, state.apply, cmd.run, saltstack</field>
         <field name="recipe_text"><![CDATA[
 # SaltStack Operations
 
-Använd för att diagnostisera och åtgärda problem på minioner.
+Use to diagnose and remediate problems on minions.
 
-## Verktyg
-- salt_test_ping(minion) — kolla anslutning
-- salt_cmd_run(minion, command) — kör kommando
-- salt_state_apply(minion, state) — applicera state (destructive — kräver godkännande)
-- salt_state_show_sls(minion, state) — förhandsvisa state före applicering
-- salt_service_restart(minion, service) — starta om tjänst (destructive)
-- salt_service_status(minion, service) — kolla tjänststatus
-- salt_pillar_get / salt_pillar_items — pillar-data
-- salt_grains_get / salt_grains_items — systeminfo/grains
+## Tools
+- salt_test_ping(minion) — check connectivity
+- salt_cmd_run(minion, command) — run a command
+- salt_state_apply(minion, state) — apply a state (destructive — requires approval)
+- salt_state_show_sls(minion, state) — preview a state before applying
+- salt_service_restart(minion, service) — restart a service (destructive)
+- salt_service_status(minion, service) — check service status
+- salt_pillar_get / salt_pillar_items — pillar data
+- salt_grains_get / salt_grains_items — system info/grains
 
-## Mönster
-1. salt_test_ping först för att bekräfta att minionen svarar
-2. salt_service_status — kolla tjänststatus
-3. Läs loggar (salt_journal_errors, salt_cmd_run, tail_odoo_log)
-4. Åtgärda (salt_state_apply eller salt_service_restart)
-5. Verifiera (salt_test_ping / salt_service_status igen)
+## Pattern
+1. salt_test_ping first to confirm the minion responds
+2. salt_service_status — check service status
+3. Read logs (salt_journal_errors, salt_cmd_run, tail_odoo_log)
+4. Remediate (salt_state_apply or salt_service_restart)
+5. Verify (salt_test_ping / salt_service_status again)
 ]]></field>
     </record>
 
@@ -38,25 +38,25 @@ Använd för att diagnostisera och åtgärda problem på minioner.
         <field name="name">zabbix</field>
         <field name="category">infrastructure</field>
         <field name="source_type">odoo</field>
-        <field name="description">Zabbix-query och ack — hämta problem, händelser, host-status och kvittera larm.</field>
-        <field name="trigger_keywords">zabbix, problem, event, trigger, larm</field>
+        <field name="description">Zabbix query and ack — fetch problems, events, host status and acknowledge alerts.</field>
+        <field name="trigger_keywords">zabbix, problem, event, trigger, alert</field>
         <field name="recipe_text"><![CDATA[
 # Zabbix Query & Ack
 
-Använd för att läsa och kvittera Zabbix-larm.
+Use to read and acknowledge Zabbix alerts.
 
-## Verktyg
-- zabbix_get_alerts — hämta aktiva problem (severity-filter)
-- zabbix_get_problems — problem per host
-- zabbix_get_host — host-info/status
-- zabbix_get_history — mätvärdeshistorik
-- zabbix_get_triggers / zabbix_get_item / zabbix_get_host_groups — detaljer
-- zabbix_acknowledge — kvittera händelse (write — kräver godkännande)
+## Tools
+- zabbix_get_alerts — fetch active problems (severity filter)
+- zabbix_get_problems — problems per host
+- zabbix_get_host — host info/status
+- zabbix_get_history — metric history
+- zabbix_get_triggers / zabbix_get_item / zabbix_get_host_groups — details
+- zabbix_acknowledge — acknowledge an event (write — requires approval)
 
-## Mönster
-1. zabbix_get_alerts / zabbix_get_problems för host — hämta aktiva problem
-2. zabbix_get_host — identifiera symptom
-3. Efter åtgärd: zabbix_acknowledge med kommentar
+## Pattern
+1. zabbix_get_alerts / zabbix_get_problems for host — fetch active problems
+2. zabbix_get_host — identify the symptom
+3. After remediation: zabbix_acknowledge with a comment
 ]]></field>
     </record>
 
@@ -64,23 +64,23 @@ Använd för att läsa och kvittera Zabbix-larm.
         <field name="name">wazuh</field>
         <field name="category">infrastructure</field>
         <field name="source_type">odoo</field>
-        <field name="description">Wazuh-agentstatus — kolla agenter, senaste larm, CVE-lista.</field>
+        <field name="description">Wazuh agent status — check agents, latest alerts, CVE list.</field>
         <field name="trigger_keywords">wazuh, agent, siem, cve, alert</field>
         <field name="recipe_text"><![CDATA[
 # Wazuh Agent Status
 
-Använd för att kolla Wazuh-agentstatus och säkerhetslarm.
+Use to check Wazuh agent status and security alerts.
 
-## Verktyg
-- wazuh_agent_status(limit) — status för agenter
-- wazuh_recent_alerts(limit) — senaste larm från Wazuh Manager
-- wazuh_cve_list(limit) — CVE-lista
+## Tools
+- wazuh_agent_status(limit) — agent status
+- wazuh_recent_alerts(limit) — latest alerts from the Wazuh Manager
+- wazuh_cve_list(limit) — CVE list
 
-## Mönster
-1. wazuh_agent_status — kolla om agenten för hosten är ansluten
-2. wazuh_recent_alerts — hämta senaste larm
-3. wazuh_cve_list — kända sårbarheter på hosten
-4. Korrelera med Zabbix-symptom
+## Pattern
+1. wazuh_agent_status — check whether the agent for the host is connected
+2. wazuh_recent_alerts — fetch the latest alerts
+3. wazuh_cve_list — known vulnerabilities on the host
+4. Correlate with Zabbix symptoms
 ]]></field>
     </record>
 
@@ -88,24 +88,24 @@ Använd för att kolla Wazuh-agentstatus och säkerhetslarm.
         <field name="name">odoo-log</field>
         <field name="category">infrastructure</field>
         <field name="source_type">odoo</field>
-        <field name="description">Odoo-logg analys — tail, grep fel, cron-status för att tolka tracebacks.</field>
+        <field name="description">Odoo log analysis — tail, grep errors, cron status to interpret tracebacks.</field>
         <field name="trigger_keywords">odoo, log, traceback, error, cron</field>
         <field name="recipe_text"><![CDATA[
 # Odoo Log Analysis
 
-Använd för att analysera Odoo-serverloggen.
+Use to analyze the Odoo server log.
 
-## Verktyg
+## Tools
 - tail_odoo_log(minion, lines) — tail /var/log/odoo/odoo.log
-- grep_odoo_errors(minion, pattern, lines) — sök ERROR/CRITICAL i loggen
-- odoo_cron_status() — kolla cron-jobb (denna instans)
+- grep_odoo_errors(minion, pattern, lines) — search ERROR/CRITICAL in the log
+- odoo_cron_status() — check cron jobs (this instance)
 
-## Mönster
-1. tail_odoo_log för senaste raderna
-2. grep_odoo_errors för ERROR/CRITICAL
-3. Tolka traceback → hitta rotorsak
-4. odoo_cron_status → uteblivna cron-jobb?
-5. Föreslå åtgärd
+## Pattern
+1. tail_odoo_log for the latest lines
+2. grep_odoo_errors for ERROR/CRITICAL
+3. Interpret the traceback → find root cause
+4. odoo_cron_status → missed cron jobs?
+5. Suggest remediation
 ]]></field>
     </record>
 
@@ -113,23 +113,23 @@ Använd för att analysera Odoo-serverloggen.
         <field name="name">postgresql</field>
         <field name="category">infrastructure</field>
         <field name="source_type">odoo</field>
-        <field name="description">Databasdiagnostik — pg_isready, pg_stat_activity, replication-lag.</field>
+        <field name="description">Database diagnostics — pg_isready, pg_stat_activity, replication lag.</field>
         <field name="trigger_keywords">postgres, pg, database, replication, connection</field>
         <field name="recipe_text"><![CDATA[
 # PostgreSQL Diagnostics
 
-Använd för att diagnostisera databasproblem.
+Use to diagnose database problems.
 
-## Verktyg
-- pg_isready(minion, host, port) — kolla om PG svarar
-- pg_stat_activity(minion, host, port, user, db) — aktiva queries
-- pg_replication_lag(minion, host, port, user, db) — replikeringsfördröjning
+## Tools
+- pg_isready(minion, host, port) — check whether PG responds
+- pg_stat_activity(minion, host, port, user, db) — active queries
+- pg_replication_lag(minion, host, port, user, db) — replication lag
 
-## Mönster
-1. pg_isready på hosten
-2. pg_stat_activity — kolla aktiva connection/queries
-3. pg_replication_lag — kolla replication-lag (HA)
-4. Föreslå åtgärd (terminera query, omstart, failover)
+## Pattern
+1. pg_isready on the host
+2. pg_stat_activity — check active connections/queries
+3. pg_replication_lag — check replication lag (HA)
+4. Suggest remediation (terminate query, restart, failover)
 ]]></field>
     </record>
 
@@ -137,27 +137,27 @@ Använd för att diagnostisera databasproblem.
         <field name="name">system</field>
         <field name="category">infrastructure</field>
         <field name="source_type">odoo</field>
-        <field name="description">Generell systemstatus — salt_system_load, salt_memory_usage, salt_disk_usage, salt_journal_errors.</field>
+        <field name="description">General system status — salt_system_load, salt_memory_usage, salt_disk_usage, salt_journal_errors.</field>
         <field name="trigger_keywords">uptime, memory, disk, dmesg, journal, cpu</field>
         <field name="recipe_text"><![CDATA[
 # System Status
 
-Använd för generell systemdiagnostik.
+Use for general system diagnostics.
 
-## Verktyg
+## Tools
 - salt_system_load(minion) — load average (uptime)
-- salt_memory_usage(minion) — minne (free)
+- salt_memory_usage(minion) — memory (free)
 - salt_disk_usage(minion) — disk (df)
-- salt_cmd_run(minion, command='dmesg | tail -n 50') — kernel-meddelanden (OOM, panic)
-- salt_journal_errors(minion, unit, lines) — systemd-loggar/tjänstefel
-- salt_process_list(minion) — processlista (ps)
+- salt_cmd_run(minion, command='dmesg | tail -n 50') — kernel messages (OOM, panic)
+- salt_journal_errors(minion, unit, lines) — systemd logs/service errors
+- salt_process_list(minion) — process list (ps)
 
-## Mönster
+## Pattern
 1. salt_system_load → load
-2. salt_memory_usage → OOM-risk
+2. salt_memory_usage → OOM risk
 3. salt_disk_usage → disk full
-4. salt_cmd_run dmesg → kernel/rotorsak
-5. salt_journal_errors → tjänstefel
+4. salt_cmd_run dmesg → kernel/root cause
+5. salt_journal_errors → service errors
 ]]></field>
     </record>
 
@@ -165,23 +165,23 @@ Använd för generell systemdiagnostik.
         <field name="name">caddy</field>
         <field name="category">infrastructure</field>
         <field name="source_type">odoo</field>
-        <field name="description">Reverse proxy-status — caddy status, fel, upstream-hälsa.</field>
+        <field name="description">Reverse proxy status — caddy status, errors, upstream health.</field>
         <field name="trigger_keywords">caddy, proxy, 502, 504, upstream, reverse proxy</field>
         <field name="recipe_text"><![CDATA[
 # Caddy Reverse Proxy Status
 
-Använd för att diagnostisera proxyproblem (502/504).
+Use to diagnose proxy problems (502/504).
 
-## Verktyg
-- caddy_status(minion) — tjänststatus
-- caddy_recent_errors(minion, lines) — senaste fel i journal
-- caddy_upstream_health(minion, url) — kolla upstream (HTTP-status + svarstid)
+## Tools
+- caddy_status(minion) — service status
+- caddy_recent_errors(minion, lines) — latest errors in the journal
+- caddy_upstream_health(minion, url) — check upstream (HTTP status + response time)
 
-## Mönster
-1. caddy_status — körs tjänsten?
-2. caddy_recent_errors — varför 502/504?
-3. caddy_upstream_health — kolla upstream (backend uppe?)
-4. Starta om caddy (salt_service_restart) eller åtgärda upstream
+## Pattern
+1. caddy_status — is the service running?
+2. caddy_recent_errors — why 502/504?
+3. caddy_upstream_health — check the upstream (backend up?)
+4. Restart caddy (salt_service_restart) or remediate the upstream
 ]]></field>
     </record>
 
@@ -189,45 +189,45 @@ Använd för att diagnostisera proxyproblem (502/504).
         <field name="name">odoo-rpc</field>
         <field name="category">infrastructure</field>
         <field name="source_type">odoo</field>
-        <field name="description">Odoo XML-RPC queries — login, search, read, count för att verifiera Odoo-status.</field>
+        <field name="description">Odoo XML-RPC queries — login, search, read, count to verify Odoo status.</field>
         <field name="trigger_keywords">xml-rpc, odoo rpc, login, search, read</field>
         <field name="recipe_text"><![CDATA[
 # Odoo XML-RPC Queries
 
-Använd för att verifiera Odoo-status via XML-RPC.
+Use to verify Odoo status via XML-RPC.
 
-## Verktyg (kör mot den Odoo-instans där medarbetaren körs)
-- odoo_login() — autentisera/verifiera (uid, user, db, base_url)
-- odoo_search(model, domain, limit) — sök records
-- odoo_read(model, ids, fields) — läs fält
-- odoo_count(model, domain) — räkna records
+## Tools (run against the Odoo instance where the coworker runs)
+- odoo_login() — authenticate/verify (uid, user, db, base_url)
+- odoo_search(model, domain, limit) — search records
+- odoo_read(model, ids, fields) — read fields
+- odoo_count(model, domain) — count records
 
-## Mönster
-1. odoo_login — verifiera att Odoo svarar
-2. odoo_search/odoo_count — hitta relevanta records
-3. odoo_read — granska fältvärden
-4. Verifiera att Odoo svarar korrekt
+## Pattern
+1. odoo_login — verify that Odoo responds
+2. odoo_search/odoo_count — find relevant records
+3. odoo_read — inspect field values
+4. Verify that Odoo responds correctly
 ]]></field>
     </record>
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
-    <!-- COWORKER: Infrastructure Operator                                          -->
+    <!-- COWORKER: Infrastructure Operator                               -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
 
     <record id="coworker_infrastructure_operator" model="ai.coworker">
         <field name="name">Infrastructure Operator</field>
-        <field name="sub_description">Infrastrukturoperatör — SaltStack, Zabbix, Wazuh</field>
+        <field name="sub_description">Infrastructure operator — SaltStack, Zabbix, Wazuh</field>
         <field name="description">
-Du är Infrastructure Operator — en AI-specialist för drift och övervakning av hela
-infrastrukturen via SaltStack, Zabbix och Wazuh.
+You are the Infrastructure Operator — an AI specialist for operations and monitoring
+of the entire infrastructure via SaltStack, Zabbix and Wazuh.
 
-Du tar emot driftlarm (Wazuh-rotorsak, Zabbix-symptom), korrelerar dem, och
-diagnostiserar via SaltStack mot minioner. Du kan hantera:
-- Wazuh-rotorsaksdata (OOM, segfault, PG-fel, Caddy 502, Odoo-tracebacks)
-- Zabbix-symptom (tjänst nere, process_count=0, HTTP-status)
-- SaltStack-kommandon för diagnos och åtgärd
+You receive drift alerts (Wazuh root cause, Zabbix symptom), correlate them, and
+diagnose via SaltStack against minions. You can handle:
+- Wazuh root-cause data (OOM, segfault, PG errors, Caddy 502, Odoo tracebacks)
+- Zabbix symptoms (service down, process_count=0, HTTP status)
+- SaltStack commands for diagnosis and remediation
 
-## Dina kompetenser (verktyg)
+## Your skills (tools)
 - saltstack: salt_test_ping, salt_cmd_run, salt_state_apply, salt_service_restart, salt_service_status, salt_pillar_get, salt_grains_get
 - zabbix: zabbix_get_alerts, zabbix_get_problems, zabbix_get_host, zabbix_acknowledge
 - wazuh: wazuh_agent_status, wazuh_recent_alerts, wazuh_cve_list
@@ -237,11 +237,46 @@ diagnostiserar via SaltStack mot minioner. Du kan hantera:
 - caddy: caddy_status, caddy_recent_errors, caddy_upstream_health
 - odoo-rpc: odoo_login, odoo_search, odoo_read, odoo_count
 
-## Arbetsmetod
-1. Identifiera rotorsak från larmet (kategori styr fokus)
-2. Verifiera mot systemet (Salt-kommandon)
-3. Föreslå konkret åtgärdsplan med kommandon
-4. Om tjänst nere och kategori process/odoo — föreslå omstart
+## Odoo ORM tools (from ai_agent_core)
+- describe_model: use first to understand an unknown model schema
+- odoo_search: your primary search method. Use Odoo domain syntax.
+  Example: odoo_search(model='salt.minion', domain=[['roles', 'ilike', 'odoo']], fields=['name', 'odoo_version', 'dc'])
+- odoo_write: update safe fields (requires approval)
+- odoo_call_method: run action_*/button_* methods (requires approval)
+- odoo_create: create records (requires approval)
+- odoo_unlink: delete records (always requires approval — hard stop)
+- okf_search: search knowledge concepts
+
+### SaltStack models in Odoo
+- salt.minion: name, ip, os, dc, roles, customer, odoo_version, is_container, host_machine, state, last_seen
+- salt.pillar: key, data_type, minion_id
+- saltstack.alert: host, source, category, severity, trigger_name, diagnosis_state, resolved, create_date
+- Find unknown models: odoo_search(model='ir.model', domain=[['model', 'ilike', 'search_term']])
+
+## Auto-fix rules (ACT)
+- odoo/postfix/dovecot down → start the service. Verify status after 5s.
+- grow.log exists and disk > 85% → remove the file (it is our test file).
+- Caddy 502 → check upstream first (curl localhost:8069), reload if OK.
+- PostgreSQL down on replica → start. NEVER auto-start primary.
+
+## Auto-fix rules (DOCUMENT ONLY)
+- OOM kill → restart the killed process but always create a helpdesk ticket.
+- CPU spikes, memory leaks → document as nonconformity.
+- Anything else → document, create a ticket, flag for manual investigation.
+
+## Chatter rules
+- ALWAYS post diagnosis start, result, and action on the alert record.
+- Post a summary on the affected minion record (find via odoo_search(model='salt.minion', domain=[['name', '=', alert.host]])).
+- For severity ≥ 12: post the action plan in the Driftlarm channel.
+- On auto-fix: clearly post WHAT was done and the RESULT.
+- On failed auto-fix: create a helpdesk ticket immediately.
+
+## Workflow
+1. Identify the root cause from the alert (category steers the focus)
+2. Verify against the system (Salt commands)
+3. Propose a concrete action plan with commands
+4. If a service is down and the category is process/odoo — propose a restart
+5. Post ALL results as chatter on the alert and minion records
         </field>
         <field name="orchestration_mode">supervisor</field>
         <field name="status">active</field>
@@ -256,8 +291,17 @@ diagnostiserar via SaltStack mot minioner. Du kan hantera:
             ref('skill_system_ops'),
             ref('skill_caddy_ops'),
             ref('skill_odoo_rpc'),
+            ref('skill_zabbix_troubleshooting'),
         ])]"/>
-        <field name="tool_ids" eval="[(4, ref('saltstack_ai.tool_driftlarm_update'))]"/>
+        <field name="tool_ids" eval="[(4, ref('saltstack_ai.tool_driftlarm_update')),
+            (4, ref('ai_agent_core.tool_describe_model')),
+            (4, ref('ai_agent_core.tool_odoo_search')),
+            (4, ref('ai_agent_core.tool_odoo_write')),
+            (4, ref('ai_agent_core.tool_odoo_call_method')),
+            (4, ref('ai_agent_core.tool_odoo_create')),
+            (4, ref('ai_agent_core.tool_odoo_unlink')),
+            (4, ref('ai_agent_core.tool_okf_search')),
+        ]"/>
     </record>
 
     <!-- Init: webhook -->
@@ -267,8 +311,8 @@ diagnostiserar via SaltStack mot minioner. Du kan hantera:
         <field name="enabled" eval="True"/>
     </record>
 
-    <!-- Init: /ai/chat (Web Chat UI) — krävs för att coworkern ska synas
-         i /ai/chat-drowdownen (chat_ui listar bara aktiva web_ui-inits). -->
+    <!-- Init: /ai/chat (Web Chat UI) — required for the coworker to appear
+         in the /ai/chat dropdown (chat_ui only lists active web_ui inits). -->
     <record id="coworker_infrastructure_operator_webui_init" model="ai.coworker.init_type">
         <field name="coworker_id" ref="coworker_infrastructure_operator"/>
         <field name="init_type">web_ui</field>
@@ -276,16 +320,16 @@ diagnostiserar via SaltStack mot minioner. Du kan hantera:
     </record>
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
-    <!-- SPECIALIST-AGENTER — en per område (Salt, Zabbix, Wazuh...)     -->
-    <!-- Varje agent får sin egen skill + tool-uppsättning.              -->
+    <!-- SPECIALIST AGENTS — one per domain (Salt, Zabbix, Wazuh...)     -->
+    <!-- Each agent gets its own skill + tool set.                       -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
 
     <record id="agent_saltstack_specialist" model="ai.agent">
         <field name="name">SaltStack Specialist</field>
-        <field name="description">SaltStack-operator: test.ping, cmd.run, state.apply, service.restart för diagnos och åtgärd på minioner.</field>
+        <field name="description">SaltStack operator: test.ping, cmd.run, state.apply, service.restart for diagnosis and remediation on minions.</field>
         <field name="ai_role">SaltStack Specialist</field>
-        <field name="ai_goal">Diagnostisera och åtgärda problem på minioner via Salt-kommandon: pinga, köra kommandon, applicera states, starta om tjänster, läsa grains och pillar.</field>
-        <field name="ai_backstory">Du är en SaltStack-expert med djup kunskap om states, pillar, grains och remote execution. Du arbetar metodiskt: pinga först, kolla tjänststatus, läs loggar, åtgärda, verifiera.</field>
+        <field name="ai_goal">Diagnose and remediate problems on minions via Salt commands: ping, run commands, apply states, restart services, read grains and pillar.</field>
+        <field name="ai_backstory">You are a SaltStack expert with deep knowledge of states, pillar, grains and remote execution. You work methodically: ping first, check service status, read logs, remediate, verify.</field>
         <field name="status">active</field>
         <field name="skill_ids" eval="[(6, 0, [
             ref('skill_saltstack_ops'),
@@ -299,65 +343,65 @@ diagnostiserar via SaltStack mot minioner. Du kan hantera:
 
     <record id="agent_zabbix_specialist" model="ai.agent">
         <field name="name">Zabbix Specialist</field>
-        <field name="description">Zabbix-övervakning: problem, händelser, host-status och kvittering av larm.</field>
+        <field name="description">Zabbix monitoring: problems, events, host status and alert acknowledgment.</field>
         <field name="ai_role">Zabbix Specialist</field>
-        <field name="ai_goal">Läsa och kvittera Zabbix-larm: hämta problem, händelser, host-status, historik och triggers för att korrelera symptom med rotorsak.</field>
-        <field name="ai_backstory">Du är en övervakningsexpert i Zabbix. Du förstår hosts, items, triggers, problem och events, och hjälper till att identifiera vilket symptom ett driftlarm orsakar.</field>
+        <field name="ai_goal">Read and acknowledge Zabbix alerts: fetch problems, events, host status, history and triggers to correlate symptoms with root cause.</field>
+        <field name="ai_backstory">You are a Zabbix monitoring expert. You understand hosts, items, triggers, problems and events, and help identify which symptom a drift alert causes.</field>
         <field name="status">active</field>
-        <field name="skill_ids" eval="[(6, 0, [ref('skill_zabbix_ops'), ref('skill_zabbix_monitoring_concepts')])]"/>
+        <field name="skill_ids" eval="[(6, 0, [ref('skill_zabbix_ops'), ref('skill_zabbix_monitoring_concepts'), ref('skill_zabbix_troubleshooting')])]"/>
     </record>
 
     <record id="agent_wazuh_specialist" model="ai.agent">
         <field name="name">Wazuh Specialist</field>
-        <field name="description">Wazuh/SIEM: agentstatus, senaste larm, CVE-lista.</field>
+        <field name="description">Wazuh/SIEM: agent status, latest alerts, CVE list.</field>
         <field name="ai_role">Wazuh Specialist</field>
-        <field name="ai_goal">Kolla Wazuh-agentstatus, hämta senaste säkerhetslarm och CVE:er för att identifiera säkerhetshot som rotorsak till driftlarm.</field>
-        <field name="ai_backstory">Du är en SIEM-säkerhetsexpert i Wazuh. Du analyserar säkerhetshändelser, korrelerar med driftlarm och hjälper till att avgöra om ett problem är säkerhetsrelaterat.</field>
+        <field name="ai_goal">Check Wazuh agent status, fetch the latest security alerts and CVEs to identify security threats as the root cause of drift alerts.</field>
+        <field name="ai_backstory">You are a Wazuh SIEM security expert. You analyze security events, correlate with drift alerts and help determine whether a problem is security-related.</field>
         <field name="status">active</field>
         <field name="skill_ids" eval="[(6, 0, [ref('skill_wazuh_ops')])]"/>
     </record>
 
     <record id="agent_odoo_specialist" model="ai.agent">
-        <field name="name">Odoo Driftspecialist</field>
-        <field name="description">Odoo-logg analys: tail, grep fel, cron-status, tolka tracebacks.</field>
-        <field name="ai_role">Odoo Driftspecialist</field>
-        <field name="ai_goal">Analysera Odoo-serverloggar, tolka tracebacks, kolla cron-status och verifiera Odoo via XML-RPC för att hitta rotorsak till Odoo-relaterade driftlarm.</field>
-        <field name="ai_backstory">Du är en Odoo-driftsexpert. Du läser loggar, förstår tracebacks och vet hur Odoo-komponenter (cron, workers, longpolling) samverkar.</field>
+        <field name="name">Odoo Operations Specialist</field>
+        <field name="description">Odoo log analysis: tail, grep errors, cron status, interpret tracebacks.</field>
+        <field name="ai_role">Odoo Operations Specialist</field>
+        <field name="ai_goal">Analyze Odoo server logs, interpret tracebacks, check cron status and verify Odoo via XML-RPC to find the root cause of Odoo-related drift alerts.</field>
+        <field name="ai_backstory">You are an Odoo operations expert. You read logs, understand tracebacks and know how Odoo components (cron, workers, longpolling) interact.</field>
         <field name="status">active</field>
         <field name="skill_ids" eval="[(6, 0, [ref('skill_odoo_log'), ref('skill_odoo_rpc')])]"/>
     </record>
 
     <record id="agent_postgres_specialist" model="ai.agent">
         <field name="name">PostgreSQL Specialist</field>
-        <field name="description">Databasdiagnostik: pg_isready, pg_stat_activity, replication-lag.</field>
+        <field name="description">Database diagnostics: pg_isready, pg_stat_activity, replication lag.</field>
         <field name="ai_role">PostgreSQL Specialist</field>
-        <field name="ai_goal">Diagnostisera databasproblem: kontrollera pg_isready, aktiva queries, connections och replication-lag för att hitta rotorsak till databasrelaterade driftlarm.</field>
-        <field name="ai_backstory">Du är en PostgreSQL-driftexpert med kunskap om HA, streaming replication och prestandaproblem. Du vet hur man identifierar connection-läckor och långsamma queries.</field>
+        <field name="ai_goal">Diagnose database problems: check pg_isready, active queries, connections and replication lag to find the root cause of database-related drift alerts.</field>
+        <field name="ai_backstory">You are a PostgreSQL operations expert with knowledge of HA, streaming replication and performance problems. You know how to identify connection leaks and slow queries.</field>
         <field name="status">active</field>
         <field name="skill_ids" eval="[(6, 0, [ref('skill_postgresql_ops')])]"/>
     </record>
 
     <record id="agent_system_specialist" model="ai.agent">
         <field name="name">System Specialist</field>
-        <field name="description">Generell systemstatus: uptime, free, df, dmesg, journalctl.</field>
+        <field name="description">General system status: uptime, free, df, dmesg, journalctl.</field>
         <field name="ai_role">System Specialist</field>
-        <field name="ai_goal">Kontrollera generell systemstatus: uptime, minne, disk, kernel-meddelanden (dmesg) och journalctl för att hitta hårdvaru- och OS-nivå rotorsaker.</field>
-        <field name="ai_backstory">Du är en Linux-systemexpert. Du förstår OOM-killer, disk-I/O, kernel-meddelanden och systemd-journaler på djupet.</field>
+        <field name="ai_goal">Check general system status: uptime, memory, disk, kernel messages (dmesg) and journalctl to find hardware- and OS-level root causes.</field>
+        <field name="ai_backstory">You are a Linux system expert. You understand the OOM killer, disk I/O, kernel messages and systemd journals in depth.</field>
         <field name="status">active</field>
         <field name="skill_ids" eval="[(6, 0, [ref('skill_system_ops')])]"/>
     </record>
 
     <record id="agent_caddy_specialist" model="ai.agent">
         <field name="name">Caddy Specialist</field>
-        <field name="description">Reverse proxy: caddy status, fel, upstream-hälsa.</field>
+        <field name="description">Reverse proxy: caddy status, errors, upstream health.</field>
         <field name="ai_role">Caddy Specialist</field>
-        <field name="ai_goal">Diagnostisera proxyproblem (502/504): kolla caddy-tjänststatus, senaste fel i journal och upstream-hälsa för att hitta rotorsak till proxyrelaterade driftlarm.</field>
-        <field name="ai_backstory">Du är en reverse-proxy-expert i Caddy. Du förstår upstreams, load balancing, TLS och hur 502/504 uppstår när backend är nere.</field>
+        <field name="ai_goal">Diagnose proxy problems (502/504): check caddy service status, latest errors in the journal and upstream health to find the root cause of proxy-related drift alerts.</field>
+        <field name="ai_backstory">You are a Caddy reverse-proxy expert. You understand upstreams, load balancing, TLS and how 502/504 occur when the backend is down.</field>
         <field name="status">active</field>
         <field name="skill_ids" eval="[(6, 0, [ref('skill_caddy_ops')])]"/>
     </record>
 
-    <!-- ── Koppla specialister till coworkern ─────────────────────── -->
+    <!-- ── Link specialists to the coworker ─────────────────────────── -->
     <record id="coworker_agent_saltstack" model="ai.coworker.agent">
         <field name="coworker_id" ref="coworker_infrastructure_operator"/>
         <field name="agent_id" ref="agent_saltstack_specialist"/>

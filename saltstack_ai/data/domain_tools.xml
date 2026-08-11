@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- ═══════════════════════════════════════════════════════════════ -->
-    <!-- DOMAIN TOOLS — högnivå-diagnostikverktyg som skillerna           -->
-    <!-- refererar (odoo-log, odoo-rpc, postgresql, caddy, wazuh).        -->
+    <!-- DOMAIN TOOLS — high-level diagnostics referenced by the skills   -->
+    <!-- (odoo-log, odoo-rpc, postgresql, caddy, wazuh).                  -->
     <!--                                                                   -->
-    <!-- Alla verktyg här har BÅDE group_ids (access → group_infra_       -->
-    <!-- operator) och agent_ids (koppling till rätt specialist-agent)     -->
-    <!-- INLINE — inga separata patch-filer behövs.                        -->
+    <!-- Every tool here has BOTH group_ids (access → group_infra_        -->
+    <!-- operator) and agent_ids (binding to the right specialist agent).  -->
+    <!-- INLINE — no separate patch files needed.                          -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
 
     <!-- ── ODOO LOG ─────────────────────────────────────────────────── -->
@@ -18,17 +18,17 @@
         <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
         <field name="agent_ids" eval="[(4, ref('agent_odoo_specialist'))]"/>
         <field name="description"><![CDATA[
-syfte: visa de senaste raderna i Odoo-serverloggen på en minion
-när: första steget vid Odoo-relaterade driftlarm — se vad som hände precis innan
-när inte: för att söka felmönster (använd grep_odoo_errors); för att ändra något
-exempel: {"minion": "sparv", "lines": 100}
-output: de senaste N raderna ur loggfilen per minion
-guardrail: ren läsoperation, säker
+purpose: show the latest lines of the Odoo server log on a minion
+when: first step for Odoo-related drift alerts — see what happened right before
+when not: to search for error patterns (use grep_odoo_errors); to change anything
+example: {"minion": "sparv", "lines": 100}
+output: the latest N lines from the log file per minion
+guardrail: read-only operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-ID där Odoo körs"},"lines":{"type":"integer","description":"Antal rader att visa","default":100},"log_path":{"type":"string","description":"Sökväg till Odoo-loggen","default":"/var/log/odoo/odoo.log"}},"required":["minion"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID where Odoo runs"},"lines":{"type":"integer","description":"Number of lines to show","default":100},"log_path":{"type":"string","description":"Path to the Odoo log","default":"/var/log/odoo/odoo.log"}},"required":["minion"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion, lines=100, log_path="/var/log/odoo/odoo.log"):
-    """Tail Odoo-serverloggen på minion."""
+    """Tail the Odoo server log on a minion."""
     api = env['saltstack.ai.config']
     return api.salt_call("local", minion, "cmd.run", f"tail -n {int(lines)} {log_path}")
 ]]></field>
@@ -41,17 +41,17 @@ async def execute(minion, lines=100, log_path="/var/log/odoo/odoo.log"):
         <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
         <field name="agent_ids" eval="[(4, ref('agent_odoo_specialist'))]"/>
         <field name="description"><![CDATA[
-syfte: söka ERROR/CRITICAL-rader (eller eget mönster) i Odoo-loggen på en minion
-när: efter tail_odoo_log, när man vill hitta felmönster och tracebacks i loggen
-när inte: för att se senaste händelser (använd tail_odoo_log); för att ändra något
-exempel: {"minion": "sparv", "pattern": "ERROR|CRITICAL", "lines": 100}
-output: matchande loggrader per minion (senaste N)
-guardrail: ren läsoperation, säker
+purpose: search ERROR/CRITICAL lines (or a custom pattern) in the Odoo log on a minion
+when: after tail_odoo_log, when looking for error patterns and tracebacks in the log
+when not: to see recent events (use tail_odoo_log); to change anything
+example: {"minion": "sparv", "pattern": "ERROR|CRITICAL", "lines": 100}
+output: matching log lines per minion (latest N)
+guardrail: read-only operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-ID där Odoo körs"},"pattern":{"type":"string","description":"Grep-mönster (EGREP)","default":"ERROR|CRITICAL"},"lines":{"type":"integer","description":"Antal matchningar att visa","default":100},"log_path":{"type":"string","description":"Sökväg till Odoo-loggen","default":"/var/log/odoo/odoo.log"}},"required":["minion"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID where Odoo runs"},"pattern":{"type":"string","description":"Grep pattern (EGREP)","default":"ERROR|CRITICAL"},"lines":{"type":"integer","description":"Number of matches to show","default":100},"log_path":{"type":"string","description":"Path to the Odoo log","default":"/var/log/odoo/odoo.log"}},"required":["minion"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion, pattern="ERROR|CRITICAL", lines=100, log_path="/var/log/odoo/odoo.log"):
-    """Grep efter fel i Odoo-loggen på minion."""
+    """Grep for errors in the Odoo log on a minion."""
     api = env['saltstack.ai.config']
     return api.salt_call("local", minion, "cmd.run", f"grep -aE '{pattern}' {log_path} | tail -n {int(lines)}")
 ]]></field>
@@ -64,17 +64,17 @@ async def execute(minion, pattern="ERROR|CRITICAL", lines=100, log_path="/var/lo
         <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
         <field name="agent_ids" eval="[(4, ref('agent_odoo_specialist'))]"/>
         <field name="description"><![CDATA[
-syfte: lista cron-jobb i den Odoo-instans där medarbetaren körs
-när: när Odoo-relaterade driftlarm kan bero på att cron-jobb inte kört (t.ex. utebliven indexering)
-när inte: för att ändra cron-jobb (read-only); för att kolla andra Odoo-instanser (använd salt_cmd_run + psql)
-exempel: {"limit": 50}
-output: lista med name, active, nextcall, model, method per cron
-guardrail: ren läsoperation, säker
+purpose: list cron jobs in the Odoo instance where the coworker runs
+when: Odoo-related drift alerts may be caused by cron jobs not running (e.g. missing indexing)
+when not: to change cron jobs (read-only); to inspect other Odoo instances (use salt_cmd_run + psql)
+example: {"limit": 50}
+output: list with name, active, nextcall, model, method per cron
+guardrail: read-only operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"limit":{"type":"integer","description":"Max antal cron-jobb","default":50}},"required":[]}</field>
+        <field name="parameters">{"type":"object","properties":{"limit":{"type":"integer","description":"Max number of cron jobs","default":50}},"required":[]}</field>
         <field name="code"><![CDATA[
 async def execute(limit=50):
-    """Lista cron-jobb i denna Odoo-instans."""
+    """List cron jobs in this Odoo instance."""
     crons = env['ir.cron'].sudo().search_read(
         [], ['name', 'active', 'nextcall', 'model', 'method'],
         limit=int(limit), order='nextcall')
@@ -82,7 +82,7 @@ async def execute(limit=50):
 ]]></field>
     </record>
 
-    <!-- ── ODOO RPC (själv-verifiering via denna instans) ───────────── -->
+    <!-- ── ODOO RPC (self-verification via this instance) ───────────── -->
 
     <record id="tool_odoo_login" model="ai.tool">
         <field name="name">odoo_login</field>
@@ -91,17 +91,17 @@ async def execute(limit=50):
         <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
         <field name="agent_ids" eval="[(4, ref('agent_odoo_specialist'))]"/>
         <field name="description"><![CDATA[
-syfte: verifiera att Odoo svarar — returnerar uid, användare, databas och bas-URL
-när: som hälso-check av den Odoo-instans där medarbetaren körs
-när inte: för att anropa andra Odoo-instanser (använd salt_cmd_run); för att ändra något
-exempel: {}
+purpose: verify that Odoo responds — returns uid, user, database and base URL
+when: as a health check of the Odoo instance where the coworker runs
+when not: to call other Odoo instances (use salt_cmd_run); to change anything
+example: {}
 output: {"uid": 1, "user": "admin", "db": "ledningssystem", "base_url": "https://..."}
-guardrail: ren läsoperation, säker
+guardrail: read-only operation, safe
 ]]></field>
         <field name="parameters">{"type":"object","properties":{},"required":[]}</field>
         <field name="code"><![CDATA[
 async def execute():
-    """Verifiera Odoo-status (denna instans)."""
+    """Verify Odoo status (this instance)."""
     return json.dumps({
         'uid': env.uid,
         'user': env.user.name,
@@ -118,19 +118,19 @@ async def execute():
         <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
         <field name="agent_ids" eval="[(4, ref('agent_odoo_specialist'))]"/>
         <field name="description"><![CDATA[
-syfte: söka records i en Odoo-modell (denna instans) — verifiera att modeller/data svarar
-när: för att bekräfta att Odoo-data är tillgänglig under diagnos
-när inte: för att läsa specifika fält (använd odoo_read); för att räkna (använd odoo_count)
-exempel: {"model": "res.partner", "domain": "[['is_company','=',True]]", "limit": 10}
-output: lista med record-ID:n som matchar domänen
-guardrail: ren läsoperation, säker
+purpose: search records in an Odoo model (this instance) — verify that models/data respond
+when: to confirm that Odoo data is available during diagnosis
+when not: to read specific fields (use odoo_read); to count (use odoo_count)
+example: {"model": "res.partner", "domain": "[['is_company','=',True]]", "limit": 10}
+output: list of record IDs matching the domain
+guardrail: read-only operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"model":{"type":"string","description":"Odoo-modell (t.ex. res.partner, salt.minion)"},"domain":{"type":"string","description":"Domän som JSON-sträng","default":"[]"},"limit":{"type":"integer","description":"Max antal träffar","default":50}},"required":["model"]}</field>
+        <field name="parameters">{"type":"object","properties":{"model":{"type":"string","description":"Odoo model (e.g. res.partner, salt.minion)"},"domain":{"type":"string","description":"Domain as JSON string","default":"[]"},"limit":{"type":"integer","description":"Max number of hits","default":50}},"required":["model"]}</field>
         <field name="code"><![CDATA[
 async def execute(model, domain="[]", limit=50):
-    """Sök records i en Odoo-modell."""
+    """Search records in an Odoo model."""
     if model not in env:
-        return f"ERROR: modellen '{model}' finns inte"
+        return f"ERROR: model '{model}' does not exist"
     try:
         dom = json.loads(domain) if isinstance(domain, str) else domain
     except Exception:
@@ -147,24 +147,24 @@ async def execute(model, domain="[]", limit=50):
         <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
         <field name="agent_ids" eval="[(4, ref('agent_odoo_specialist'))]"/>
         <field name="description"><![CDATA[
-syfte: läsa specifika fält från records i en Odoo-modell (denna instans)
-när: efter odoo_search, för att granska fältvärden på hittade records
-när inte: för att söka records (använd odoo_search); för att ändra data (read-only)
-exempel: {"model": "salt.minion", "ids": "[1,2,3]", "fields": "['name','ip','is_online']"}
-output: fältvärden per record
-guardrail: ren läsoperation, säker
+purpose: read specific fields from records in an Odoo model (this instance)
+when: after odoo_search, to inspect field values on the found records
+when not: to search records (use odoo_search); to change data (read-only)
+example: {"model": "salt.minion", "ids": "[1,2,3]", "fields": "['name','ip','is_online']"}
+output: field values per record
+guardrail: read-only operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"model":{"type":"string","description":"Odoo-modell"},"ids":{"type":"string","description":"Record-ID:n som JSON-lista","default":"[]"},"fields":{"type":"string","description":"Fält att läsa som JSON-lista (tom = alla)","default":"[]"}},"required":["model"]}</field>
+        <field name="parameters">{"type":"object","properties":{"model":{"type":"string","description":"Odoo model"},"ids":{"type":"string","description":"Record IDs as JSON list","default":"[]"},"fields":{"type":"string","description":"Fields to read as JSON list (empty = all)","default":"[]"}},"required":["model"]}</field>
         <field name="code"><![CDATA[
 async def execute(model, ids="[]", fields="[]"):
-    """Läs fält från records i en Odoo-modell."""
+    """Read fields from records in an Odoo model."""
     if model not in env:
-        return f"ERROR: modellen '{model}' finns inte"
+        return f"ERROR: model '{model}' does not exist"
     try:
         rec_ids = json.loads(ids) if isinstance(ids, str) else ids
         flds = json.loads(fields) if isinstance(fields, str) else fields
     except Exception:
-        return "ERROR: ids/fields måste vara giltig JSON"
+        return "ERROR: ids/fields must be valid JSON"
     recs = env[model].sudo().browse(rec_ids)
     data = recs.read(flds or None)
     return json.dumps(data, indent=2, default=str)
@@ -178,19 +178,19 @@ async def execute(model, ids="[]", fields="[]"):
         <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
         <field name="agent_ids" eval="[(4, ref('agent_odoo_specialist'))]"/>
         <field name="description"><![CDATA[
-syfte: räkna records som matchar en domän i en Odoo-modell (denna instans)
-när: för att snabbt kvantifiera data (t.ex. antal aktiva minioner, antal larm)
-när inte: för att hämta själva recorden (använd odoo_search)
-exempel: {"model": "salt.minion", "domain": "[['is_online','=',True]]"}
-output: antal träffar
-guardrail: ren läsoperation, säker
+purpose: count records matching a domain in an Odoo model (this instance)
+when: to quickly quantify data (e.g. number of active minions, number of alerts)
+when not: to fetch the records themselves (use odoo_search)
+example: {"model": "salt.minion", "domain": "[['is_online','=',True]]"}
+output: number of hits
+guardrail: read-only operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"model":{"type":"string","description":"Odoo-modell"},"domain":{"type":"string","description":"Domän som JSON-sträng","default":"[]"}},"required":["model"]}</field>
+        <field name="parameters">{"type":"object","properties":{"model":{"type":"string","description":"Odoo model"},"domain":{"type":"string","description":"Domain as JSON string","default":"[]"}},"required":["model"]}</field>
         <field name="code"><![CDATA[
 async def execute(model, domain="[]"):
-    """Räkna records i en Odoo-modell."""
+    """Count records in an Odoo model."""
     if model not in env:
-        return f"ERROR: modellen '{model}' finns inte"
+        return f"ERROR: model '{model}' does not exist"
     try:
         dom = json.loads(domain) if isinstance(domain, str) else domain
     except Exception:
@@ -208,17 +208,17 @@ async def execute(model, domain="[]"):
         <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
         <field name="agent_ids" eval="[(4, ref('agent_postgres_specialist'))]"/>
         <field name="description"><![CDATA[
-syfte: kontrollera att PostgreSQL svarar på en minion (pg_isready)
-när: första steget vid databasrelaterade driftlarm — är PG uppe?
-när inte: för detaljerad query-status (använd pg_stat_activity); för att ändra något
-exempel: {"minion": "pg-1", "host": "localhost", "port": "5432"}
-output: pg_isready-utdata (accepting connections / no response)
-guardrail: ren läsoperation, säker
+purpose: check that PostgreSQL responds on a minion (pg_isready)
+when: first step for database-related drift alerts — is PG up?
+when not: for detailed query status (use pg_stat_activity); to change anything
+example: {"minion": "pg-1", "host": "localhost", "port": "5432"}
+output: pg_isready output (accepting connections / no response)
+guardrail: read-only operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-ID där PostgreSQL körs"},"host":{"type":"string","description":"PG-värd","default":"localhost"},"port":{"type":"string","description":"PG-port","default":"5432"}},"required":["minion"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID where PostgreSQL runs"},"host":{"type":"string","description":"PG host","default":"localhost"},"port":{"type":"string","description":"PG port","default":"5432"}},"required":["minion"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion, host="localhost", port="5432"):
-    """Kontrollera att PostgreSQL svarar."""
+    """Check that PostgreSQL responds."""
     api = env['saltstack.ai.config']
     return api.salt_call("local", minion, "cmd.run", f"pg_isready -h {host} -p {port}")
 ]]></field>
@@ -231,17 +231,17 @@ async def execute(minion, host="localhost", port="5432"):
         <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
         <field name="agent_ids" eval="[(4, ref('agent_postgres_specialist'))]"/>
         <field name="description"><![CDATA[
-syfte: visa aktiva queries/connections i PostgreSQL på en minion (pg_stat_activity)
-när: vid prestandaproblem, connection-läckor eller låsta queries
-när inte: för att kolla om PG svarar (använd pg_isready); för att ändra något
-exempel: {"minion": "pg-1", "host": "localhost", "port": "5432", "user": "postgres", "db": "postgres"}
-output: pid, usename, state, wait_event_type, query_start och första 80 tecken av query
-guardrail: ren läsoperation, säker
+purpose: show active queries/connections in PostgreSQL on a minion (pg_stat_activity)
+when: for performance issues, connection leaks or locked queries
+when not: to check whether PG responds (use pg_isready); to change anything
+example: {"minion": "pg-1", "host": "localhost", "port": "5432", "user": "postgres", "db": "postgres"}
+output: pid, usename, state, wait_event_type, query_start and the first 80 chars of query
+guardrail: read-only operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-ID där PostgreSQL körs"},"host":{"type":"string","description":"PG-värd","default":"localhost"},"port":{"type":"string","description":"PG-port","default":"5432"},"user":{"type":"string","description":"PG-användare","default":"postgres"},"db":{"type":"string","description":"PG-databas","default":"postgres"}},"required":["minion"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID where PostgreSQL runs"},"host":{"type":"string","description":"PG host","default":"localhost"},"port":{"type":"string","description":"PG port","default":"5432"},"user":{"type":"string","description":"PG user","default":"postgres"},"db":{"type":"string","description":"PG database","default":"postgres"}},"required":["minion"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion, host="localhost", port="5432", user="postgres", db="postgres"):
-    """Visa aktiva PG-queries."""
+    """Show active PG queries."""
     api = env['saltstack.ai.config']
     sql = ("SELECT pid, usename, state, wait_event_type, query_start, "
            "left(query,80) AS q FROM pg_stat_activity "
@@ -258,17 +258,17 @@ async def execute(minion, host="localhost", port="5432", user="postgres", db="po
         <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
         <field name="agent_ids" eval="[(4, ref('agent_postgres_specialist'))]"/>
         <field name="description"><![CDATA[
-syfte: visa streaming-replikationsstatus och lag (pg_stat_replication) på primären
-när: vid HA-frågor — är standby i fas? hur stort är lagget?
-när inte: för att kolla om PG svarar (använd pg_isready); för att ändra något
-exempel: {"minion": "pg-1", "host": "localhost", "port": "5432", "user": "postgres", "db": "postgres"}
-output: client_addr, state och lag_bytes per standby
-guardrail: ren läsoperation, säker
+purpose: show streaming replication status and lag (pg_stat_replication) on the primary
+when: for HA questions — is the standby in sync? how big is the lag?
+when not: to check whether PG responds (use pg_isready); to change anything
+example: {"minion": "pg-1", "host": "localhost", "port": "5432", "user": "postgres", "db": "postgres"}
+output: client_addr, state and lag_bytes per standby
+guardrail: read-only operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-ID där primären körs"},"host":{"type":"string","description":"PG-värd","default":"localhost"},"port":{"type":"string","description":"PG-port","default":"5432"},"user":{"type":"string","description":"PG-användare","default":"postgres"},"db":{"type":"string","description":"PG-databas","default":"postgres"}},"required":["minion"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID where the primary runs"},"host":{"type":"string","description":"PG host","default":"localhost"},"port":{"type":"string","description":"PG port","default":"5432"},"user":{"type":"string","description":"PG user","default":"postgres"},"db":{"type":"string","description":"PG database","default":"postgres"}},"required":["minion"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion, host="localhost", port="5432", user="postgres", db="postgres"):
-    """Visa replikeringslag."""
+    """Show replication lag."""
     api = env['saltstack.ai.config']
     sql = ("SELECT client_addr, state, "
            "pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn) AS lag_bytes "
@@ -287,17 +287,17 @@ async def execute(minion, host="localhost", port="5432", user="postgres", db="po
         <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
         <field name="agent_ids" eval="[(4, ref('agent_caddy_specialist'))]"/>
         <field name="description"><![CDATA[
-syfte: kontrollera om Caddy-tjänsten körs på en minion
-när: första steget vid 502/504 eller proxyrelaterade driftlarm
-när inte: för att se fel (använd caddy_recent_errors); för att starta om (använd salt_service_restart)
-exempel: {"minion": "gw0"}
-output: true/false + aktiv status från systemd
-guardrail: ren läsoperation, säker
+purpose: check whether the Caddy service is running on a minion
+when: first step for 502/504 or proxy-related drift alerts
+when not: to see errors (use caddy_recent_errors); to restart (use salt_service_restart)
+example: {"minion": "gw0"}
+output: true/false + active status from systemd
+guardrail: read-only operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-ID där Caddy körs"}},"required":["minion"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID where Caddy runs"}},"required":["minion"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion):
-    """Kolla Caddy-tjänststatus."""
+    """Check Caddy service status."""
     api = env['saltstack.ai.config']
     return api.salt_call("local", minion, "service.status", "caddy")
 ]]></field>
@@ -310,17 +310,17 @@ async def execute(minion):
         <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
         <field name="agent_ids" eval="[(4, ref('agent_caddy_specialist'))]"/>
         <field name="description"><![CDATA[
-syfte: visa senaste fel/panik-rader ur Caddy-journalen på en minion
-när: efter caddy_status, för att förstå VARFÖR proxyn ger 502/504
-när inte: för att se all journal (använd salt_journal_errors); för att ändra något
-exempel: {"minion": "gw0", "lines": 100}
-output: matchande journalctl-rader (error/fail/panic)
-guardrail: ren läsoperation, säker
+purpose: show recent error/panic lines from the Caddy journal on a minion
+when: after caddy_status, to understand WHY the proxy returns 502/504
+when not: to see the whole journal (use salt_journal_errors); to change anything
+example: {"minion": "gw0", "lines": 100}
+output: matching journalctl lines (error/fail/panic)
+guardrail: read-only operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-ID där Caddy körs"},"lines":{"type":"integer","description":"Antal journalrader att söka","default":100}},"required":["minion"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID where Caddy runs"},"lines":{"type":"integer","description":"Number of journal lines to search","default":100}},"required":["minion"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion, lines=100):
-    """Visa senaste Caddy-fel ur journalen."""
+    """Show recent Caddy errors from the journal."""
     api = env['saltstack.ai.config']
     cmd = f"journalctl -u caddy -n {int(lines)} --no-pager | grep -iE 'error|fail|panic' || true"
     return api.salt_call("local", minion, "cmd.run", cmd)
@@ -334,19 +334,19 @@ async def execute(minion, lines=100):
         <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
         <field name="agent_ids" eval="[(4, ref('agent_caddy_specialist'))]"/>
         <field name="description"><![CDATA[
-syfte: kolla hälsan hos en upstream bakom Caddy (HTTP-status + svarstid) på en minion
-när: vid 502/504 — är backend uppe? svarar den snabbt?
-när inte: för att kolla själva Caddy-tjänsten (använd caddy_status); för att ändra något
-exempel: {"minion": "gw0", "url": "http://localhost:8069"}
-output: "HTTP <kod> — <svarstid>s" eller curl-fel
-guardrail: ren läsoperation, säker
+purpose: check the health of an upstream behind Caddy (HTTP status + response time) on a minion
+when: on 502/504 — is the backend up? does it respond fast?
+when not: to check the Caddy service itself (use caddy_status); to change anything
+example: {"minion": "gw0", "url": "http://localhost:8069"}
+output: "HTTP <code> — <response_time>s" or a curl error
+guardrail: read-only operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion-ID där Caddy körs"},"url":{"type":"string","description":"Upstream-URL att testa (t.ex. http://localhost:8069)"}},"required":["minion","url"]}</field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Minion ID where Caddy runs"},"url":{"type":"string","description":"Upstream URL to test (e.g. http://localhost:8069)"}},"required":["minion","url"]}</field>
         <field name="code"><![CDATA[
 async def execute(minion, url):
-    """Kolla upstream-hälsa."""
+    """Check upstream health."""
     api = env['saltstack.ai.config']
-    cmd = f"curl -sS -o /dev/null -w 'HTTP %{{http_code}} - %{{time_total}}s\\n' --max-time 15 '{url}' || echo 'curl fel (uppström nere?)'"
+    cmd = f"curl -sS -o /dev/null -w 'HTTP %{{http_code}} - %{{time_total}}s\\n' --max-time 15 '{url}' || echo 'curl error (upstream down?)'"
     return api.salt_call("local", minion, "cmd.run", cmd)
 ]]></field>
     </record>
@@ -360,17 +360,17 @@ async def execute(minion, url):
         <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
         <field name="agent_ids" eval="[(4, ref('agent_wazuh_specialist'))]"/>
         <field name="description"><![CDATA[
-syfte: lista Wazuh-agenter och deras status (active/disconnected/never_connected)
-när: vid säkerhetslarm — är agenten för hosten ansluten?
-när inte: för att hämta larm (använd wazuh_recent_alerts); för att ändra något
-exempel: {"limit": 100}
-output: agentlista med id, name, ip och status
-guardrail: ren läsoperation, säker
+purpose: list Wazuh agents and their status (active/disconnected/never_connected)
+when: on security alerts — is the agent for the host connected?
+when not: to fetch alerts (use wazuh_recent_alerts); to change anything
+example: {"limit": 100}
+output: agent list with id, name, ip and status
+guardrail: read-only operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"limit":{"type":"integer","description":"Max antal agenter","default":100}},"required":[]}</field>
+        <field name="parameters">{"type":"object","properties":{"limit":{"type":"integer","description":"Max number of agents","default":100}},"required":[]}</field>
         <field name="code"><![CDATA[
 async def execute(limit=100):
-    """Lista Wazuh-agentstatus."""
+    """List Wazuh agent status."""
     api = env['saltstack.ai.config']
     return api.wazuh_call("agents", {"limit": int(limit)})
 ]]></field>
@@ -383,17 +383,17 @@ async def execute(limit=100):
         <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
         <field name="agent_ids" eval="[(4, ref('agent_wazuh_specialist'))]"/>
         <field name="description"><![CDATA[
-syfte: hämta senaste säkerhetslarm från Wazuh Manager
-när: för att korrelera ett driftlarm med säkerhetshändelser på samma host
-när inte: för att kolla agentstatus (använd wazuh_agent_status); för att ändra något
-exempel: {"limit": 20}
-output: senaste larm (rule, level, agent, timestamp, description)
-guardrail: ren läsoperation, säker
+purpose: fetch the latest security alerts from the Wazuh Manager
+when: to correlate a drift alert with security events on the same host
+when not: to check agent status (use wazuh_agent_status); to change anything
+example: {"limit": 20}
+output: latest alerts (rule, level, agent, timestamp, description)
+guardrail: read-only operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"limit":{"type":"integer","description":"Max antal larm","default":20}},"required":[]}</field>
+        <field name="parameters">{"type":"object","properties":{"limit":{"type":"integer","description":"Max number of alerts","default":20}},"required":[]}</field>
         <field name="code"><![CDATA[
 async def execute(limit=20):
-    """Hämta senaste Wazuh-larm."""
+    """Fetch the latest Wazuh alerts."""
     api = env['saltstack.ai.config']
     return api.wazuh_call("alerts", {"limit": int(limit), "sort": "-timestamp"})
 ]]></field>
@@ -406,36 +406,36 @@ async def execute(limit=20):
         <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
         <field name="agent_ids" eval="[(4, ref('agent_wazuh_specialist'))]"/>
         <field name="description"><![CDATA[
-syfte: lista kända sårbarheter (CVE) från Wazuh inventering
-när: när ett säkerhetslarm kan kopplas till en känd CVE på en host
-när inte: för att hämta larm (använd wazuh_recent_alerts); för att ändra något
-exempel: {"limit": 20}
-output: CVE-lista (cve, package, severity, agent)
-guardrail: ren läsoperation, säker
+purpose: list known vulnerabilities (CVE) from the Wazuh inventory
+when: when a security alert may be linked to a known CVE on a host
+when not: to fetch alerts (use wazuh_recent_alerts); to change anything
+example: {"limit": 20}
+output: CVE list (cve, package, severity, agent)
+guardrail: read-only operation, safe
 ]]></field>
-        <field name="parameters">{"type":"object","properties":{"limit":{"type":"integer","description":"Max antal CVE:er","default":20}},"required":[]}</field>
+        <field name="parameters">{"type":"object","properties":{"limit":{"type":"integer","description":"Max number of CVEs","default":20}},"required":[]}</field>
         <field name="code"><![CDATA[
 async def execute(limit=20):
-    """Hämta CVE-lista från Wazuh."""
+    """Fetch the CVE list from Wazuh."""
     api = env['saltstack.ai.config']
     return api.wazuh_call("cve", {"limit": int(limit)})
 ]]></field>
     </record>
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
-    <!-- FÖRMÅGA: diagnostics — serialiseringsenhet för domänverktygen     -->
-    <!-- (används i enum/namespace-läge; access styrs av group_ids)       -->
+    <!-- CAPABILITY: diagnostics — serialization unit for the domain      -->
+    <!-- tools (used in enum/namespace mode; access governed by group_ids)-->
     <!-- ═══════════════════════════════════════════════════════════════ -->
 
     <record id="cap_diagnostics" model="ai.tool.capability">
         <field name="name">diagnostics</field>
         <field name="description">
-syfte: domänspecifik diagnostik — Odoo-loggar/RPC, PostgreSQL, Caddy och Wazuh/SIEM
-när: allt arbete som går utöver generiska salt/zabbix-verktyg — loggtolkning, databas, proxy, säkerhet
-när inte: för generisk SaltStack-drift (använd salt-förmågan); för generisk Zabbix-övervakning (använd zabbix-förmågan)
-exempel: {"operation": "tail_odoo_log", "minion": "sparv"} → {"operation": "grep_odoo_errors", "minion": "sparv"} → {"operation": "pg_stat_activity", "minion": "pg-1"}
-output: per operation — se respektive operations beskrivning
-guardrail: alla diagnostikoperationer är read_only; åtgärder görs med salt-förmågans destructive-verktyg (kräver godkännande)
+purpose: domain-specific diagnostics — Odoo logs/RPC, PostgreSQL, Caddy and Wazuh/SIEM
+when: any work beyond the generic salt/zabbix tools — log interpretation, database, proxy, security
+when not: for generic SaltStack operations (use the salt capability); for generic Zabbix monitoring (use the zabbix capability)
+example: {"operation": "tail_odoo_log", "minion": "sparv"} → {"operation": "grep_odoo_errors", "minion": "sparv"} → {"operation": "pg_stat_activity", "minion": "pg-1"}
+output: per operation — see each operation's description
+guardrail: all diagnostics operations are read_only; actions are done with the salt capability's destructive tools (require approval)
         </field>
         <field name="member_ids" eval="[(6, 0, [
             ref('tool_tail_odoo_log'),

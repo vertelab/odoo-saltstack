@@ -58,7 +58,7 @@ class SaltstackAiConfig(models.Model):
     def _salt_login(self, api_key=None, timeout=15):
         """Exchange sharedsecret API key for a session token via /login.
 
-        Salt API-nyckeln (saltstack.api_token med auth_method='sharedsecret',
+        The Salt API key (saltstack.api_token with auth_method='sharedsecret',
         or the value in keykeep.credential purpose='saltstack_api') is NOT a
         session token — it must be exchanged for a token via POST /login.
         """
@@ -156,7 +156,7 @@ class SaltstackAiConfig(models.Model):
              → data.token
           2. GET  {url}/api/v1/{endpoint}?<params>  Authorization: Bearer <token>
 
-        Config (ir.config_parameter, sätts av saltstack_wazuh):
+        Config (ir.config_parameter, set by saltstack_wazuh):
           siem.api_url, siem.api_token, siem.auth_method (token|keykeep)
         """
         params = self.env['ir.config_parameter']
@@ -164,8 +164,8 @@ class SaltstackAiConfig(models.Model):
         api_token = self._get_siem_token()
         if not api_url:
             return json.dumps(
-                {'error': 'siem.api_url inte konfigurerad — sätt i '
-                          'Inställningar → Saltstack → Wazuh'},
+                {'error': 'siem.api_url is not configured — set it in '
+                          'Settings → Saltstack → Wazuh'},
                 indent=2)
 
         ctx = ssl.create_default_context()
@@ -189,13 +189,13 @@ class SaltstackAiConfig(models.Model):
                 login = json.loads(resp.read().decode())
         except Exception as e:
             return json.dumps(
-                {'error': f'Wazuh login fel: {e}'}, indent=2)
+                {'error': f'Wazuh login failed: {e}'}, indent=2)
 
         data = login.get('data') or {}
         token = data.get('token', '')
         if not token:
             return json.dumps(
-                {'error': 'Wazuh login misslyckades (ingen token)',
+                {'error': 'Wazuh login failed (no token)',
                  'response': login}, indent=2)
 
         # 2. Anropa endpoint
@@ -213,7 +213,7 @@ class SaltstackAiConfig(models.Model):
             return json.dumps(result, indent=2, default=str)
         except Exception as e:
             return json.dumps(
-                {'error': f'Wazuh {endpoint} fel: {e}'}, indent=2)
+                {'error': f'Wazuh {endpoint} failed: {e}'}, indent=2)
 
     def _get_siem_token(self):
         params = self.env['ir.config_parameter']
