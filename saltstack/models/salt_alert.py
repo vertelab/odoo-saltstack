@@ -180,10 +180,13 @@ class SaltAlert(models.Model):
         """Start AI diagnosis via the selected AI coworker."""
         self.ensure_one()
         self.diagnosis_state = 'running'
+        self._post_diagnosis_start()
         try:
             if 'ai.coworker' not in self.env:
                 self.diagnosis_result = 'AI coworker unavailable (saltstack_ai not installed)'
                 self.diagnosis_state = 'unavailable'
+                self._post_diagnosis_result(
+                    'AI coworker unavailable (saltstack_ai not installed)', '')
                 return None
 
             Coworker = self.env['ai.coworker']
@@ -191,12 +194,19 @@ class SaltAlert(models.Model):
             if not coworker:
                 self.diagnosis_result = 'AI coworker unavailable (no coworker exists)'
                 self.diagnosis_state = 'unavailable'
+                self._post_diagnosis_result(
+                    'AI coworker unavailable (no coworker exists)', '')
                 return None
 
             prompt = self._build_diagnosis_prompt()
             result = coworker.run(prompt)
-            self.diagnosis_result = str(result)[:5000]
+            result_str = str(result)[:5000] if result else ''
+            self.diagnosis_result = result_str
             self.diagnosis_state = 'done'
+
+            # Chatter writeback
+            self._post_diagnosis_result(result_str, '')
+            self._post_minion_chatter(result_str)
 
             if self.severity >= 12 and result:
                 self._post_action_plan(str(result))
@@ -206,6 +216,8 @@ class SaltAlert(models.Model):
             _logger.exception('AI diagnosis failed: %s', e)
             self.diagnosis_result = 'AI coworker unavailable: %s' % str(e)
             self.diagnosis_state = 'unavailable'
+            self._post_diagnosis_result(
+                'AI diagnosis failed: %s' % str(e), '')
             return None
 
     def _get_diagnosis_coworker(self):
@@ -228,11 +240,11 @@ class SaltAlert(models.Model):
         """
         instructions = {
             'kernel': 'Run: salt <host> cmd.run \'dmesg | tail -50\'. Look for OOM, kernel panic.',
-            'process': 'Run: salt <host> cmd.run \'systemctl status odoo\'. If down, suggest restart.',
-            'database': 'Run: salt <host> cmd.run \'pg_isready\'. Check replication lag.',
-            'proxy': 'Run: salt <host> cmd.run \'systemctl status caddy\'. Check upstream.',
-            'odoo': 'Run: salt <host> cmd.run \'tail -100 /var/log/odoo/odoo-server.log\'. Interpret traceback.',
-            'system': 'Run: uptime, free -m, df -h, dmesg, journalctl.',
+            'process': 'Run: salt <host> cmd.run \'systemctl status odoo\'. If down, AUTO-RESTART: systemctl start odoo. Verify after 5s.',
+            'database': 'Run: salt <host> cmd.run \'pg_isready\'. Check replication lag. AUTO-RESTART only on replica, NEVER on primary.',
+            'proxy': 'Run: salt <host> cmd.run \'systemctl status caddy\'. Check upstream with curl localhost:8069. If upstream OK, AUTO-RELOAD: systemctl reload caddy.',
+            'odoo': 'Run: salt <host> cmd.run \'tail -100 /var/log/odoo/odoo-server.log\'. Interpret traceback. If Odoo is down, AUTO-RESTART.',
+            'system': 'Run: uptime, free -m, df -h, dmesg, journalctl. If grow.log found and disk > 85%, AUTO-REMOVE grow.log (it is a test file).',
             'other': 'Diagnose generally: system status, services, logs.',
         }
         cat_instruction = instructions.get(self.category, instructions['other'])
@@ -248,8 +260,6 @@ class SaltAlert(models.Model):
             f"Severity: {self.severity}\n\n"
             f"## Diagnosis instruction ({self.category})\n{cat_instruction}\n\n"
             f"## Raw log (excerpt)\n{self.raw_log[:2000]}\n\n"
-            f"Analyze the root cause, verify against the system, and give a "
-            f"concrete action plan with commands.\n\n"
             f"## Driftlarm record\n"
             f"You are working on the Driftlarm record with ID {self.id} "
             f"(model saltstack.alert). You CAN write your assessment and "
@@ -258,8 +268,26 @@ class SaltAlert(models.Model):
             f"- Save your assessment (diagnosis_result)\n"
             f"- Set the status (pending/running/done/error)\n"
             f"- Mark as resolved when the action is complete\n"
-            f"- Leave an action plan in the description\n"
-            f"\nAlso report the result in your answer."
+            f"- Leave an action plan in the description\n\n"
+            f"## Odoo ORM tools\n"
+            f"- Find the minion record: odoo_search(model='salt.minion', "
+            f"domain=[['name', '=', '{self.host}']])\n"
+            f"- Check alert history: odoo_search(model='saltstack.alert', "
+            f"domain=[['host', '=', '{self.host}'], ['trigger_name', '=', "
+            f"'{self.trigger_name}']], order='create_date desc', limit=5)\n"
+            f"- If the minion record has action methods, use odoo_call_method\n\n"
+            f"## Auto-fix rules\n"
+            f"- SAFE TO AUTO-FIX: odoo/postfix/dovecot down → restart service. "
+            f"grow.log disk full → remove file. Caddy 502 if upstream OK → reload.\n"
+            f"- DOCUMENT ONLY (no auto-fix): OOM kill → restart process but "
+            f"create helpdesk ticket. CPU spikes → document as nonconformity. "
+            f"Primary database down → NEVER auto-restart.\n\n"
+            f"## Chatter rules\n"
+            f"- Post ALL findings and actions on the alert record (id={self.id})\n"
+            f"- Post a summary on the minion record after diagnosis\n"
+            f"- If auto-fix fails: create helpdesk ticket\n\n"
+            f"Analyze the root cause, verify against the system, apply auto-fix "
+            f"if safe, and document everything."
         )
 
     # ── Notification ─────────────────────────────────────────────────────
@@ -317,6 +345,58 @@ class SaltAlert(models.Model):
             )
         except Exception as e:
             _logger.warning('Could not post action plan: %s', e)
+
+    # ── Chatter / Writeback ────────────────────────────────────────────
+
+    def _post_diagnosis_start(self):
+        """Post diagnosis start as chatter on the alert record."""
+        self.ensure_one()
+        self.message_post(
+            body=(
+                f'🔍 <b>AI-diagnos påbörjad</b><br/>'
+                f'Kategori: {self.category}<br/>'
+                f'Undersöker {self.host} — {self.trigger_name}'
+            ),
+            message_type='notification',
+        )
+
+    def _post_diagnosis_result(self, result, action_taken):
+        """Post diagnosis result + action taken as chatter on the alert record."""
+        self.ensure_one()
+        msg = f'<b>Diagnos klar</b>'
+        if action_taken:
+            msg += f'<br/>🔧 <b>Åtgärd:</b> {action_taken}'
+        if result:
+            excerpt = result[:3000] if len(result) > 3000 else result
+            msg += f'<br/><pre>{excerpt}</pre>'
+        self.message_post(body=msg, message_type='notification')
+
+    def _post_minion_chatter(self, result):
+        """Post a summary of the alert + diagnosis on the related minion record.
+
+        Finds the salt.minion via the host field.
+        """
+        self.ensure_one()
+        if not self.host:
+            return
+        Minion = self.env['salt.minion']
+        minion = Minion.search([('name', '=', self.host)], limit=1)
+        if not minion:
+            _logger.info('No minion record for host %s — skipping chatter', self.host)
+            return
+        source_label = dict(self._fields['source'].selection).get(
+            self.source, self.source or 'unknown')
+        summary = result[:500] if result and len(result) > 500 else (result or '')
+        minion.message_post(
+            body=(
+                f'🚨 <b>Driftlarm</b> ({source_label})<br/>'
+                f'<b>Trigger:</b> {self.trigger_name}<br/>'
+                f'<b>Severity:</b> {self.severity}<br/>'
+                f'<b>Diagnos:</b> {self.diagnosis_state}<br/>'
+                f'<b>Sammanfattning:</b> {summary}'
+            ),
+            message_type='notification',
+        )
 
     # ── Actions ──────────────────────────────────────────────────────────
 

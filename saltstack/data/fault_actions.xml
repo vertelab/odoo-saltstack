@@ -39,4 +39,35 @@
         <field name="code">records.action_fault_cleanup()</field>
         <field name="groups_id" eval="[(4, ref('base.group_system'))]"/>
     </record>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- END-TO-END SIMULATION — fault + alert + diagnosis chain        -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <record id="action_simulate_chain_stop_odoo" model="ir.actions.server">
+        <field name="name">🧪 Simulate full alert chain (stop odoo)</field>
+        <field name="model_id" ref="model_salt_minion"/>
+        <field name="binding_model_id" ref="model_salt_minion"/>
+        <field name="state">code</field>
+        <field name="code">records.action_simulate_full_chain('stop_odoo')</field>
+        <field name="groups_id" eval="[(4, ref('base.group_system'))]"/>
+    </record>
+
+    <record id="action_simulate_chain_grow_log" model="ir.actions.server">
+        <field name="name">🧪 Simulate full alert chain (disk full)</field>
+        <field name="model_id" ref="model_salt_minion"/>
+        <field name="binding_model_id" ref="model_salt_minion"/>
+        <field name="state">code</field>
+        <field name="code">records.action_simulate_full_chain('grow_log')</field>
+        <field name="groups_id" eval="[(4, ref('base.group_system'))]"/>
+    </record>
+
+    <record id="action_simulate_chain_wazuh_bruteforce" model="ir.actions.server">
+        <field name="name">🧪 Simulate full alert chain (Wazuh brute force)</field>
+        <field name="model_id" ref="model_salt_minion"/>
+        <field name="binding_model_id" ref="model_salt_minion"/>
+        <field name="state">code</field>
+        <field name="code">records.action_simulate_full_chain('wazuh_bruteforce')</field>
+        <field name="groups_id" eval="[(4, ref('base.group_system'))]"/>
+    </record>
 </odoo>

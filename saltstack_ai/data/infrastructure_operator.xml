@@ -227,11 +227,46 @@ diagnose via SaltStack against minions. You can handle:
 - caddy: status, errors, upstream_health
 - odoo-rpc: login, search, read, count
 
+## Odoo ORM-verktyg (från ai_agent_core)
+- describe_model: använd först för att förstå ett okänt modell-schema
+- odoo_search: din primära sökmetod. Använd Odoo domain-syntax.
+  Ex: odoo_search(model='salt.minion', domain=[['roles', 'ilike', 'odoo']], fields=['name', 'odoo_version', 'dc'])
+- odoo_write: uppdatera säkra fält (kräver godkännande)
+- odoo_call_method: kör action_*/button_*-metoder (kräver godkännande)
+- odoo_create: skapa poster (kräver godkännande)
+- odoo_unlink: radera poster (kräver alltid godkännande - hårt stopp)
+- okf_search: sök kunskapskoncept
+
+### SaltStack-modeller i Odoo
+- salt.minion: name, ip, os, dc, roles, customer, odoo_version, is_container, host_machine, state, last_seen
+- salt.pillar: key, data_type, minion_id
+- saltstack.alert: host, source, category, severity, trigger_name, diagnosis_state, resolved, create_date
+- Hitta okända modeller: odoo_search(model='ir.model', domain=[['model', 'ilike', 'sökterm']])
+
+## Auto-fix-regler (AGERA)
+- Odoo/postfix/dovecot nere → starta tjänsten. Kontrollera status efter 5s.
+- grow.log finns och disk > 85% → ta bort filen (den är vår testfil).
+- Caddy 502 → kontrollera upstream först (curl localhost:8069), reloada om OK.
+- PostgreSQL nere på replica → starta. ALDRIG auto-starta primary.
+
+## Auto-fix-regler (DOKUMENTERA ENDAST)
+- OOM-kill → starta om den dödade processen men skapa alltid helpdesk-ticket.
+- CPU-spikar, minnesläckor → dokumentera som nonconformity.
+- Allt annat → dokumentera, skapa ticket, flagga för manuell utredning.
+
+## Chatter-regler
+- Posta ALLTID diagnosstart, resultat, och åtgärd på alert-posten.
+- Posta en sammanfattning på den berörda minion-posten (hitta via odoo_search(model='salt.minion', domain=[['name', '=', alert.host]])).
+- Vid severity ≥ 12: posta åtgärdsplan i Driftlarm-kanalen.
+- Vid auto-fix: posta tydligt VAD som gjordes och RESULTATET.
+- Vid misslyckad auto-fix: skapa helpdesk-ticket direkt.
+
 ## Workflow
 1. Identify the root cause from the alert (category steers the focus)
 2. Verify against the system (Salt commands)
 3. Propose a concrete action plan with commands
 4. If a service is down and the category is process/odoo — propose a restart
+5. Post ALL results as chatter on the alert and minion records
         </field>
         <field name="orchestration_mode">supervisor</field>
         <field name="status">active</field>
@@ -246,8 +281,17 @@ diagnose via SaltStack against minions. You can handle:
             ref('skill_system_ops'),
             ref('skill_caddy_ops'),
             ref('skill_odoo_rpc'),
+            ref('skill_zabbix_troubleshooting'),
         ])]"/>
-        <field name="tool_ids" eval="[(4, ref('saltstack_ai.tool_driftlarm_update'))]"/>
+        <field name="tool_ids" eval="[(4, ref('saltstack_ai.tool_driftlarm_update')),
+            (4, ref('ai_agent_core.tool_describe_model')),
+            (4, ref('ai_agent_core.tool_odoo_search')),
+            (4, ref('ai_agent_core.tool_odoo_write')),
+            (4, ref('ai_agent_core.tool_odoo_call_method')),
+            (4, ref('ai_agent_core.tool_odoo_create')),
+            (4, ref('ai_agent_core.tool_odoo_unlink')),
+            (4, ref('ai_agent_core.tool_okf_search')),
+        ]"/>
     </record>
 
     <!-- Init: webhook -->
@@ -286,7 +330,7 @@ diagnose via SaltStack against minions. You can handle:
         <field name="ai_goal">Read and acknowledge Zabbix alerts: fetch problems, events, host status, history and triggers to correlate symptoms with root cause.</field>
         <field name="ai_backstory">You are a Zabbix monitoring expert. You understand hosts, items, triggers, problems and events, and help identify which symptom a drift alert causes.</field>
         <field name="status">active</field>
-        <field name="skill_ids" eval="[(6, 0, [ref('skill_zabbix_ops'), ref('skill_zabbix_monitoring_concepts')])]"/>
+        <field name="skill_ids" eval="[(6, 0, [ref('skill_zabbix_ops'), ref('skill_zabbix_monitoring_concepts'), ref('skill_zabbix_troubleshooting')])]"/>
     </record>
 
     <record id="agent_wazuh_specialist" model="ai.agent">

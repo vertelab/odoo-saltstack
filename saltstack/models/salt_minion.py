@@ -385,6 +385,91 @@ class SaltMinion(models.Model):
 
     # ── Fault Injection (server actions) ────────────────────────────────
 
+    def action_simulate_full_chain(self, fault_type='stop_odoo'):
+        """Inject a fault AND trigger the full alert chain.
+
+        fault_type: 'stop_odoo' | 'grow_log' | 'wazuh_bruteforce'
+
+        1. Injects the real fault on the minion
+        2. Builds a webhook payload matching what Zabbix/Wazuh would send
+        3. Calls process_webhook() internally to create the alert + start AI diagnosis
+        4. Returns the alert ID so the operator can follow the chain
+        """
+        self.ensure_one()
+
+        # Step 1: Inject fault
+        fault_map = {
+            'stop_odoo': {
+                'method': 'action_fault_stop_odoo',
+                'source': 'zabbix',
+                'category': 'process',
+                'severity': 12,
+                'trigger_name': 'Odoo HTTP endpoint not responding',
+                'description': 'Simulerat larm: odoo stoppad via server action på %s' % self.name,
+            },
+            'grow_log': {
+                'method': 'action_fault_grow_log',
+                'source': 'zabbix',
+                'category': 'system',
+                'severity': 12,
+                'trigger_name': 'No free disk space',
+                'description': 'Simulerat larm: diskfyllning (grow.log) via server action på %s' % self.name,
+            },
+            'wazuh_bruteforce': {
+                'method': 'action_fault_wazuh_bruteforce',
+                'source': 'wazuh',
+                'category': 'system',
+                'severity': 12,
+                'trigger_name': 'SSH brute force detected',
+                'description': 'Simulerat larm: Wazuh brute-force via server action på %s' % self.name,
+                'wazuh_rule_id': '5710',
+            },
+        }
+        fault = fault_map.get(fault_type)
+        if not fault:
+            return {'success': False, 'error': 'Unknown fault_type: %s' % fault_type}
+
+        # Run fault injection
+        fault_result = getattr(self, fault['method'])()
+
+        # Step 2: Build webhook payload
+        payload = {
+            'host': self.name,
+            'source': fault['source'],
+            'category': fault['category'],
+            'severity': fault['severity'],
+            'trigger_name': fault['trigger_name'],
+            'description': fault['description'],
+            'raw_log': str(fault_result.get('result', '')),
+        }
+        if 'wazuh_rule_id' in fault:
+            payload['wazuh_rule_id'] = fault['wazuh_rule_id']
+
+        # Step 3: Trigger alert chain internally
+        alert_model = self.env['saltstack.alert']
+        webhook_result = alert_model.process_webhook(payload)
+
+        # Step 4: Post summary
+        alert_id = webhook_result.get('alert_id', '?')
+        self.message_post(
+            body=(
+                f'🧪 <b>Simulerad full larmkedja</b><br/>'
+                f'Typ: {fault_type}<br/>'
+                f'Alert: #{alert_id}<br/>'
+                f'Diagnos startad: {webhook_result.get("diagnosis_started", False)}<br/>'
+                f'<b>Följ alert #{alert_id} för att se diagnos och åtgärd.</b>'
+            ),
+            message_type='notification',
+        )
+
+        return {
+            'success': True,
+            'fault_type': fault_type,
+            'fault_result': fault_result,
+            'alert_id': alert_id,
+            'diagnosis_started': webhook_result.get('diagnosis_started', False),
+        }
+
     def action_fault_stop_odoo(self):
         """Stop the Odoo service on this minion. Zabbix will alert."""
         self.ensure_one()

@@ -524,4 +524,73 @@ api.call("history.get", {
 ]]></field>
     </record>
 
+    <!-- 7: Zabbix Troubleshooting Methodology -->
+    <record id="skill_zabbix_troubleshooting" model="ai.skill">
+        <field name="name">Zabbix Troubleshooting Methodology</field>
+        <field name="description">Structured 5-step Zabbix triage: problem → trigger → item history → correlation → Salt mapping. Teaches the AI how to reason from Zabbix alerts to concrete Salt diagnostic commands.</field>
+        <field name="category">infrastructure</field>
+        <field name="source_type">odoo</field>
+        <field name="compatibility">any</field>
+        <field name="trigger_keywords">
+            zabbix, problem, trigger, item, host, felsök, triage, correlate,
+            zabbix troubleshooting, investigate, diagnose zabbix
+        </field>
+        <field name="recipe_text"><![CDATA[
+# Zabbix Troubleshooting Methodology
+
+A structured approach to go from a Zabbix alert to concrete Salt diagnostic commands.
+
+## The 5-Step Method
+
+### Step 1: Start from the active problem
+Use zabbix_get_problems or zabbix_get_alerts to see what's currently active on the host.
+- What's the problem name?
+- What's the severity?
+- When did it start?
+
+### Step 2: Look up the trigger
+Use zabbix_get_triggers to understand what's being measured and the threshold.
+- What item is monitored?
+- What condition triggers the alert?
+- Example: "Odoo HTTP endpoint not responding" → trigger checks HTTP status code
+
+### Step 3: Check item history
+Use zabbix_get_history to see the metric around the problem time.
+- What was the normal value before the problem?
+- Did it spike gradually or suddenly?
+- Are there patterns (nightly spikes, weekends)?
+
+### Step 4: Correlate with other problems
+Check for multiple problems on the same host — they may share a root cause.
+- Disk full + Odoo down → disk full caused Odoo to crash
+- CPU spike + memory high → possible memory leak
+- Multiple services down → possible host reboot or power issue
+
+### Step 5: Map to Salt diagnostic commands
+Translate Zabbix triggers into concrete Salt commands:
+
+| Zabbix Trigger | Salt Diagnostic |
+|---|---|
+| Odoo HTTP not responding | salt_service_status + salt_journal_errors + tail odoo log |
+| No free disk space | salt_disk_usage + find large files |
+| CPU load too high | salt_process_list + salt_system_load |
+| PostgreSQL not responding | salt_cmd_run pg_isready + check replication |
+| Caddy 502 errors | salt_service_status caddy + curl upstream |
+| Memory usage > 90% | salt_memory_usage + salt_process_list (find culprit) |
+| SSH brute force detected | salt_journal_errors sshd + check auth.log |
+
+## Example Triage Flow
+
+```
+1. zabbix_get_problems(host='sparv') → "Odoo HTTP endpoint not responding" (severity 5)
+2. zabbix_get_triggers → trigger checks net.tcp.service[http,8069]
+3. zabbix_get_history(itemid, time_from=1h ago) → HTTP status was 200, dropped to 0 at 14:32
+4. zabbix_get_problems(host='sparv') → also "No free disk space" (severity 4) — CORRELATION!
+5. Salt: salt_disk_usage('sparv') → /var/log 95% full → find large files → odoo.log 20GB
+   Root cause: disk full → Odoo couldn't write logs → crashed
+   Fix: rotate logs → restart odoo → verify
+```
+]]></field>
+    </record>
+
 </odoo>
