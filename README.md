@@ -53,6 +53,43 @@ SaltStack
 - 🚨 Simulera Wazuh-säkerhetshot (brute force i auth.log)
 - 🧹 Rensa felinjektioner
 
+**End-to-end-simulering** (server actions på minion, admin only):
+- 🧪 Simulera full larmkedja (stoppa odoo) — injicerar felet, bygger
+  webhook-payload, anropar `/saltstack/alert` internt, startar AI-diagnos
+- 🧪 Simulera full larmkedja (disk full)
+- 🧪 Simulera full larmkedja (Wazuh brute-force)
+
+## AI-diagnos & auto-fix (saltstack + saltstack_ai)
+
+När ett larm kommer in via `/saltstack/alert` startar Infrastructure Operator
+coworkern en diagnos. Denna ändring (2026-08-12) tillförde:
+
+- **Chatter/writeback** — diagnosstart, resultat och åtgärd postas på
+  `saltstack.alert`-posten (via mail.thread), sammanfattning på den berörda
+  `salt.minion`-posten (med klickbar länk till alerten), och åtgärdsplan i
+  Driftlarm-kanalen vid severity ≥ 12.
+- **Auto-fix-taxonomi** i diagnos-prompten: säkra fel åtgärdas automatiskt
+  (odoo/postfix/dovecot nere → starta tjänsten, grow.log + disk > 85 % → ta
+  bort filen, Caddy 502 → kolla upstream först, sedan reload, PostgreSQL nere
+  på replica → starta, ALDRIG primary). Övriga (OOM, CPU-spikar) dokumenteras
+  bara → helpdesk-ticket/nonconformity.
+- **Odoo ORM-verktyg** från ai_agent_core (`describe_model`, `odoo_search`,
+  `odoo_write`, `odoo_call_method`, `odoo_create`, `odoo_unlink`,
+  `okf_search`) är tilldelade Infrastructure Operator — AI:n kan svara på
+  frågor som "Hur många minioner kör Odoo 18?" och skriva tillbaka på poster.
+- **Zabbix Troubleshooting-skill** (5-stegs metodik: problem → trigger →
+  item-historik → korrelation → Salt-mappning) bunden till coworkern.
+- **Helpdesk/nonconformity-verktyg** (`create_helpdesk_ticket` i
+  saltstack_helpdesk, `document_nonconformity` i saltstack_managementsystem)
+  binds till coworkern när respektive modul installeras.
+
+**Tester:** `saltstack/tests/test_salt_alert.py` (chatter, prompt, simulering)
++ `saltstack_ai/tests/test_tool_access.py` (ORM-tools, skills).
+
+```bash
+sudo checkmodule -d ledningssystem -m saltstack,saltstack_ai -t
+```
+
 ## Konventioner
 
 - **Rena Odoo-repon** — varje modul i egen undermapp, addons_path direkt mot repot

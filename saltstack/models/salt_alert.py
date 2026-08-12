@@ -270,6 +270,8 @@ class SaltAlert(models.Model):
             f"- Mark as resolved when the action is complete\n"
             f"- Leave an action plan in the description\n\n"
             f"## Odoo ORM tools\n"
+            f"- Describe the schema first: describe_model(model='salt.minion') / "
+            f"describe_model(model='saltstack.alert') to understand fields\n"
             f"- Find the minion record: odoo_search(model='salt.minion', "
             f"domain=[['name', '=', '{self.host}']])\n"
             f"- Check alert history: odoo_search(model='saltstack.alert', "
@@ -389,7 +391,8 @@ class SaltAlert(models.Model):
         summary = result[:500] if result and len(result) > 500 else (result or '')
         minion.message_post(
             body=(
-                f'🚨 <b>Driftlarm</b> ({source_label})<br/>'
+                f'🚨 <b>Driftlarm</b> ({source_label}) — '
+                f'<a href="/web#id={self.id}&model=saltstack.alert">alert #{self.id}</a><br/>'
                 f'<b>Trigger:</b> {self.trigger_name}<br/>'
                 f'<b>Severity:</b> {self.severity}<br/>'
                 f'<b>Diagnos:</b> {self.diagnosis_state}<br/>'

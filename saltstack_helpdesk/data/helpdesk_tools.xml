@@ -77,4 +77,12 @@ async def execute(title, description, minion="", metric=""):
     return f"Anomaly documented: {ticket.name} (ID: {ticket.id})"
 ]]></field>
     </record>
+
+    <!-- Bind escalation tool to the Infrastructure Operator coworker.     -->
+    <!-- Runs when this bridge module is installed (depends on saltstack_ai) -->
+    <!-- so the auto-fix prompt's "create a helpdesk ticket" instruction    -->
+    <!-- is backed by an actually available tool.                           -->
+    <record id="saltstack_ai.coworker_infrastructure_operator" model="ai.coworker">
+        <field name="tool_ids" eval="[(4, ref('tool_create_helpdesk_ticket'))]"/>
+    </record>
 </odoo>

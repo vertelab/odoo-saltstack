@@ -154,3 +154,43 @@ class TestSaltstackCapabilities(TransactionCase):
         ops = enum_tool.parameters['properties']['operation']['enum']
         self.assertNotIn('zabbix_acknowledge', ops)
         self.assertIn('zabbix_get_alerts', ops)
+
+
+ORM_TOOL_XMLIDS = [
+    'tool_describe_model', 'tool_odoo_search', 'tool_odoo_write',
+    'tool_odoo_call_method', 'tool_odoo_create', 'tool_odoo_unlink',
+    'tool_okf_search',
+]
+
+
+class TestInfrastructureOperatorOdooTools(TransactionCase):
+    """Odoo ORM tools + Zabbix skill bound to Infrastructure Operator."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.coworker = cls.env.ref(
+            'saltstack_ai.coworker_infrastructure_operator')
+
+    def test_ai_agent_core_tool_xmlids_exist(self):
+        """The ai_agent_core builtin tool xmlids referenced by the coworker
+        are bound (via _bind_tool_xmlid during seed)."""
+        for xmlid in ORM_TOOL_XMLIDS:
+            tool = self.env.ref('ai_agent_core.%s' % xmlid)
+            self.assertTrue(tool, 'missing xmlid ai_agent_core.%s' % xmlid)
+            self.assertTrue(tool.active)
+
+    def test_coworker_has_orm_tools(self):
+        """Infrastructure Operator has the 7 Odoo ORM tools in tool_ids."""
+        tool_names = {t.name for t in self.coworker.tool_ids}
+        for name in ('describe_model', 'odoo_search', 'odoo_write',
+                     'odoo_call_method', 'odoo_create', 'odoo_unlink',
+                     'okf_search'):
+            self.assertIn(name, tool_names,
+                          'coworker saknar Odoo ORM-verktyg %s' % name)
+
+    def test_coworker_has_zabbix_troubleshooting_skill(self):
+        """Zabbix troubleshooting skill is in skill_ids (9 total)."""
+        skill_names = {s.name for s in self.coworker.skill_ids}
+        self.assertIn('Zabbix Troubleshooting Methodology', skill_names)
+        self.assertEqual(len(self.coworker.skill_ids), 9)
