@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ── List View ─────────────────────────────────────────────── -->
+    <record id="view_salt_runlog_list" model="ir.ui.view">
+        <field name="name">saltstack.runlog.list</field>
+        <field name="model">saltstack.runlog</field>
+        <field name="arch" type="xml">
+            <list decoration-danger="status == 'error'"
+                  decoration-warning="status == 'warning'"
+                  decoration-success="status == 'ok'">
+                <field name="timestamp"/>
+                <field name="host"/>
+                <field name="source"/>
+                <field name="run_type"/>
+                <field name="status"/>
+                <field name="summary"/>
+                <field name="create_date" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ── Form View ─────────────────────────────────────────────── -->
+    <record id="view_salt_runlog_form" model="ir.ui.view">
+        <field name="name">saltstack.runlog.form</field>
+        <field name="model">saltstack.runlog</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <field name="status" widget="statusbar"
+                           options="{'clickable': False}"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group>
+                        <group string="Run">
+                            <field name="host"/>
+                            <field name="source"/>
+                            <field name="run_type"/>
+                            <field name="timestamp"/>
+                        </group>
+                        <group string="Result">
+                            <field name="summary"/>
+                            <field name="status"/>
+                        </group>
+                    </group>
+                    <group string="Logg">
+                        <field name="raw_log" nolabel="1"
+                               class="font-monospace" colspan="2"/>
+                    </group>
+                    <group string="JSON (maskinläsbar)" invisible="not json_payload">
+                        <field name="json_payload" nolabel="1"
+                               class="font-monospace" colspan="2"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ── Search View ───────────────────────────────────────────── -->
+    <record id="view_salt_runlog_search" model="ir.ui.view">
+        <field name="name">saltstack.runlog.search</field>
+        <field name="model">saltstack.runlog</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="host"/>
+                <field name="summary"/>
+                <field name="source"/>
+                <field name="run_type"/>
+                <field name="status"/>
+                <separator/>
+                <filter name="err" string="Fel"
+                        domain="[('status', '=', 'error')]"/>
+                <filter name="warn" string="Varningar"
+                        domain="[('status', '=', 'warning')]"/>
+                <filter name="ok" string="OK"
+                        domain="[('status', '=', 'ok')]"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_host" string="Host"
+                            context="{'group_by': 'host'}"/>
+                    <filter name="group_source" string="Source"
+                            context="{'group_by': 'source'}"/>
+                    <filter name="group_type" string="Run type"
+                            context="{'group_by': 'run_type'}"/>
+                    <filter name="group_status" string="Status"
+                            context="{'group_by': 'status'}"/>
+                    <filter name="group_day" string="Dag"
+                            context="{'group_by': 'timestamp:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ── Action + Menu ─────────────────────────────────────────── -->
+    <record id="action_salt_runlog" model="ir.actions.act_window">
+        <field name="name">Driftslogg</field>
+        <field name="res_model">saltstack.runlog</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_salt_runlog_search"/>
+    </record>
+    <menuitem id="menu_salt_runlog"
+              name="Driftslogg"
+              parent="menu_saltstack_root"
+              action="action_salt_runlog"
+              groups="saltstack.group_saltstack_officer"
+              sequence="45"/>
+</odoo>

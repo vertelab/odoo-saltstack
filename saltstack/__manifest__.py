@@ -2,7 +2,7 @@
 
 {
     'name': 'SaltStack Infrastructure',
-    'version': '18.0.1.13.0',
+    'version': '18.0.1.14.0',
     'category': 'Infrastructure',
     'summary': 'Manage SaltStack minions, pillar anchors and infrastructure',
     'description': """
@@ -35,6 +35,7 @@ Features:
         'views/salt_pillar_views.xml',
         'views/salt_minion_views.xml',
         'views/salt_alert_views.xml',
+            'views/salt_runlog_views.xml',
     ],
     'post_init_hook': '_ensure_webhook_config',
     'installable': True,

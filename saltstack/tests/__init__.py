@@ -2,3 +2,4 @@
 
 from . import test_salt_models
 from . import test_salt_alert
+from . import test_salt_runlog
