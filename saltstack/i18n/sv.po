@@ -1284,3 +1284,126 @@ msgstr ""
 #: model:ir.actions.server,name:saltstack.action_fault_cleanup
 msgid "🧹 Rensa felinjektioner"
 msgstr ""
+
+# ── saltstack.runlog (Driftslogg) — tillägg 18.0.1.15.0 ──
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__run_type__backup
+msgid "Backup"
+msgstr "Backup"
+
+
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__run_type__highstate
+msgid "Highstate"
+msgstr "Highstate"
+
+
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_form
+msgid "JSON (maskinläsbar)"
+msgstr "JSON (maskinläsbar)"
+
+
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__raw_log
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_form
+msgid "Logg"
+msgstr "Logg"
+
+
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__source__odoosa
+msgid "OdooSA Translation"
+msgstr "OdooSA-översättning"
+
+
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__source__restic
+msgid "Restic"
+msgstr "Restic"
+
+
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_form
+msgid "Result"
+msgstr "Resultat"
+
+
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__name
+msgid "Rubrik"
+msgstr "Rubrik"
+
+
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_form
+msgid "Run"
+msgstr "Körning"
+
+
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__run_type
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_search
+msgid "Run type"
+msgstr "Körtyp"
+
+
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__source__salt
+msgid "Salt"
+msgstr "Salt"
+
+
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__summary
+msgid "Sammanfattning"
+msgstr "Sammanfattning"
+
+
+#. module: saltstack
+#: model:ir.model.fields,help:saltstack.field_saltstack_runlog__source
+msgid "Source system that published the run."
+msgstr "Källsystem som publicerade körningen."
+
+
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__run_type__sync
+msgid "Sync"
+msgstr "Sync"
+
+
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__run_type__test
+msgid "Test"
+msgstr "Test"
+
+
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__run_type__translation
+msgid "Translation"
+msgstr "Översättning"
+
+
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_search
+msgid "Translations"
+msgstr "Översättningar"
+
+
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__status__warning
+msgid "Varning"
+msgstr "Varning"
+
+
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__source__wazuh
+msgid "Wazuh"
+msgstr "Wazuh"
+
+
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__source__zabbix
+msgid "Zabbix"
+msgstr "Zabbix"
+
