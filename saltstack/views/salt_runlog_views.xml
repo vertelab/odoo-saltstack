@@ -76,6 +76,9 @@
                         domain="[('status', '=', 'warning')]"/>
                 <filter name="ok" string="OK"
                         domain="[('status', '=', 'ok')]"/>
+                <separator/>
+                <filter name="odoosa" string="Translations"
+                        domain="[('source', '=', 'odoosa')]"/>
                 <group expand="0" string="Group By">
                     <filter name="group_host" string="Host"
                             context="{'group_by': 'host'}"/>
