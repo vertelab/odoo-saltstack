@@ -1285,7 +1285,6 @@ msgstr ""
 msgid "🧹 Rensa felinjektioner"
 msgstr ""
 
-# ── saltstack.runlog (Driftslogg) — tillägg 18.0.1.15.0 ──
 #. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__run_type__backup
 msgid "Backup"
