@@ -32,6 +32,8 @@ class TestSaltstackApi(TransactionCase):
 
     def test_salt_call_builds_payload_and_posts_to_root(self):
         """salt_call POSTs to {api_url}/ (root), not /run, with correct payload."""
+        self.env['ir.config_parameter'].set_param(
+            'saltstack.api_token', 'test-token-123')
         captured = {}
 
         def fake_urlopen(req, timeout=0, context=None):
@@ -50,7 +52,8 @@ class TestSaltstackApi(TransactionCase):
         # urllib lowercases header names (Content-type, X-auth-token)
         self.assertEqual(captured['headers'].get('Content-type'),
                          'application/json')
-        self.assertTrue(captured['headers'].get('X-auth-token'))
+        self.assertEqual(captured['headers'].get('X-auth-token'),
+                         'test-token-123')
         self.assertEqual(captured['body'], {
             'client': 'local',
             'fun': 'test.ping',
