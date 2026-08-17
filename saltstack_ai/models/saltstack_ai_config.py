@@ -40,7 +40,7 @@ class SaltstackAiConfig(models.Model):
         # NOTE: POST must go to ROOT (/), not /run — /run returns 401 even with
         # a valid token in rest_cherrypy (verified 2026-08-09).
         req = urllib.request.Request(
-            f'{api_url.rstrip("/")}/run',
+            f'{api_url.rstrip("/")}/',
             data=data,
             headers={
                 'Content-Type': 'application/json',
