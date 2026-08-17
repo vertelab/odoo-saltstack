@@ -70,10 +70,10 @@ class TestAlertWebhookGround(TransactionCase):
         self.assertIn('Test critical', body)
 
     def test_bridge_hooks_called_when_present(self):
-        """When a bridge defines _correlate_zabbix/_start_diagnosis, the
-        webhook calls them (guarded). Simulated via stub methods on the model.
-        Fields are NOT set on the base-only model — we assert the guard calls
-        the hooks and falls back to safe defaults in the result dict.
+        """When a bridge defines _correlate_zabbix, the webhook calls it
+        (guarded). _auto_diagnose_enabled only exists when saltstack_ai is
+        installed — in this test (base+zabbix only) it does not, so the
+        diagnosis hook must be skipped gracefully.
         """
         AlertModel = self.Alert.__class__
         called = []
@@ -81,16 +81,8 @@ class TestAlertWebhookGround(TransactionCase):
         def fake_correlate(self):
             called.append('correlate')
 
-        def fake_auto_enabled(self):
-            return True
-
-        def fake_start(self):
-            called.append('diagnosis')
-
-        with patch.object(AlertModel, '_correlate_zabbix', fake_correlate), \
-                patch.object(AlertModel, '_auto_diagnose_enabled',
-                             fake_auto_enabled), \
-                patch.object(AlertModel, '_start_diagnosis', fake_start):
+        # _correlate_zabbix exists (saltstack_zabbix installed)
+        with patch.object(AlertModel, '_correlate_zabbix', fake_correlate):
             result = self.Alert.process_webhook({
                 'host': 'sparv',
                 'category': 'process',
@@ -98,12 +90,11 @@ class TestAlertWebhookGround(TransactionCase):
             })
 
         self.assertIn('correlate', called)
-        self.assertIn('diagnosis', called)
         self.assertEqual(result['status'], 'ok')
-        # Hooks ran but their fields are not present on the base-only model
-        self.assertFalse(result['correlated_zabbix_alert'])
+        # saltstack_ai not installed → diagnosis hooks absent → guarded skip
+        self.assertFalse(hasattr(AlertModel, '_auto_diagnose_enabled'))
         self.assertFalse(result['diagnosis_started'])
-        self.assertEqual(result['coworker_session_id'], '')
+        self.assertFalse(result['correlated_zabbix_alert'])
 
 
 @tagged('post_install', '-at_install')

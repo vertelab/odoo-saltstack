@@ -47,8 +47,10 @@ class TestSaltstackApi(TransactionCase):
 
         self.assertEqual(captured['url'], 'http://localhost:8377/')
         self.assertEqual(captured['method'], 'POST')
-        self.assertEqual(captured['headers']['Content-Type'], 'application/json')
-        self.assertTrue(captured['headers']['X-Auth-Token'])
+        # urllib lowercases header names (Content-type, X-auth-token)
+        self.assertEqual(captured['headers'].get('Content-type'),
+                         'application/json')
+        self.assertTrue(captured['headers'].get('X-auth-token'))
         self.assertEqual(captured['body'], {
             'client': 'local',
             'fun': 'test.ping',
