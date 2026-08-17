@@ -40,7 +40,7 @@
                         <h1><field name="name"/></h1>
                     </div>
                     <group>
-                        <group string="Alert">
+                        <group string="Alert" class="alert-group">
                             <field name="host"/>
                             <field name="source"/>
                             <field name="category"/>
@@ -48,14 +48,14 @@
                             <field name="trigger_name"/>
                             <field name="timestamp"/>
                         </group>
-                        <group string="Status">
+                        <group string="Status" class="status-group">
                             <field name="resolved"/>
                         </group>
                     </group>
-                    <group string="Description">
+                    <group string="Description" class="description-group">
                         <field name="description" nolabel="1" colspan="2"/>
                     </group>
-                    <group string="Raw log">
+                    <group string="Raw log" class="rawlog-group">
                         <field name="raw_log" nolabel="1" colspan="2"/>
                     </group>
                 </sheet>
