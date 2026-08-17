@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Re-add AI diagnosis fields/button on top of the ground salt.alert view. -->
+    <record id="view_salt_alert_list_inherit_ai" model="ir.ui.view">
+        <field name="name">saltstack.alert.list.ai</field>
+        <field name="model">saltstack.alert</field>
+        <field name="inherit_id" ref="saltstack.view_salt_alert_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list/field[@name='severity']" position="after">
+                <field name="diagnosis_state"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_salt_alert_form_inherit_ai" model="ir.ui.view">
+        <field name="name">saltstack.alert.form.ai</field>
+        <field name="model">saltstack.alert</field>
+        <field name="inherit_id" ref="saltstack.view_salt_alert_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form/header" position="inside">
+                <button name="action_diagnose" type="object"
+                        string="Run diagnosis" class="btn-primary"
+                        icon="fa-stethoscope"/>
+            </xpath>
+            <xpath expr="//form/sheet/group/group[@string='Status']" position="after">
+                <group string="Diagnosis">
+                    <field name="coworker_session_id"/>
+                    <field name="diagnosis_state"/>
+                </group>
+            </xpath>
+            <xpath expr="//form/sheet/group[@string='Description']" position="after">
+                <group string="Diagnosis result">
+                    <field name="diagnosis_result" nolabel="1" colspan="2"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_salt_alert_search_inherit_ai" model="ir.ui.view">
+        <field name="name">saltstack.alert.search.ai</field>
+        <field name="model">saltstack.alert</field>
+        <field name="inherit_id" ref="saltstack.view_salt_alert_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search/group/filter[@name='group_category']" position="after">
+                <filter name="group_state" string="Diagnosis status"
+                        context="{'group_by': 'diagnosis_state'}"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

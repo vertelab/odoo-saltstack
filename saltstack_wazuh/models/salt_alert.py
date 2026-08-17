@@ -9,3 +9,5 @@ class SaltAlert(models.Model):
     source = fields.Selection(
         selection_add=[('wazuh', 'Wazuh')],
     )
+
+    wazuh_rule_id = fields.Char(string='Wazuh Rule ID')

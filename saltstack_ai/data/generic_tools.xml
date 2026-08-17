@@ -21,7 +21,7 @@ guardrail: none — pure read operation, safe
         <field name="code"><![CDATA[
 async def execute(minion="*"):
     """Ping Salt minion(s)."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     return api.salt_call("local", minion, "test.ping")
 ]]></field>
     </record>
@@ -43,7 +43,7 @@ guardrail: requires human approval (destructive)
         <field name="code"><![CDATA[
 async def execute(minion, state, pillar=""):
     """Apply Salt state."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     kwargs = {}
     if pillar:
         import json
@@ -69,7 +69,7 @@ guardrail: requires human approval (destructive, long-running timeout 600s)
         <field name="code"><![CDATA[
 async def execute(minion):
     """Run highstate."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     return api.salt_call("local", minion, "state.highstate", timeout=600)
 ]]></field>
     </record>
@@ -91,7 +91,7 @@ guardrail: none — pure read operation, safe
         <field name="code"><![CDATA[
 async def execute(minion, state):
     """Show compiled SLS."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     return api.salt_call("local", minion, "state.show_sls", state)
 ]]></field>
     </record>
@@ -113,7 +113,7 @@ guardrail: requires human approval (destructive — arbitrary execution)
         <field name="code"><![CDATA[
 async def execute(minion, command):
     """Run shell command on minion."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     return api.salt_call("local", minion, "cmd.run", command)
 ]]></field>
     </record>
@@ -135,7 +135,7 @@ guardrail: none — but handle output carefully (secrets in pillar)
         <field name="code"><![CDATA[
 async def execute(minion, key):
     """Fetch pillar data."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     return api.salt_call("local", minion, "pillar.get", key)
 ]]></field>
     </record>
@@ -157,7 +157,7 @@ guardrail: none — but handle output carefully (secrets in pillar)
         <field name="code"><![CDATA[
 async def execute(minion):
     """Fetch all pillar data."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     return api.salt_call("local", minion, "pillar.items")
 ]]></field>
     </record>
@@ -179,7 +179,7 @@ guardrail: none — pure read operation, safe
         <field name="code"><![CDATA[
 async def execute(minion, key):
     """Fetch specific grain."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     return api.salt_call("local", minion, "grains.get", key)
 ]]></field>
     </record>
@@ -201,7 +201,7 @@ guardrail: none — pure read operation, safe
         <field name="code"><![CDATA[
 async def execute(minion):
     """Fetch all grains."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     return api.salt_call("local", minion, "grains.items")
 ]]></field>
     </record>
@@ -223,7 +223,7 @@ guardrail: none — pure read operation, safe
         <field name="code"><![CDATA[
 async def execute():
     """List all minions."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     return api.salt_call("runner", None, "minions.list")
 ]]></field>
     </record>
@@ -245,7 +245,7 @@ guardrail: requires human approval (destructive — key management)
         <field name="code"><![CDATA[
 async def execute(minion_id):
     """Accept minion key."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     return api.salt_call("wheel", None, "key.accept", minion_id)
 ]]></field>
     </record>
@@ -267,7 +267,7 @@ guardrail: none — pure read operation, safe
         <field name="code"><![CDATA[
 async def execute(minion, service):
     """Check service status."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     return api.salt_call("local", minion, "service.status", service)
 ]]></field>
     </record>
@@ -289,7 +289,7 @@ guardrail: requires human approval (destructive — service interruption)
         <field name="code"><![CDATA[
 async def execute(minion, service):
     """Restart service."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     return api.salt_call("local", minion, "service.restart", service)
 ]]></field>
     </record>
@@ -311,7 +311,7 @@ guardrail: none — pure read operation, safe
         <field name="code"><![CDATA[
 async def execute(minion, path=""):
     """Check disk usage."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     cmd = f"df -h {path}" if path else "df -h"
     return api.salt_call("local", minion, "cmd.run", cmd)
 ]]></field>
@@ -334,7 +334,7 @@ guardrail: none — pure read operation, safe
         <field name="code"><![CDATA[
 async def execute(minion):
     """Check memory usage."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     return api.salt_call("local", minion, "cmd.run", "free -m")
 ]]></field>
     </record>
@@ -356,7 +356,7 @@ guardrail: none — pure read operation, safe
         <field name="code"><![CDATA[
 async def execute(minion):
     """Check system load."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     return api.salt_call("local", minion, "cmd.run", "uptime")
 ]]></field>
     </record>
@@ -378,7 +378,7 @@ guardrail: none — pure read operation, safe
         <field name="code"><![CDATA[
 async def execute(minion, unit="", lines=50):
     """Fetch journal errors."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     cmd = f"journalctl -p err -n {lines}"
     if unit:
         cmd += f" -u {unit}"
@@ -404,7 +404,7 @@ guardrail: none — pure read operation, safe
         <field name="code"><![CDATA[
 async def execute(minion, filter=""):
     """List processes."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     if filter:
         cmd = f"ps aux | grep -v grep | grep {filter} || echo 'No matching processes'"
     else:
@@ -434,10 +434,12 @@ guardrail: none — pure read operation, safe
         <field name="code"><![CDATA[
 async def execute(severity="high", limit=20):
     """Fetch Zabbix alerts."""
-    api = env['saltstack.ai.config']
+    if 'zabbix.api' not in env:
+        return "ERROR: saltstack_zabbix not installed — install it to use Zabbix tools"
+    api = env['zabbix.api']
     sev_map = {"high":[4,5],"medium":[3],"low":[0,1,2],"all":[0,1,2,3,4,5]}
     sev = sev_map.get(severity, [4,5])
-    result = api.call("problem.get", {
+    result = api.zabbix_call("problem.get", {
         "output": "extend",
         "severities": sev,
         "recent": True,
@@ -466,8 +468,10 @@ guardrail: none — pure read operation, safe
         <field name="code"><![CDATA[
 async def execute(host):
     """Fetch Zabbix host info."""
-    api = env['saltstack.ai.config']
-    result = api.call("host.get", {
+    if 'zabbix.api' not in env:
+        return "ERROR: saltstack_zabbix not installed — install it to use Zabbix tools"
+    api = env['zabbix.api']
+    result = api.zabbix_call("host.get", {
         "output": "extend",
         "filter": {"host": [host]},
         "selectInterfaces": "extend",
@@ -494,7 +498,9 @@ guardrail: none — pure read operation, safe
         <field name="code"><![CDATA[
 async def execute(host="", recent="true", limit=50):
     """Fetch Zabbix problems."""
-    api = env['saltstack.ai.config']
+    if 'zabbix.api' not in env:
+        return "ERROR: saltstack_zabbix not installed — install it to use Zabbix tools"
+    api = env['zabbix.api']
     params = {
         "output": "extend",
         "recent": recent == "true",
@@ -525,8 +531,10 @@ guardrail: requires human approval (write — changes alert status)
         <field name="code"><![CDATA[
 async def execute(event_id, message="Acknowledged by Infrastructure Operator"):
     """Acknowledge Zabbix alert."""
-    api = env['saltstack.ai.config']
-    result = api.call("event.acknowledge", {
+    if 'zabbix.api' not in env:
+        return "ERROR: saltstack_zabbix not installed — install it to use Zabbix tools"
+    api = env['zabbix.api']
+    result = api.zabbix_call("event.acknowledge", {
         "eventids": [event_id],
         "action": 1,
         "message": message,
@@ -552,8 +560,10 @@ guardrail: none — pure read operation, safe
         <field name="code"><![CDATA[
 async def execute(item_id, limit=100):
     """Fetch historical metric values."""
-    api = env['saltstack.ai.config']
-    result = api.call("history.get", {
+    if 'zabbix.api' not in env:
+        return "ERROR: saltstack_zabbix not installed — install it to use Zabbix tools"
+    api = env['zabbix.api']
+    result = api.zabbix_call("history.get", {
         "output": "extend",
         "itemids": [item_id],
         "sortfield": "clock",
@@ -581,11 +591,13 @@ guardrail: none — pure read operation, safe
         <field name="code"><![CDATA[
 async def execute(host, key_pattern=""):
     """Fetch Zabbix item."""
-    api = env['saltstack.ai.config']
+    if 'zabbix.api' not in env:
+        return "ERROR: saltstack_zabbix not installed — install it to use Zabbix tools"
+    api = env['zabbix.api']
     params = {"output": "extend", "host": host}
     if key_pattern:
         params["search"] = {"key_": key_pattern}
-    result = api.call("item.get", params)
+    result = api.zabbix_call("item.get", params)
     return str(result)
 ]]></field>
     </record>
@@ -607,7 +619,9 @@ guardrail: none — pure read operation, safe
         <field name="code"><![CDATA[
 async def execute():
     """Fetch Zabbix host groups."""
-    api = env['saltstack.ai.config']
+    if 'zabbix.api' not in env:
+        return "ERROR: saltstack_zabbix not installed — install it to use Zabbix tools"
+    api = env['zabbix.api']
     return api.zabbix_call("hostgroup.get", {"output": "extend"})
 ]]></field>
     </record>
@@ -629,7 +643,9 @@ guardrail: none — pure read operation, safe
         <field name="code"><![CDATA[
 async def execute(host="", only_problem="true"):
     """Fetch Zabbix triggers."""
-    api = env['saltstack.ai.config']
+    if 'zabbix.api' not in env:
+        return "ERROR: saltstack_zabbix not installed — install it to use Zabbix tools"
+    api = env['zabbix.api']
     params = {
         "output": "extend",
         "selectHosts": ["hostid", "host"],

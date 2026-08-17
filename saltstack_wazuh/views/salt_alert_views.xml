@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Re-add Wazuh field on top of the ground salt.alert view. -->
+    <record id="view_salt_alert_form_inherit_wazuh" model="ir.ui.view">
+        <field name="name">saltstack.alert.form.wazuh</field>
+        <field name="model">saltstack.alert</field>
+        <field name="inherit_id" ref="saltstack.view_salt_alert_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form/sheet/group/group[@string='Alert']" position="inside">
+                <field name="wazuh_rule_id"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

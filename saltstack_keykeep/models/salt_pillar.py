@@ -26,7 +26,7 @@ class SaltPillar(models.Model):
         Returns a flat {key_path: value} dict and prefers the SaltStack
         master's (global) value when the same key exists on several minions.
         """
-        api = self.env['saltstack.ai.config']
+        api = self.env['saltstack.api']
         result = api.salt_call('local', '*', 'pillar.raw', timeout=timeout)
         data = json.loads(result)
         returned = (data.get('return') or [{}])[0]
@@ -166,7 +166,7 @@ class SaltPillar(models.Model):
             raise UserError(_('Salt API URL not configured'))
 
         try:
-            api = self.env['saltstack.ai.config']
+            api = self.env['saltstack.api']
             import json
             result = api.salt_call('local', 'bifrost', 'pillar.get', 'bifrost')
             data = json.loads(result)

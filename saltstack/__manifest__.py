@@ -2,7 +2,7 @@
 
 {
     'name': 'SaltStack Infrastructure',
-    'version': '18.0.1.15.0',
+    'version': '18.0.1.16.0',
     'category': 'Infrastructure',
     'summary': 'Manage SaltStack minions, pillar anchors and infrastructure',
     'description': """
@@ -21,7 +21,7 @@ Features:
     'author': 'Vertel Sverige AB',
     'license': 'AGPL-3',
     'website': 'https://vertel.se',
-    'depends': ['base', 'mail', 'ai_agent_core'],
+    'depends': ['base', 'mail'],
     'data': [
         'security/saltstack_groups.xml',
         'data/model_registry.xml',

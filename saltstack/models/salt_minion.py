@@ -2,8 +2,6 @@
 
 import json
 import logging
-import ssl
-import urllib.request
 
 from odoo import _, api, fields, models
 
@@ -167,85 +165,12 @@ class SaltMinion(models.Model):
 
     # ── Salt API Helpers ─────────────────────────────────────────────────
 
-    def _get_salt_api_config(self):
-        """Return (api_url, api_token) from ir.config_parameter."""
-        params = self.env['ir.config_parameter']
-        url = params.get_param('saltstack.api_url', '')
-        token = params.get_param('saltstack.api_token', '')
-        return url, token
-
-    def _salt_login(self, api_key=None, timeout=15):
-        """Exchange sharedsecret API key for a session token via /login.
-
-        The API key (saltstack.api_token with auth_method='sharedsecret',
-        or the value in keykeep.credential purpose='saltstack_api') is NOT a
-        session token — it must be exchanged via POST /login.
-        """
-        api_url = self._get_salt_api_config()[0]
-        if api_key is None:
-            api_key = self._get_salt_api_config()[1]
-        payload = {
-            'username': 'saltapi',
-            'password': api_key,
-            'eauth': 'sharedsecret',
-        }
-        data = json.dumps(payload).encode()
-        req = urllib.request.Request(
-            f'{api_url.rstrip("/")}/login',
-            data=data,
-            headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
-        )
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
-            result = json.loads(resp.read().decode())
-        try:
-            return result['return'][0]['token']
-        except (KeyError, IndexError, TypeError):
-            raise ValueError('Salt login failed: %s' % result)
-
     def _call_salt_api(self, client, tgt, fun, *args, timeout=120, **kwargs):
-        """Call the Salt REST API. Returns dict or raises."""
-        api_url, api_token = self._get_salt_api_config()
-        if not api_url:
-            raise ValueError('Salt API URL not configured')
-        auth_method = self.env['ir.config_parameter'].get_param(
-            'saltstack.auth_method', 'token')
-        if auth_method == 'keykeep' and 'keykeep.credential' in self.env:
-            cred = self.env['keykeep.credential'].search([
-                ('purpose', '=', 'saltstack_api'),
-            ], limit=1)
-            if cred and cred._get_decrypted_value():
-                api_token = self._salt_login(cred._get_decrypted_value())
-        elif auth_method == 'sharedsecret':
-            api_token = self._salt_login()
-
-        payload = {'client': client, 'fun': fun, 'timeout': timeout}
-        if client in ('local', 'local_async', 'local_batch'):
-            payload['tgt'] = tgt
-        if args:
-            payload['arg'] = list(args)
-        if kwargs:
-            payload['kwarg'] = kwargs
-
-        data = json.dumps(payload).encode()
-        req = urllib.request.Request(
-            f'{api_url.rstrip("/")}/',
-            data=data,
-            headers={
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-Auth-Token': api_token,
-            },
-        )
-
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-
-        with urllib.request.urlopen(req, timeout=timeout + 30, context=ctx) as resp:
-            return json.loads(resp.read().decode())
+        """Call the Salt REST API via saltstack.api. Returns parsed dict or raises."""
+        import json as _json
+        result = self.env['saltstack.api'].salt_call(
+            client, tgt, fun, *args, timeout=timeout, **kwargs)
+        return _json.loads(result)
 
     # ── Actions ──────────────────────────────────────────────────────────
 

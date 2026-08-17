@@ -1,20 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- ── List View ─────────────────────────────────────────────── -->
+    <!-- Ground-only: bridge modules (saltstack_zabbix, saltstack_ai)
+         extend with their domain fields via xpath. -->
     <record id="view_salt_alert_list" model="ir.ui.view">
         <field name="name">saltstack.alert.list</field>
         <field name="model">saltstack.alert</field>
         <field name="arch" type="xml">
             <list decoration-danger="severity >= 12 and not resolved"
-                  decoration-warning="correlated_zabbix_alert == True and not resolved"
                   decoration-muted="resolved == True">
                 <field name="name"/>
                 <field name="host"/>
                 <field name="source"/>
                 <field name="category"/>
                 <field name="severity"/>
-                <field name="correlated_zabbix_alert"/>
-                <field name="diagnosis_state"/>
                 <field name="resolved"/>
                 <field name="create_date"/>
             </list>
@@ -28,9 +27,6 @@
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <button name="action_diagnose" type="object"
-                            string="Run diagnosis" class="btn-primary"
-                            icon="fa-stethoscope"/>
                     <button name="action_mark_resolved" type="object"
                             string="Mark as resolved" icon="fa-check"
                             confirm="Mark this alert as resolved?"/>
@@ -51,22 +47,13 @@
                             <field name="severity"/>
                             <field name="trigger_name"/>
                             <field name="timestamp"/>
-                            <field name="wazuh_rule_id"/>
-                            <field name="zabbix_event_id"/>
                         </group>
-                        <group string="Correlation &amp; Diagnosis">
-                            <field name="correlated_zabbix_alert"/>
-                            <field name="zabbix_alert_id"/>
-                            <field name="coworker_session_id"/>
-                            <field name="diagnosis_state"/>
+                        <group string="Status">
                             <field name="resolved"/>
                         </group>
                     </group>
                     <group string="Description">
                         <field name="description" nolabel="1" colspan="2"/>
-                    </group>
-                    <group string="Diagnosis result">
-                        <field name="diagnosis_result" nolabel="1" colspan="2"/>
                     </group>
                     <group string="Raw log">
                         <field name="raw_log" nolabel="1" colspan="2"/>
@@ -92,8 +79,6 @@
                         domain="[('severity', '>=', 12)]"/>
                 <filter name="unresolved" string="Unresolved"
                         domain="[('resolved', '=', False)]"/>
-                <filter name="correlated" string="Correlated"
-                        domain="[('correlated_zabbix_alert', '=', True)]"/>
                 <group expand="0" string="Group By">
                     <filter name="group_host" string="Host"
                             context="{'group_by': 'host'}"/>
@@ -101,8 +86,6 @@
                             context="{'group_by': 'source'}"/>
                     <filter name="group_category" string="Category"
                             context="{'group_by': 'category'}"/>
-                    <filter name="group_state" string="Diagnosis status"
-                            context="{'group_by': 'diagnosis_state'}"/>
                 </group>
             </search>
         </field>

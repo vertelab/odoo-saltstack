@@ -1,1 +1,2 @@
 id,name,model_id/id,group_id/id,perm_read,perm_write,perm_create,perm_unlink
+access_wazuh_api,wazuh.api.access,model_wazuh_api,base.group_system,1,1,1,1

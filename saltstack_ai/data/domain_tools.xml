@@ -29,7 +29,7 @@ guardrail: read-only operation, safe
         <field name="code"><![CDATA[
 async def execute(minion, lines=100, log_path="/var/log/odoo/odoo.log"):
     """Tail the Odoo server log on a minion."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     return api.salt_call("local", minion, "cmd.run", f"tail -n {int(lines)} {log_path}")
 ]]></field>
     </record>
@@ -52,7 +52,7 @@ guardrail: read-only operation, safe
         <field name="code"><![CDATA[
 async def execute(minion, pattern="ERROR|CRITICAL", lines=100, log_path="/var/log/odoo/odoo.log"):
     """Grep for errors in the Odoo log on a minion."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     return api.salt_call("local", minion, "cmd.run", f"grep -aE '{pattern}' {log_path} | tail -n {int(lines)}")
 ]]></field>
     </record>
@@ -190,7 +190,7 @@ guardrail: read-only operation, safe
         <field name="code"><![CDATA[
 async def execute(minion, host="localhost", port="5432"):
     """Check that PostgreSQL responds."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     return api.salt_call("local", minion, "cmd.run", f"pg_isready -h {host} -p {port}")
 ]]></field>
     </record>
@@ -213,7 +213,7 @@ guardrail: read-only operation, safe
         <field name="code"><![CDATA[
 async def execute(minion, host="localhost", port="5432", user="postgres", db="postgres"):
     """Show active PG queries."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     sql = ("SELECT pid, usename, state, wait_event_type, query_start, "
            "left(query,80) AS q FROM pg_stat_activity "
            "ORDER BY query_start DESC NULLS LAST LIMIT 20")
@@ -240,7 +240,7 @@ guardrail: read-only operation, safe
         <field name="code"><![CDATA[
 async def execute(minion, host="localhost", port="5432", user="postgres", db="postgres"):
     """Show replication lag."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     sql = ("SELECT client_addr, state, "
            "pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn) AS lag_bytes "
            "FROM pg_stat_replication")
@@ -269,7 +269,7 @@ guardrail: read-only operation, safe
         <field name="code"><![CDATA[
 async def execute(minion):
     """Check Caddy service status."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     return api.salt_call("local", minion, "service.status", "caddy")
 ]]></field>
     </record>
@@ -292,7 +292,7 @@ guardrail: read-only operation, safe
         <field name="code"><![CDATA[
 async def execute(minion, lines=100):
     """Show recent Caddy errors from the journal."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     cmd = f"journalctl -u caddy -n {int(lines)} --no-pager | grep -iE 'error|fail|panic' || true"
     return api.salt_call("local", minion, "cmd.run", cmd)
 ]]></field>
@@ -316,7 +316,7 @@ guardrail: read-only operation, safe
         <field name="code"><![CDATA[
 async def execute(minion, url):
     """Check upstream health."""
-    api = env['saltstack.ai.config']
+    api = env['saltstack.api']
     cmd = f"curl -sS -o /dev/null -w 'HTTP %{{http_code}} - %{{time_total}}s\\n' --max-time 15 '{url}' || echo 'curl error (upstream down?)'"
     return api.salt_call("local", minion, "cmd.run", cmd)
 ]]></field>
@@ -342,7 +342,9 @@ guardrail: read-only operation, safe
         <field name="code"><![CDATA[
 async def execute(limit=100):
     """List Wazuh agent status."""
-    api = env['saltstack.ai.config']
+    if 'wazuh.api' not in env:
+        return "ERROR: saltstack_wazuh not installed — install it to use Wazuh tools"
+    api = env['wazuh.api']
     return api.wazuh_call("agents", {"limit": int(limit)})
 ]]></field>
     </record>
@@ -365,7 +367,9 @@ guardrail: read-only operation, safe
         <field name="code"><![CDATA[
 async def execute(limit=20):
     """Fetch the latest Wazuh alerts."""
-    api = env['saltstack.ai.config']
+    if 'wazuh.api' not in env:
+        return "ERROR: saltstack_wazuh not installed — install it to use Wazuh tools"
+    api = env['wazuh.api']
     return api.wazuh_call("alerts", {"limit": int(limit), "sort": "-timestamp"})
 ]]></field>
     </record>
@@ -388,7 +392,9 @@ guardrail: read-only operation, safe
         <field name="code"><![CDATA[
 async def execute(limit=20):
     """Fetch the CVE list from Wazuh."""
-    api = env['saltstack.ai.config']
+    if 'wazuh.api' not in env:
+        return "ERROR: saltstack_wazuh not installed — install it to use Wazuh tools"
+    api = env['wazuh.api']
     return api.wazuh_call("cve", {"limit": int(limit)})
 ]]></field>
     </record>

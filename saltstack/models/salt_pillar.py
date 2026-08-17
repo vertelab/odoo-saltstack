@@ -218,79 +218,12 @@ class SaltPillar(models.Model):
 
     # ── Salt Master Sync ────────────────────────────────────────────────────
 
-    def _salt_login(self, api_key=None, timeout=15):
-        """Exchange sharedsecret API key for a session token via /login."""
-        import json as _json
-        import ssl as _ssl
-        import urllib.request as _urllib
-        params = self.env['ir.config_parameter']
-        api_url = params.get_param('saltstack.api_url', '')
-        if api_key is None:
-            api_key = params.get_param('saltstack.api_token', '')
-        payload = {
-            'username': 'saltapi',
-            'password': api_key,
-            'eauth': 'sharedsecret',
-        }
-        data = _json.dumps(payload).encode()
-        req = _urllib.Request(
-            f'{api_url.rstrip("/")}/login',
-            data=data,
-            headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
-        )
-        ctx = _ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = _ssl.CERT_NONE
-        with _urllib.urlopen(req, timeout=timeout, context=ctx) as resp:
-            result = _json.loads(resp.read().decode())
-        try:
-            return result['return'][0]['token']
-        except (KeyError, IndexError, TypeError):
-            raise ValueError('Salt login misslyckades: %s' % result)
-
     def _call_salt_api(self, client, tgt, fun, *args, timeout=120, **kwargs):
-        """Call the Salt REST API. Returns dict or raises."""
+        """Call the Salt REST API via saltstack.api. Returns parsed dict or raises."""
         import json as _json
-        import ssl as _ssl
-        import urllib.request as _urllib
-
-        params = self.env['ir.config_parameter']
-        api_url = params.get_param('saltstack.api_url', '')
-        api_token = params.get_param('saltstack.api_token', '')
-        if not api_url:
-            raise ValueError('Salt API URL not configured')
-        auth_method = params.get_param('saltstack.auth_method', 'token')
-        if auth_method == 'keykeep' and 'keykeep.credential' in self.env:
-            cred = self.env['keykeep.credential'].search([
-                ('purpose', '=', 'saltstack_api'),
-            ], limit=1)
-            if cred and cred._get_decrypted_value():
-                api_token = self._salt_login(cred._get_decrypted_value())
-        elif auth_method == 'sharedsecret':
-            api_token = self._salt_login()
-
-        payload = {'client': client, 'fun': fun, 'timeout': timeout}
-        if client in ('local', 'local_async', 'local_batch'):
-            payload['tgt'] = tgt
-        if args:
-            payload['arg'] = list(args)
-        if kwargs:
-            payload['kwarg'] = kwargs
-        data = _json.dumps(payload).encode()
-        req = _urllib.Request(
-            f'{api_url.rstrip("/")}/',
-            data=data,
-            headers={
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-Auth-Token': api_token,
-            },
-        )
-        ctx = _ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = _ssl.CERT_NONE
-        with _urllib.urlopen(req, timeout=timeout + 30, context=ctx) as resp:
-            return _json.loads(resp.read().decode())
+        result = self.env['saltstack.api'].salt_call(
+            client, tgt, fun, *args, timeout=timeout, **kwargs)
+        return _json.loads(result)
 
     _SECRET_HINTS = (
         'password', 'passwd', 'token', 'secret', 'credential',

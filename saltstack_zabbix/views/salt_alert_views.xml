@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Re-add Zabbix correlation fields on top of the ground salt.alert view. -->
+    <record id="view_salt_alert_list_inherit_zabbix" model="ir.ui.view">
+        <field name="name">saltstack.alert.list.zabbix</field>
+        <field name="model">saltstack.alert</field>
+        <field name="inherit_id" ref="saltstack.view_salt_alert_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list/field[@name='severity']" position="after">
+                <field name="correlated_zabbix_alert"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_salt_alert_form_inherit_zabbix" model="ir.ui.view">
+        <field name="name">saltstack.alert.form.zabbix</field>
+        <field name="model">saltstack.alert</field>
+        <field name="inherit_id" ref="saltstack.view_salt_alert_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form/sheet/group/group[@string='Alert']" position="inside">
+                <field name="zabbix_event_id"/>
+            </xpath>
+            <xpath expr="//form/sheet/group/group[@string='Status']" position="inside">
+                <field name="correlated_zabbix_alert"/>
+                <field name="zabbix_alert_id"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_salt_alert_search_inherit_zabbix" model="ir.ui.view">
+        <field name="name">saltstack.alert.search.zabbix</field>
+        <field name="model">saltstack.alert</field>
+        <field name="inherit_id" ref="saltstack.view_salt_alert_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search/separator" position="after">
+                <filter name="correlated" string="Correlated"
+                        domain="[('correlated_zabbix_alert', '=', True)]"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

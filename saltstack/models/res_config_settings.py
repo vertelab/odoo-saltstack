@@ -208,7 +208,7 @@ class ResConfigSettings(models.TransientModel):
         try:
             # Reuse the fixed client (sharedsecret login + correct endpoint).
             # Pings the SaltStack master (always online) instead of a hardcoded minion.
-            result = json.loads(self.env['saltstack.ai.config'].salt_call(
+            result = json.loads(self.env['saltstack.api'].salt_call(
                 'local', 'SaltStack', 'test.ping', timeout=10))
 
             returned = result.get('return', [{}])

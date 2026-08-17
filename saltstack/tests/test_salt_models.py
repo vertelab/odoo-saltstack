@@ -3,6 +3,8 @@
 from odoo.tests.common import TransactionCase, tagged
 from odoo.exceptions import ValidationError
 
+from unittest.mock import patch
+
 
 @tagged('post_install', '-at_install')
 class TestSaltMinion(TransactionCase):
@@ -39,6 +41,19 @@ class TestSaltMinion(TransactionCase):
         result = minion.action_ping()
         self.assertIn('success', result)
         self.assertFalse(result['success'])
+
+    def test_ping_delegates_to_saltstack_api(self):
+        """action_ping reaches Salt via saltstack.api delegator."""
+        minion = self.SaltMinion.create({'name': 'test-delegate-1'})
+        with patch('odoo.addons.saltstack.models.salt_api.'
+                   'urllib.request.urlopen') as mock_urlopen:
+            mock_urlopen.return_value.__enter__.return_value.read.return_value = \
+                b'{"return": [{"test-delegate-1": true}]}'
+            result = minion.action_ping()
+        self.assertTrue(result['success'])
+        self.assertEqual(result['status'], 'up')
+        minion.invalidate_recordset()
+        self.assertEqual(minion.state, 'online')
 
 
 @tagged('post_install', '-at_install')

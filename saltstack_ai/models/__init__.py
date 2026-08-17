@@ -1,1 +1,1 @@
-from . import saltstack_ai_config
+from . import salt_alert

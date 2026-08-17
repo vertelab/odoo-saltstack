@@ -46,6 +46,28 @@ class TestSaltstackToolsExecutable(TransactionCase):
                 '%s saknar kod' % xmlid)
             compile(tool.code, '<%s>' % xmlid, 'exec')
 
+    def test_no_tool_references_deleted_config_model(self):
+        """Konsolidering: inget tool anropar den raderade saltstack.ai.config."""
+        for xmlid in ALL_TOOL_IDS:
+            tool = self.env.ref('saltstack_ai.%s' % xmlid)
+            if not (tool.code and tool.code.strip()):
+                continue
+            self.assertNotIn(
+                'saltstack.ai.config', tool.code,
+                '%s refererar den raderade klienten saltstack.ai.config' % xmlid)
+
+    def test_domain_tools_point_to_correct_client(self):
+        """Konsolidering: salt→saltstack.api, zabbix→zabbix.api."""
+        salt_tool = self.env.ref('saltstack_ai.tool_salt_test_ping')
+        self.assertIn("env['saltstack.api']", salt_tool.code)
+        zabbix_tool = self.env.ref('saltstack_ai.tool_zabbix_get_alerts')
+        self.assertIn("env['zabbix.api']", zabbix_tool.code)
+        # Zabbix-verktyg gardar mot saknad klientmodul
+        self.assertIn("'zabbix.api' not in env", zabbix_tool.code)
+        wazuh_tool = self.env.ref('saltstack_ai.tool_wazuh_agent_status')
+        self.assertIn("env['wazuh.api']", wazuh_tool.code)
+        self.assertIn("'wazuh.api' not in env", wazuh_tool.code)
+
 
 class TestSaltstackAccessGroups(TransactionCase):
 
