@@ -30,7 +30,8 @@ class SaltRunlog(models.Model):
     )
     source = fields.Selection([
         ('restic', 'Restic'),
-        ('odoosa', 'OdooSA Translation'),
+        ('odoosa', 'Odoo SA'),
+        ('dirvish', 'Dirvish'),
         ('salt', 'Salt'),
         ('zabbix', 'Zabbix'),
         ('wazuh', 'Wazuh'),
@@ -41,7 +42,7 @@ class SaltRunlog(models.Model):
         ('backup', 'Backup'),
         ('highstate', 'Highstate'),
         ('sync', 'Sync'),
-        ('translation', 'Translation'),
+        ('translation', 'Odoo SA'),
         ('test', 'Test'),
         ('other', 'Other'),
     ], string='Run type', default='other')
