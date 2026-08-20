@@ -11,7 +11,6 @@ class ResConfigSettings(models.TransientModel):
     saltstack_api_url = fields.Char(
         string='Salt API URL',
         config_parameter='saltstack.api_url',
-        default='http://localhost:8377',
         help='Base URL of the Salt REST API (e.g. http://192.168.11.22:8377)',
     )
     saltstack_api_token = fields.Char(

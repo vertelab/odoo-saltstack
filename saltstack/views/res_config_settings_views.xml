@@ -22,8 +22,7 @@
                         <setting id="saltstack_api_token_setting"
                                  title="Salt API Token"
                                  help="Authentication token for the Salt REST API. The token can also be managed via Keykeep.">
-                            <field name="saltstack_api_token"
-                                   
+                            <field name="saltstack_api_token" password="True"
                                    class="w-50"/>
                         </setting>
 

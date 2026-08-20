@@ -1,24 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- noupdate="1": these defaults are written ONLY at first install.
-     On module upgrade, user-changed values are not overwritten. -->
-<odoo noupdate="1">
-    <!-- Default Salt API configuration -->
-    <record id="saltstack_api_url" model="ir.config_parameter">
-        <field name="key">saltstack.api_url</field>
-        <field name="value">http://localhost:8377</field>
-    </record>
-    <record id="saltstack_auth_method" model="ir.config_parameter">
-        <field name="key">saltstack.auth_method</field>
-        <field name="value">token</field>
-    </record>
+<!-- TOM MED AVSIKT (2026-08-20)
 
-    <!-- Default Zabbix API configuration -->
-    <record id="zabbix_api_url" model="ir.config_parameter">
-        <field name="key">zabbix.api_url</field>
-        <field name="value">https://zabbix.example.com</field>
-    </record>
-    <record id="zabbix_auth_method" model="ir.config_parameter">
-        <field name="key">zabbix.auth_method</field>
-        <field name="value">token</field>
-    </record>
+     Denna fil innehåller INGA ir.config_parameter-record längre.
+
+     Orsak: ir.config_parameter-record skrivs ALLTID om vid moduluppgradering
+     (noupdate="1" skyddar INTE config-parametrar — de betraktas som
+     koddefaults och skrivs tillbaka vid varje init/update av modulen). Det
+     gjorde att t.ex. saltstack.api_url skrevs över med
+     http://localhost:8377 varje gång modulen uppgraderades.
+
+     Alla parametrar sätts nu endast via Settings (res.config.settings):
+       - saltstack.api_url        -> fält saltstack_api_url (utan default,
+                                     tom tills användaren anger den)
+       - saltstack.auth_method    -> fält saltstack_auth_method (default token)
+       - zabbix.api_url / auth    -> fält i saltstack_zabbix
+
+     Vid en ny installation skapas parametrarna när Settings sparas, och
+     läsande kod har get_param(..., default)-fallbacks.
+-->
+<odoo noupdate="1">
 </odoo>
