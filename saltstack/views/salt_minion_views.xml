@@ -69,8 +69,9 @@
                   decoration-warning="is_demo == True"
                   decoration-info="state == 'offline' and active == True">
                 <header>
-                    <button name="action_sync_all_minions" type="object"
-                            string="Sync with Salt Master"
+                    <button name="saltstack.action_sync_minions_all" type="action"
+                            display="always"
+                            string="Synka minioner"
                             class="btn-primary" icon="fa-refresh"/>
                 </header>
                 <field name="name"/>
