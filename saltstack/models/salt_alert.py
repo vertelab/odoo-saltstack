@@ -66,6 +66,30 @@ class SaltAlert(models.Model):
                 return fields.Datetime.now()
 
     @api.depends('host', 'source', 'category', 'trigger_name')
+    @staticmethod
+    def _parse_severity(value):
+        """Accept both numeric and named severities (Zabbix sends text).
+
+        Zabbix: Not classified=0, Information=1, Warning=2, Average=3,
+        High=4, Disaster=5. Unknown text falls back to 0.
+        """
+        if value is None or value == '':
+            return 0
+        if isinstance(value, int):
+            return value
+        text = str(value).strip().lower()
+        names = {
+            'not classified': 0, 'information': 1, 'info': 1,
+            'warning': 2, 'warn': 2, 'average': 3, 'avg': 3,
+            'high': 4, 'disaster': 5, 'catastrophe': 5,
+        }
+        if text in names:
+            return names[text]
+        try:
+            return int(text)
+        except (ValueError, TypeError):
+            return 0
+
     def _compute_name(self):
         for rec in self:
             source = dict(rec._fields['source'].selection).get(rec.source, rec.source or '')
@@ -96,7 +120,7 @@ class SaltAlert(models.Model):
                 'host': host,
                 'source': source or False,
                 'category': category,
-                'severity': int(payload.get('severity', 0) or 0),
+                'severity': self._parse_severity(payload.get('severity')),
                 'trigger_name': payload.get('trigger_name', ''),
                 'description': payload.get('description', ''),
                 'raw_log': payload.get('raw_log', ''),
