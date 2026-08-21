@@ -32,6 +32,7 @@ class SaltRunlog(models.Model):
         ('restic', 'Restic'),
         ('odoosa', 'Odoo SA'),
         ('dirvish', 'Dirvish'),
+            ('github-backup', 'GitHub backup'),
         ('salt', 'Salt'),
         ('zabbix', 'Zabbix'),
         ('wazuh', 'Wazuh'),
