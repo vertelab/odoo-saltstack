@@ -53,5 +53,6 @@ class SaltAlertController(http.Controller):
         _logger.info('Driftlarm webhook: alert for %s (source %s)',
                      payload.get('host'), payload.get('source'))
 
-        result = request.env['saltstack.alert'].sudo().process_webhook(payload)
+        admin = request.env['res.users'].browse(1)
+        result = request.env['saltstack.alert'].sudo().with_user(admin).process_webhook(payload)
         return result
