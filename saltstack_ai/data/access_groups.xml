@@ -10,7 +10,7 @@
 
     <record id="group_infra_operator" model="res.groups">
         <field name="name">Infrastructure Operator</field>
-        <field name="category_id" ref="base.module_category_hidden"/>
+        <field name="category_id" ref="saltstack.module_category_saltstack"/>
         <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
         <field name="comment">Role for using the Infrastructure Operator coworker and its salt/zabbix tools via AI.</field>
     </record>

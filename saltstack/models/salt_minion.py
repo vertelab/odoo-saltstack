@@ -8,12 +8,38 @@ from odoo import _, api, fields, models
 _logger = logging.getLogger(__name__)
 
 
+def _is_rfc1918(ip):
+    """True for private/link-local/loopback IPv4 ranges."""
+    try:
+        parts = [int(p) for p in ip.split('.')]
+    except (ValueError, AttributeError):
+        return True
+    if len(parts) != 4:
+        return True
+    a, b, c, _d = parts
+    if a == 10:
+        return True
+    if a == 127:
+        return True
+    if a == 169 and b == 254:
+        return True
+    if a == 172 and 16 <= b <= 31:
+        return True
+    if a == 192 and b == 168:
+        return True
+    if a == 100 and 64 <= b <= 127:
+        return True  # CGNAT
+    if a == 0:
+        return True
+    return False
+
+
 class SaltMinion(models.Model):
     _name = 'salt.minion'
     _description = 'Salt Minion Registry'
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'is_demo, dc, name'
-    _rec_names_search = ['name', 'customer', 'host_machine']
+    _rec_names_search = ['name', 'customer', 'host_machine', 'private_ip']
 
     # ── Identity ────────────────────────────────────────────────────────
 
@@ -22,8 +48,14 @@ class SaltMinion(models.Model):
         required=True,
         index=True,
     )
-    ip = fields.Char(
-        string='IP Address',
+    private_ip = fields.Char(
+        string='Private IP',
+        help='Private address — prefers the 192.168.11.0/24 management '
+             'network, filled from grains at sync.',
+    )
+    public_ip = fields.Char(
+        string='Public IP',
+        help='First non-RFC1918 address; empty for containers.',
     )
     os = fields.Char(
         string='Operating System',
@@ -47,10 +79,22 @@ class SaltMinion(models.Model):
 
     customer = fields.Char(
         string='Customer',
-        help='Customer name if this is a customer container',
+        help='Customer name if this is a customer container (grain mirror).',
+    )
+    partner_id = fields.Many2one(
+        'res.partner',
+        string='Customer (Partner)',
+        ondelete='set null',
+        help='Linked res.partner, looked up by name from the customer grain '
+             'at sync when not set.',
     )
     odoo_version = fields.Char(
         string='Odoo Version',
+    )
+    odoo_has_demo_data = fields.Boolean(
+        string='Odoo Demo Data',
+        help='True when the minion runs Odoo and its main database contains '
+             'demo data. Checked at sync.',
     )
 
     # ── Container ────────────────────────────────────────────────────────
@@ -75,7 +119,14 @@ class SaltMinion(models.Model):
         compute='_compute_state',
         store=True,
         default='offline',
-        help='Minion-status: online (svarar), offline (ej svarar), faulty (fel).',
+        help='Minion-status semaphore: faulty (olösta larm) > online '
+             '(svarar) > offline (svarar ej).',
+    )
+    open_alert_count = fields.Integer(
+        string='Open Alerts',
+        default=0,
+        help='Number of unresolved saltstack.alert records for this host. '
+             'Maintained by the alert model and the minion sync.',
     )
     image = fields.Image(
         string='Logo',
@@ -117,51 +168,81 @@ class SaltMinion(models.Model):
 
     # ── Computed ─────────────────────────────────────────────────────────
 
-    @api.depends('last_seen')
+    @api.depends('last_seen', 'open_alert_count')
     def _compute_state(self):
-        """Minion status: online if seen within the last hour, else offline."""
+        """Semaphore: faulty (unresolved alerts) > online > offline."""
         from datetime import datetime, timedelta
         threshold = datetime.now() - timedelta(hours=1)
         for rec in self:
-            rec.state = 'online' if (
-                rec.last_seen and rec.last_seen > threshold) else 'offline'
+            if rec.open_alert_count > 0:
+                rec.state = 'faulty'
+            elif rec.last_seen and rec.last_seen > threshold:
+                rec.state = 'online'
+            else:
+                rec.state = 'offline'
+
+    def _update_open_alert_count(self):
+        """Recompute the stored open alert count from alert records.
+
+        Called by the alert model on create/resolve and at sync end (backfill).
+        Writing the stored field triggers the stored state recomputation.
+        """
+        for rec in self:
+            count = self.env['saltstack.alert'].search_count([
+                ('host', '=', rec.name),
+                ('resolved', '=', False),
+            ])
+            if rec.open_alert_count != count:
+                rec.open_alert_count = count
+        return True
+
+    # ── Logo handling ────────────────────────────────────────────────────
+
+    _ROLE_LOGO_PRIORITY = [
+        ('salt-master', 'saltstack.png'),
+        ('salt', 'saltstack.png'),
+        ('lxd-host', 'lxd.png'),
+        ('lxd', 'lxd.png'),
+        ('odoo', 'odoo.png'),
+        ('postgres', 'postgres.png'),
+        ('caddy', 'caddy.png'),
+        ('gateway', 'caddy.png'),
+        ('mail', 'mail.png'),
+        ('postfix', 'mail.png'),
+        ('dovecot', 'mail.png'),
+        ('garage', 'garage.png'),
+        ('s3', 'garage.png'),
+        ('zabbix', 'siem.png'),
+        ('wazuh', 'siem.png'),
+    ]
+    _LOGO_FALLBACK = 'server.png'
 
     def _set_default_image(self):
-        """Set a default logo per role if image is empty."""
-        role_logo = {
-            'odoo': self._logo_from_module('base', 'static/description/icon.png'),
-            'postgres': self._logo_from_module('base', 'static/description/icon.png'),
-            'bifrost': self._logo_from_module('base', 'static/description/icon.png'),
-            'caddy': self._logo_from_module('base', 'static/description/icon.png'),
-            'gateway': self._logo_from_module('base', 'static/description/icon.png'),
-            'lxd-host': self._logo_from_module('base', 'static/description/icon.png'),
-        }
+        """Set a technology logo per primary role if image is empty."""
         for rec in self:
             if rec.image:
                 continue  # keep manually set image
             roles = [r.strip().lower() for r in (rec.roles or '').split(',') if r.strip()]
-            matched = next((role_logo[r] for r in roles if r in role_logo), None)
-            rec.image = matched or role_logo.get('gateway')
+            asset = next(
+                (logo for role, logo in self._ROLE_LOGO_PRIORITY if role in roles),
+                self._LOGO_FALLBACK,
+            )
+            rec.image = self._logo_from_asset(asset)
 
-    def _logo_from_module(self, module, path):
-        """Return base64 of a logo file from a module, or None."""
+    def _logo_from_asset(self, filename):
+        """Return base64 PNG of a bundled logo asset from this module."""
         import base64 as b64
         import os as _os
+        path = _os.path.join(
+            _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))),
+            'static', 'src', 'img', 'logos', filename,
+        )
         try:
-            mod = self.env['ir.module.module'].search(
-                [('name', '=', module)], limit=1)
-            if mod:
-                full = _os.path.join(mod.get_manifest_glob('') or '/', path)
-                # try addons path
-                for ap in self.env['ir.config_parameter'].get_param(
-                        'addons_path', '').split(','):
-                    cand = _os.path.join(ap.strip(), module, path)
-                    if _os.path.isfile(cand):
-                        with open(cand, 'rb') as f:
-                            return b64.b64encode(f.read())
-        except Exception:
-            pass
-        return None
+            with open(path, 'rb') as f:
+                return b64.b64encode(f.read())
+        except OSError:
+            _logger.warning('Logo asset missing: %s', path)
+            return None
 
     # ── Salt API Helpers ─────────────────────────────────────────────────
 
@@ -172,6 +253,98 @@ class SaltMinion(models.Model):
             client, tgt, fun, *args, timeout=timeout, **kwargs)
         return _json.loads(result)
 
+    # ── IP extraction ────────────────────────────────────────────────────
+
+    @staticmethod
+    def _extract_ips(grains):
+        """Return (private_ip, public_ip) from grains.
+
+        private_ip: first address in 192.168.11.0/24 (management network),
+        falling back to the first non-loopback non-bridge address.
+        public_ip: first non-RFC1918 address.
+        """
+        candidates = []  # (iface, ip)
+        ip4_interfaces = grains.get('ip4_interfaces') or {}
+        for iface, addrs in ip4_interfaces.items():
+            if iface == 'lo':
+                continue
+            for ip in addrs or []:
+                candidates.append((iface, ip))
+        for src in ('fqdn_ip4', 'ipv4'):
+            for ip in grains.get(src) or []:
+                candidates.append(('', ip))
+
+        private = None
+        public = None
+        for _iface, ip in candidates:
+            if not isinstance(ip, str) or '.' not in ip:
+                continue
+            if ip.startswith('192.168.11.'):
+                if private is None:
+                    private = ip
+            elif not _is_rfc1918(ip):
+                if public is None:
+                    public = ip
+        return (private or ''), (public or '')
+
+    # ── Demo data detection ──────────────────────────────────────────────
+
+    def _update_demo_data(self, grains=None):
+        """Check whether an Odoo minion's main database contains demo data.
+
+        Main database is resolved from the Odoo setting (saltstack.odoo_main_db)
+        or the grain 'odoo_main_db'. The check is best-effort: failures are
+        logged, never fatal.
+        """
+        self.ensure_one()
+        roles = [r.strip().lower() for r in (self.roles or '').split(',') if r.strip()]
+        if 'odoo' not in roles:
+            self.odoo_has_demo_data = False
+            return False
+
+        main_db = self.env['ir.config_parameter'].get_param(
+            'saltstack.odoo_main_db', '')
+        if not main_db and grains and isinstance(grains, dict):
+            main_db = grains.get('odoo_main_db') or ''
+        if not main_db:
+            _logger.info(
+                'Demo data check skipped for %s: no saltstack.odoo_main_db '
+                'setting or odoo_main_db grain', self.name)
+            return False
+
+        query = (
+            "SELECT count(*) FROM res_company WHERE name ILIKE "
+            "'%(san francisco)%' OR name ILIKE '%(chicago)%' OR name ILIKE '%(demo)%'"
+        )
+        cmd = 'psql -d %s -tAc "%s"' % (main_db, query)
+        try:
+            result = self._call_salt_api('local', self.name, 'cmd.run', cmd, timeout=60)
+            raw = result.get('return', [{}])[0].get(self.name, '')
+            count = int(str(raw).strip() or 0)
+            self.odoo_has_demo_data = count > 0
+            _logger.info('Demo data check for %s (%s): %s', self.name, main_db, count)
+            return bool(count)
+        except Exception as e:
+            _logger.warning('Demo data check failed for %s: %s', self.name, e)
+            return False
+
+    # ── DC inference ─────────────────────────────────────────────────────
+
+    _DC_BY_HOST = {
+        # host_machine -> dc. Fylls på med den faktiska mappningen (open
+        # question i design.md). Grain 'dc' är auktoritativ när den finns.
+        # 'fors': 'ska',
+    }
+
+    def _infer_dc(self, host_machine, private_ip):
+        """Best-effort DC inference when the grain lacks 'dc'."""
+        if host_machine and host_machine in self._DC_BY_HOST:
+            return self._DC_BY_HOST[host_machine]
+        if private_ip:
+            # Management network 192.168.11.x — ranges per DC unknown yet.
+            pass
+        return False
+
     # ── Actions ──────────────────────────────────────────────────────────
 
     def action_ping(self):
@@ -179,12 +352,23 @@ class SaltMinion(models.Model):
         self.ensure_one()
         try:
             self._call_salt_api('local', self.name, 'test.ping')
-            self.last_seen = fields.Datetime.now()
-            self.state = 'online'
+            self.last_seen = fields.Datetime.now()  # state recomputes
             return {'success': True, 'minion': self.name, 'status': 'up'}
         except Exception as e:
             _logger.warning('Ping failed for %s: %s', self.name, e)
             return {'success': False, 'minion': self.name, 'error': str(e)}
+
+    def action_show_alerts(self):
+        """Open the alert list filtered to this host (smart button)."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Drift Alerts — %s' % self.name,
+            'res_model': 'saltstack.alert',
+            'view_mode': 'list,form',
+            'domain': [('host', '=', self.name)],
+            'context': {'search_default_unresolved': 1},
+        }
 
     def _apply_grains(self, grains):
         """Write grains data onto this record (no API call)."""
@@ -193,34 +377,45 @@ class SaltMinion(models.Model):
             _logger.warning('No grains for %s (got %r)', self.name, grains)
             return False
 
-        # Extract ip (fqdn_ip4/ipv4 can be empty lists — IndexError-safe)
-        fqdn_ip4 = grains.get('fqdn_ip4') or []
-        ipv4 = grains.get('ipv4') or []
-        ip = (fqdn_ip4[0] if fqdn_ip4 else None) or (ipv4[0] if ipv4 else None)
-        if not ip and grains.get('ip4_interfaces'):
-            for iface, addrs in grains['ip4_interfaces'].items():
-                if iface != 'lo' and addrs:
-                    ip = addrs[0]
-                    break
+        private_ip, public_ip = self._extract_ips(grains)
 
         roles = grains.get('roles', '')
         if isinstance(roles, list):
             roles = ','.join(roles)
 
+        customer = grains.get('customer') or ''
+        partner_id = self.partner_id.id
+        if not partner_id and customer:
+            partner = self.env['res.partner'].search(
+                [('name', '=', customer)], limit=1)
+            if partner:
+                partner_id = partner.id
+
+        is_container = bool(grains.get('lxc'))
+        if is_container:
+            public_ip = ''
+
+        dc = grains.get('dc') or self._infer_dc(grains.get('host'), private_ip)
+        if not dc:
+            dc = False
+
         self.write({
-            'ip': ip,
+            'private_ip': private_ip,
+            'public_ip': public_ip,
             'os': str(grains.get('os', '')).title(),
             'os_version': str(grains.get('osrelease', '')),
-            'dc': grains.get('dc'),
+            'dc': dc,
             'roles': roles,
-            'customer': grains.get('customer'),
+            'customer': customer,
+            'partner_id': partner_id,
             'odoo_version': grains.get('odoo_version') or grains.get('odoo_full_version'),
-            'is_container': bool(grains.get('lxc')),
+            'is_container': is_container,
             'host_machine': grains.get('host'),
             'grains_json': json.dumps(grains, indent=2, default=str),
             'last_sync': fields.Datetime.now(),
         })
         self._set_default_image()
+        self._update_demo_data(grains)
         return True
 
     def action_sync_from_grains(self):
@@ -237,11 +432,10 @@ class SaltMinion(models.Model):
     def action_sync_all_minions(self):
         """List all minions via Salt API and create/update records.
 
-        Optimized (2026-08-09): fetches grains for ALL minions in ONE call
-        (tgt='*') instead of one call per minion. Previously the sync could
-        take many minutes — each down minion waited out a 120 s timeout
-        sequentially. Now the whole sync takes max ~45 s regardless of the
-        number of down minions.
+        Protected sync (2026-08-23): an empty/erroneous manage.status result
+        refuses to run the deactivation pass, so a broken Salt API can never
+        wipe the registry. Sets last_seen for up minions so the semaphore
+        reflects the sync, and backfills open_alert_count.
         """
         try:
             result = self._call_salt_api('runner', None, 'manage.status')
@@ -249,10 +443,19 @@ class SaltMinion(models.Model):
             _logger.warning('Minion list failed: %s', e)
             return {'error': str(e)}
 
-        all_minions = []
         returned = result.get('return', [{}])[0]
-        for state in ('up', 'down', 'unaccepted'):
-            all_minions.extend(returned.get(state, []))
+        if not isinstance(returned, dict):
+            returned = {}
+        up = returned.get('up') or []
+        down = returned.get('down') or []
+        all_minions = list(up) + list(down) + list(returned.get('unaccepted') or [])
+
+        # Protect the registry: never deactivate everything on an empty result.
+        if not all_minions:
+            _logger.error(
+                'manage.status returned no minions (raw=%s); refusing to '
+                'sync/deactivate', result)
+            return {'error': 'manage.status returned no minions; registry untouched'}
 
         # Bulk-grains: ett anrop mot alla minioner → {minion_id: grains}
         bulk_grains = {}
@@ -262,6 +465,7 @@ class SaltMinion(models.Model):
         except Exception as e:
             _logger.warning('Bulk grains fetch failed: %s', e)
 
+        now = fields.Datetime.now()
         created = 0
         updated = 0
         deactivated = 0
@@ -273,18 +477,27 @@ class SaltMinion(models.Model):
                     existing.active = True
                     updated += 1
                 existing._apply_grains(grains)
+                if minion_id in up:
+                    existing.last_seen = now  # semaphore: online (if no alerts)
                 updated += 1
             else:
                 rec = self.create({'name': minion_id})
                 rec._apply_grains(grains)
+                if minion_id in up:
+                    rec.last_seen = now
                 created += 1
 
         # Deactivate minions no longer present on the Salt master
+        # (only reached when manage.status returned a healthy list).
         known = self.search([('active', '=', True)])
         for rec in known:
             if rec.name not in all_minions:
                 rec.active = False
                 deactivated += 1
+
+        # Backfill open alert counts (first run after upgrade + alert drift).
+        for rec in known:
+            rec._update_open_alert_count()
 
         return {
             'created': created,
@@ -382,6 +595,7 @@ class SaltMinion(models.Model):
                 f'Typ: {fault_type}<br/>'
                 f'Alert: #{alert_id}<br/>'
                 f'Diagnos startad: {webhook_result.get("diagnosis_started", False)}<br/>'
+                f'Deduplicerad: {webhook_result.get("deduplicated", False)}<br/>'
                 f'<b>Följ alert #{alert_id} för att se diagnos och åtgärd.</b>'
             ),
             message_type='notification',
@@ -393,6 +607,7 @@ class SaltMinion(models.Model):
             'fault_result': fault_result,
             'alert_id': alert_id,
             'diagnosis_started': webhook_result.get('diagnosis_started', False),
+            'deduplicated': webhook_result.get('deduplicated', False),
         }
 
     def action_fault_stop_odoo(self):

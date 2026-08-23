@@ -153,3 +153,65 @@ class TestSimulateFullChain(TransactionCase):
                 self.assertEqual(payload['severity'], exp['severity'])
                 self.assertEqual(
                     payload['trigger_name'], exp['trigger_name'])
+
+
+@tagged('post_install', '-at_install')
+class TestAlertDedup(TransactionCase):
+    """Alert dedup: same host + normalized trigger does not create new records."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.Alert = cls.env['saltstack.alert']
+
+    def _payload(self, host='sparv', trigger='Odoo: HTTP endpoint not responding (HTTP 0)'):
+        return {
+            'host': host,
+            'source': 'zabbix',
+            'category': 'process',
+            'severity': 12,
+            'trigger_name': trigger,
+            'description': 'test',
+        }
+
+    def test_normalize_strips_trailing_parenthetical(self):
+        self.assertEqual(
+            self.Alert._normalize_trigger('Odoo: HTTP endpoint not responding (HTTP 0)'),
+            'odoo: http endpoint not responding')
+        self.assertEqual(
+            self.Alert._normalize_trigger('Odoo: HTTP endpoint not responding (HTTP 200)'),
+            'odoo: http endpoint not responding')
+
+    def test_same_trigger_deduplicated(self):
+        r1 = self.Alert.process_webhook(self._payload())
+        self.assertFalse(r1['deduplicated'])
+        r2 = self.Alert.process_webhook(self._payload())
+        self.assertTrue(r2['deduplicated'])
+        self.assertEqual(r2['alert_id'], r1['alert_id'])
+        alert = self.Alert.browse(r1['alert_id'])
+        self.assertEqual(alert.occurrences, 2)
+        self.assertTrue(alert.last_occurrence)
+
+    def test_flapping_suffix_deduplicated(self):
+        r1 = self.Alert.process_webhook(self._payload(trigger='Odoo: HTTP endpoint not responding (HTTP 0)'))
+        r2 = self.Alert.process_webhook(self._payload(trigger='Odoo: HTTP endpoint not responding (HTTP 200)'))
+        self.assertTrue(r2['deduplicated'])
+        self.assertEqual(r2['alert_id'], r1['alert_id'])
+
+    def test_different_trigger_creates_new(self):
+        r1 = self.Alert.process_webhook(self._payload(trigger='Odoo: HTTP endpoint not responding (HTTP 0)'))
+        r2 = self.Alert.process_webhook(self._payload(trigger='Linux: Load average is too high'))
+        self.assertFalse(r2['deduplicated'])
+        self.assertNotEqual(r2['alert_id'], r1['alert_id'])
+
+    def test_resolved_previous_allows_new(self):
+        r1 = self.Alert.process_webhook(self._payload())
+        self.Alert.browse(r1['alert_id']).action_mark_resolved()
+        r2 = self.Alert.process_webhook(self._payload())
+        self.assertFalse(r2['deduplicated'])
+        self.assertNotEqual(r2['alert_id'], r1['alert_id'])
+
+    def test_dedup_skips_diagnosis_flag(self):
+        r1 = self.Alert.process_webhook(self._payload())
+        r2 = self.Alert.process_webhook(self._payload())
+        self.assertFalse(r2['diagnosis_started'])

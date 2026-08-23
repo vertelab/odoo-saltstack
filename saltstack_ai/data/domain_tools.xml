@@ -121,7 +121,7 @@ async def execute():
 purpose: read specific fields from records in an Odoo model (this instance)
 when: after odoo_search, to inspect field values on the found records
 when not: to search records (use odoo_search); to change data (read-only)
-example: {"model": "salt.minion", "ids": "[1,2,3]", "fields": "['name','ip','is_online']"}
+example: {"model": "salt.minion", "ids": "[1,2,3]", "fields": "['name','private_ip','is_online']"}
 output: field values per record
 guardrail: read-only operation, safe
 ]]></field>

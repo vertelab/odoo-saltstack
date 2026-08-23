@@ -1,10 +1,14 @@
 # Copyright (C) 2026 Vertel Sverige AB (<https://vertel.se>).
 
 import logging
+import re
 
 from odoo import _, api, fields, models
 
 _logger = logging.getLogger(__name__)
+
+_PAREN_SUFFIX_RE = re.compile(r'\s*\([^)]*\)\s*$')
+_WS_RE = re.compile(r'\s+')
 
 
 class SaltAlert(models.Model):
@@ -38,6 +42,24 @@ class SaltAlert(models.Model):
 
     # ── Alert details ────────────────────────────────────────────────────
     trigger_name = fields.Char(string='Trigger')
+    normalized_trigger = fields.Char(
+        string='Normalized Trigger',
+        compute='_compute_normalized_trigger',
+        store=True,
+        index=True,
+        help='Dedup key: lowercase trigger with trailing parenthetical '
+             'groups stripped (e.g. "http endpoint not responding (http 0)" '
+             'and "... (http 200)" collapse to the same key).',
+    )
+    occurrences = fields.Integer(
+        string='Occurrences',
+        default=1,
+        help='How many times this same problem has been reported (dedup).',
+    )
+    last_occurrence = fields.Datetime(
+        string='Last Occurrence',
+        help='Timestamp of the latest deduplicated repeat.',
+    )
     description = fields.Text(string='Description')
     raw_log = fields.Text(string='Raw log')
     timestamp = fields.Datetime(string='Timestamp')
@@ -46,6 +68,29 @@ class SaltAlert(models.Model):
     active = fields.Boolean(string='Active', default=True)
 
     # ── Computed ─────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _normalize_trigger(name):
+        """Normalize a trigger name into a stable dedup key.
+
+        Lowercases, strips trailing parenthetical groups (repeatedly) and
+        collapses whitespace. Kept conservative so only volatile suffixes
+        like "(HTTP 0)"/"(HTTP 200)" disappear — different reports stay
+        distinct.
+        """
+        if not name:
+            return ''
+        value = str(name).strip().lower()
+        prev = None
+        while prev != value:
+            prev = value
+            value = _PAREN_SUFFIX_RE.sub('', value).strip()
+        return _WS_RE.sub(' ', value)
+
+    @api.depends('trigger_name')
+    def _compute_normalized_trigger(self):
+        for rec in self:
+            rec.normalized_trigger = self._normalize_trigger(rec.trigger_name)
 
     @api.model
     def _parse_timestamp(self, value):
@@ -97,11 +142,42 @@ class SaltAlert(models.Model):
                 rec.host or '?', rec.trigger_name or 'Alert',
                 source or rec.category or '?')
 
+    # ── Minion state coupling ────────────────────────────────────────────
+
+    def _recompute_minions(self, hosts):
+        """Refresh open_alert_count/state for minions matching the hosts."""
+        hosts = {h for h in (hosts or set()) if h}
+        if not hosts:
+            return
+        minions = self.env['salt.minion'].search([('name', 'in', list(hosts))])
+        minions._update_open_alert_count()
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        hosts = {r.host for r in records if r.host}
+        self._recompute_minions(hosts)
+        return records
+
+    def write(self, vals):
+        resolved_touched = 'resolved' in vals
+        hosts = {r.host for r in self if r.host}
+        res = super().write(vals)
+        if resolved_touched:
+            self._recompute_minions(hosts)
+        return res
+
     # ── Webhook-processing ───────────────────────────────────────────────
 
     @api.model
     def process_webhook(self, payload):
         """Process an incoming alert payload. Returns result dict.
+
+        Deduplicates: when an unresolved alert for the same host + normalized
+        trigger already exists, no new record is created — the existing one is
+        updated (occurrences/last_occurrence/raw_log) and notification +
+        correlation + diagnosis are skipped. A different normalized trigger
+        (another report) creates a new record.
 
         Bridge modules (saltstack_zabbix, saltstack_ai) extend this flow by
         defining _correlate_zabbix / _start_diagnosis on the same model. The
@@ -116,15 +192,45 @@ class SaltAlert(models.Model):
             if category not in dict(self._fields['category'].selection):
                 category = 'other'
 
+            trigger = str(payload.get('trigger_name', '') or '')
+            norm = self._normalize_trigger(trigger)
+
+            # ── Dedup: same host + normalized trigger, previous not resolved
+            existing = self.search([
+                ('host', '=', host),
+                ('resolved', '=', False),
+                ('normalized_trigger', '=', norm),
+            ], limit=1) if norm else self.env['saltstack.alert']
+
+            if existing:
+                existing.write({
+                    'occurrences': existing.occurrences + 1,
+                    'last_occurrence': fields.Datetime.now(),
+                    'raw_log': payload.get('raw_log', ''),
+                })
+                _logger.info(
+                    'Dedup alert for %s (%s): alert #%s now occurrences=%s',
+                    host, norm, existing.id, existing.occurrences + 1)
+                return {
+                    'status': 'ok',
+                    'alert_id': existing.id,
+                    'deduplicated': True,
+                    'diagnosis_started': False,
+                    'correlated_zabbix_alert': False,
+                }
+
+            now = fields.Datetime.now()
             alert = self.create({
                 'host': host,
                 'source': source or False,
                 'category': category,
                 'severity': self._parse_severity(payload.get('severity')),
-                'trigger_name': payload.get('trigger_name', ''),
+                'trigger_name': trigger,
                 'description': payload.get('description', ''),
                 'raw_log': payload.get('raw_log', ''),
                 'timestamp': self._parse_timestamp(payload.get('timestamp')),
+                'occurrences': 1,
+                'last_occurrence': now,
             })
 
             # Correlate with Zabbix (only when saltstack_zabbix installed)
@@ -149,6 +255,7 @@ class SaltAlert(models.Model):
                 'coworker_session_id': getattr(
                     alert, 'coworker_session_id', '') or '',
                 'alert_id': alert.id,
+                'deduplicated': False,
             }
         except Exception as e:
             _logger.exception('Webhook-processing misslyckades: %s', e)

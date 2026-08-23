@@ -14,6 +14,8 @@
                 <field name="source"/>
                 <field name="category"/>
                 <field name="severity"/>
+                <field name="occurrences"/>
+                <field name="last_occurrence"/>
                 <field name="resolved"/>
                 <field name="create_date"/>
             </list>
@@ -50,6 +52,8 @@
                         </group>
                         <group string="Status" class="status-group">
                             <field name="resolved"/>
+                            <field name="occurrences"/>
+                            <field name="last_occurrence"/>
                         </group>
                     </group>
                     <group string="Description" class="description-group">

@@ -1,9 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- ── Access category (own heading on Access Rights) ───────────── -->
+    <record id="module_category_saltstack" model="ir.module.category">
+        <field name="name">Saltstack</field>
+        <field name="sequence">100</field>
+    </record>
+
     <!-- ── Access groups ─────────────────────────────────────────────── -->
     <record id="group_saltstack_officer" model="res.groups">
         <field name="name">Saltstack-officer</field>
-        <field name="category_id" ref="base.module_category_hidden"/>
+        <field name="category_id" ref="module_category_saltstack"/>
         <field name="comment">
             Saltstack-officer — ser Saltstack-menyn med Pillars, Minions och
             Driftslarm, men INTE Konfiguration.
@@ -12,7 +18,7 @@
 
     <record id="group_saltstack_admin" model="res.groups">
         <field name="name">Saltstack Administrator</field>
-        <field name="category_id" ref="base.module_category_hidden"/>
+        <field name="category_id" ref="module_category_saltstack"/>
         <field name="comment">
             Saltstack Administrator — also sees Configuration (Settings).
             Inherits officer rights. Everyone in the Settings group (base.group_system)
