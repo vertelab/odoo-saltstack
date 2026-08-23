@@ -4,6 +4,7 @@
     <menuitem id="menu_saltstack_root"
               name="Saltstack"
               sequence="90"
+              web_icon="saltstack,static/description/icon.png"
               groups="saltstack.group_saltstack_officer"/>
 
     <!-- ── Konfiguration (parent, endast admin) ────────────────────── -->
