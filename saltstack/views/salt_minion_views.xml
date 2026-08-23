@@ -23,7 +23,7 @@
                     <div t-attf-class="oe_kanban_global_click position-relative">
                         <!-- DC ribbon -->
                         <div t-if="record.dc.raw_value" class="ribbon ribbon-top-right">
-                            <span t-att-class="'text-bg-primary' if record.dc.raw_value == 'ska' else 'text-bg-dark'">
+                            <span t-att-class="record.dc.raw_value == 'ska' ? 'text-bg-primary' : 'text-bg-dark'">
                                 <field name="dc"/>
                             </span>
                         </div>
@@ -66,7 +66,7 @@
                         <div class="o_kanban_record_bottom">
                             <span class="d-inline-flex align-items-center me-2"
                                   style="width:12px;height:12px;border-radius:50%;"
-                                  t-att-class="'bg-success' if record.state.raw_value == 'online' else 'bg-danger' if record.state.raw_value == 'faulty' else 'bg-secondary'"/>
+                                  t-att-class="record.state.raw_value == 'online' ? 'bg-success' : record.state.raw_value == 'faulty' ? 'bg-danger' : 'bg-secondary'"/>
                             <field name="state" widget="badge"
                                    decoration-success="state == 'online'"
                                    decoration-warning="state == 'faulty'"
