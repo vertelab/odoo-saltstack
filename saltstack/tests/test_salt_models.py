@@ -172,6 +172,7 @@ class TestMinionOverview(TransactionCase):
         self.assertEqual(minion.open_alert_count, 1)
         self.assertEqual(minion.state, 'faulty')
         alert.action_mark_resolved()
+        minion.invalidate_recordset()
         self.assertEqual(minion.open_alert_count, 0)
         self.assertEqual(minion.state, 'online')
 
@@ -198,7 +199,8 @@ class TestMinionOverview(TransactionCase):
                 {'return': [{'test-up-1': {'os': 'Ubuntu', 'roles': 'odoo'}}]},
             ]
             result = minion.action_sync_all_minions()
-        self.assertEqual(result['created'], 1)
+        self.assertEqual(result['created'], 0)
+        self.assertGreaterEqual(result['updated'], 1)
         minion.invalidate_recordset()
         self.assertTrue(minion.last_seen)
         self.assertEqual(minion.state, 'online')

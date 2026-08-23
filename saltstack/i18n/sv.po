@@ -3,18 +3,7 @@
 # 	* saltstack
 #
 msgid ""
-msgstr ""
-"Project-Id-Version: Odoo Server 18.0-20260810\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-10 12:45+0000\n"
-"PO-Revision-Date: 2026-08-10 12:45+0000\n"
-"Last-Translator: \n"
-"Language-Team: \n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: \n"
-"Plural-Forms: \n"
-
+msgstr "Project-Id-Version: Odoo Server 18.0-20260810\nReport-Msgid-Bugs-To: \nPOT-Creation-Date: 2026-08-10 12:45+0000\nPO-Revision-Date: 2026-08-10 12:45+0000\nLast-Translator: \nLanguage-Team: \nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: \nPlural-Forms: \n"
 #. module: saltstack
 #: model:res.groups,comment:saltstack.group_saltstack_admin
 msgid ""
@@ -24,7 +13,6 @@ msgid ""
 "            blir automatiskt saltstack-admin.\n"
 "        "
 msgstr ""
-
 #. module: saltstack
 #: model:res.groups,comment:saltstack.group_saltstack_officer
 msgid ""
@@ -33,207 +21,184 @@ msgid ""
 "            Driftslarm, men INTE Konfiguration.\n"
 "        "
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "<span class=\"me-2\">Sync every</span>"
 msgstr ""
 
 #. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_form
+msgid "<span class=\"o_stat_text\">Driftslarm</span>"
+msgstr ""
+
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_kanban
+msgid "<span class=\"text-bg-warning\">Demo</span>"
+msgstr ""
+
+#. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "<span>hours</span>"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_res_config_settings__alert_coworker_id
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "AI Coworker"
 msgstr "AI Medarbetare"
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid ""
 "AI coworker that performs diagnosis on drift alerts. Default is the "
 "Infrastructure Operator (bundled with the module)."
-msgstr ""
-"AI Medarbetare som utför diagnos vid driftlarm. Default är Infrastructure "
-"Operator (följer med modulen)."
-
+msgstr "AI Medarbetare som utför diagnos vid driftlarm. Default är Infrastructure Operator (följer med modulen)."
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_res_config_settings__alert_coworker_id
 msgid ""
 "AI coworker that performs diagnosis on drift alerts. Default is the one "
 "bundled with the module (Infrastructure Operator)."
 msgstr ""
-
-#. module: saltstack
-#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_alert__diagnosis_state__unavailable
-msgid "AI unavailable"
-msgstr "AI otillgänglig"
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_res_config_settings__alert_webhook_token
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "API key"
 msgstr "API-nyckel"
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid ""
 "API key (Bearer token) sent in the Authorization header. Generated "
 "automatically at installation — press the button to create a new one."
-msgstr ""
-"API-nyckel (Bearer token) som skickas med Authorization-headern. Genereras "
-"automatiskt vid installation — tryck på knappen för att skapa en ny."
-
+msgstr "API-nyckel (Bearer token) som skickas med Authorization-headern. Genereras automatiskt vid installation — tryck på knappen för att skapa en ny."
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_res_config_settings__alert_webhook_token
 msgid ""
 "API key (Bearer token) that Wazuh/Zabbix send in the Authorization header to"
 " the webhook URL."
-msgstr ""
-"API-nyckel (Bearer token) som Wazuh/Zabbix skickar i Authorization-headern "
-"till webhook-URL:en."
-
+msgstr "API-nyckel (Bearer token) som Wazuh/Zabbix skickar i Authorization-headern till webhook-URL:en."
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__message_needaction
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__message_needaction
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__message_needaction
 msgid "Action Needed"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__active
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__active
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__active
 msgid "Active"
 msgstr "Aktiv"
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__activity_ids
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__activity_ids
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__activity_ids
 msgid "Activities"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__activity_exception_decoration
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__activity_exception_decoration
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__activity_exception_decoration
 msgid "Activity Exception Decoration"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__activity_state
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__activity_state
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__activity_state
 msgid "Activity State"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__activity_type_icon
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__activity_type_icon
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__activity_type_icon
 msgid "Activity Type Icon"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid ""
 "Address of the Salt master REST API (port 8377). e.g. "
 "http://192.168.11.22:8377"
+msgstr "Adress till Salt-masterns REST API (port 8377). t.ex. http://192.168.11.22:8377"
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__cron_active
+msgid "Aktiv"
 msgstr ""
-"Adress till Salt-masterns REST API (port 8377). t.ex. "
-"http://192.168.11.22:8377"
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_search
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_pillar_search
 msgid "Aktiva"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__name
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_alert_form
 msgid "Alert"
 msgstr "Larm"
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__message_attachment_count
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__message_attachment_count
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__message_attachment_count
 msgid "Attachment Count"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_res_config_settings__saltstack_api_token
 msgid "Authentication token for the Salt API"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid ""
 "Authentication token for the Salt REST API. The token can also be managed "
 "via Keykeep."
-msgstr ""
-"Autentiseringstoken mot Salt REST API. Token kan även hanteras via Keykeep."
-
+msgstr "Autentiseringstoken mot Salt REST API. Token kan även hanteras via Keykeep."
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_res_config_settings__alert_auto_diagnose
 msgid "Auto diagnosis"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Auto diagnosis on alert"
 msgstr "Auto-diagnos vid larm"
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Automatic sync"
 msgstr "Automatisk synk"
-
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
+msgid "Background Jobs"
+msgstr ""
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__run_type__backup
+msgid "Backup"
+msgstr "Backup"
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_res_config_settings__saltstack_api_url
 msgid "Base URL of the Salt REST API (e.g. http://192.168.11.22:8377)"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__salt_pillar__data_type__boolean
 msgid "Boolean"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_pillar_search
 msgid "By Data Type"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_pillar_search
 msgid "By Minion Target"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_pillar_search
 msgid "By Pillar File"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_alert_form
 msgid "CRITICAL"
 msgstr "KRITISKT"
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__category
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_alert_search
 msgid "Category"
 msgstr "Kategori"
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_form
 msgid "Clear all fault injections on this minion?"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_salt_minion__roles
 msgid "Comma-separated roles (e.g. \"caddy,odoo,postgres\")"
@@ -243,263 +208,264 @@ msgstr ""
 #: model:ir.model,name:saltstack.model_res_config_settings
 msgid "Config Settings"
 msgstr "Inställningar"
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_search
 msgid "Containers"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_form
 msgid "Context"
 msgstr ""
-
-#. module: saltstack
-#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_alert_search
-msgid "Correlated"
-msgstr "Korrelerade"
-
-#. module: saltstack
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__correlated_zabbix_alert
-msgid "Correlated with Zabbix"
-msgstr "Korrelerat med Zabbix"
-
-#. module: saltstack
-#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_alert_form
-msgid "Correlation & Diagnosis"
-msgstr "Korrelation & Diagnos"
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_res_config_settings__alert_correlation_window
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Correlation window (s)"
 msgstr "Korrelationsfönster (s)"
-
-#. module: saltstack
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__coworker_session_id
-msgid "Coworker session"
-msgstr "Coworker-session"
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Create a new random API key (Bearer token)"
 msgstr "Skapa en ny slumpmässig API-nyckel (Bearer token)"
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__create_uid
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__create_uid
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__create_uid
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_api__create_uid
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__create_uid
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__create_uid
 msgid "Created by"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__create_date
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__create_date
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__create_date
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_api__create_date
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__create_date
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__create_date
 msgid "Created on"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_alert_search
 msgid "Critical (≥12)"
 msgstr "Kritiska (≥12)"
-
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__cron_id
+msgid "Cron"
+msgstr ""
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
+msgid "Cron-jobb"
+msgstr ""
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_res_config_settings__saltstack_cron_line_ids
+msgid "Cron-rader"
+msgstr ""
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__customer
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_search
 msgid "Customer"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_salt_minion__partner_id
+msgid "Customer (Partner)"
+msgstr "Kund (partner)"
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_salt_minion__customer
-msgid "Customer name if this is a customer container"
+msgid "Customer name if this is a customer container (grain mirror)."
 msgstr ""
-
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_search
+msgid "Dag"
+msgstr ""
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_cron_line__cron_interval_type__days
+msgid "Dagar"
+msgstr ""
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__data_type
 msgid "Data Type"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__saltstack_alert__category__database
 msgid "Database"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__dc
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_search
 msgid "Datacenter"
+msgstr ""
+#. module: saltstack
+#: model:ir.model.fields,help:saltstack.field_saltstack_alert__normalized_trigger
+msgid ""
+"Dedup key: lowercase trigger with trailing parenthetical groups stripped "
+"(e.g. \"http endpoint not responding (http 0)\" and \"... (http 200)\" "
+"collapse to the same key)."
 msgstr ""
 
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__is_demo
 msgid "Demo / Test"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_search
 msgid "Demo/Test"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Derive from web address"
 msgstr "Härled från webbadress"
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__description
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__description
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_alert_form
 msgid "Description"
 msgstr "Beskrivning"
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_pillar_form
 msgid "Details"
 msgstr ""
-
-#. module: saltstack
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__diagnosis_result
-#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_alert_form
-msgid "Diagnosis result"
-msgstr "Diagnosresultat"
-
-#. module: saltstack
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__diagnosis_state
-#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_alert_search
-msgid "Diagnosis status"
-msgstr "Diagnosstatus"
-
 #. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__salt_pillar__data_type__dict
 msgid "Dictionary (YAML)"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__source__dirvish
+msgid "Dirvish"
+msgstr ""
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__display_name
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__display_name
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__display_name
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_api__display_name
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__display_name
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__display_name
 msgid "Display Name"
 msgstr ""
-
-#. module: saltstack
-#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_alert__diagnosis_state__done
-msgid "Done"
-msgstr "Klar"
-
 #. module: saltstack
 #: model:ir.actions.act_window,name:saltstack.action_salt_alert
 #: model:ir.ui.menu,name:saltstack.menu_salt_alert
 msgid "Drift Alerts"
 msgstr "Driftslarm"
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Driftlarm (webhook)"
 msgstr "Driftlarm (webhook)"
-
 #. module: saltstack
 #: model:ir.model,name:saltstack.model_saltstack_alert
 msgid "Driftslarm"
+msgstr "Driftslarm"
+#. module: saltstack
+#: model:ir.actions.act_window,name:saltstack.action_salt_runlog
+#: model:ir.model,name:saltstack.model_saltstack_runlog
+#: model:ir.ui.menu,name:saltstack.menu_salt_runlog
+msgid "Driftslogg"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_res_config_settings__alert_webhook_enabled
 msgid "Enable/disable reception of drift alerts."
 msgstr "Aktivera/avaktivera mottagning av driftlarm."
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_pillar_form
 msgid "Enter pillar value..."
 msgstr ""
-
 #. module: saltstack
-#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_alert__diagnosis_state__error
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__status__error
 msgid "Error"
 msgstr "Fel"
-
 #. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__salt_minion__state__faulty
-#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_search
 msgid "Faulty"
+msgstr "Felaktig"
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__cron_failure_count
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_search
+msgid "Fel"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Fill in the URL from web.base.url (the server's public address)"
 msgstr "Fyll i URL:en från web.base.url (serverns publika adress)"
-
+#. module: saltstack
+#: model:ir.model.fields,help:saltstack.field_salt_minion__public_ip
+msgid "First non-RFC1918 address; empty for containers."
+msgstr "Första icke-RFC1918-adressen; tom för containers."
 #. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__salt_pillar__data_type__float
 msgid "Float"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__message_follower_ids
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__message_follower_ids
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__message_follower_ids
 msgid "Followers"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__message_partner_ids
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__message_partner_ids
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__message_partner_ids
 msgid "Followers (Partners)"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_salt_minion__activity_type_icon
 #: model:ir.model.fields,help:saltstack.field_salt_pillar__activity_type_icon
 #: model:ir.model.fields,help:saltstack.field_saltstack_alert__activity_type_icon
 msgid "Font awesome icon e.g. fa-tasks"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__grains_json
 msgid "Full Grains (JSON)"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Generate new key"
 msgstr "Generera ny nyckel"
-
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__source__github-backup
+msgid "GitHub backup"
+msgstr ""
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_form
 msgid "Grains"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_alert_search
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_search
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_search
 msgid "Group By"
 msgstr "Gruppera efter"
-
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_search
+msgid "Har larm (faulty)"
+msgstr "Har larm (felaktig)"
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__has_message
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__has_message
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__has_message
 msgid "Has Message"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__run_type__highstate
+msgid "Highstate"
+msgstr "Highstate"
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__host
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__host
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_alert_search
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_search
 msgid "Host"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields,help:saltstack.field_saltstack_alert__occurrences
+msgid "How many times this same problem has been reported (dedup)."
+msgstr "Hur många gånger samma problem har rapporterats (dedup)."
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid ""
 "How often minions and pillars are synced automatically from the Salt Master."
 msgstr "Hur ofta minions och pillars synkas automatiskt från Salt Master."
-
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_res_config_settings__sync_interval_number
 msgid "How often the minion and pillar sync runs (in hours)."
 msgstr "Hur ofta minion- och pillar-synkningen körs (i timmar)."
-
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_res_config_settings__saltstack_auth_method
 msgid ""
@@ -515,70 +481,62 @@ msgstr ""
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__id
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__id
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__id
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_api__id
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__id
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__id
 msgid "ID"
 msgstr ""
-
-#. module: saltstack
-#: model:ir.model.fields,field_description:saltstack.field_salt_minion__ip
-msgid "IP Address"
-msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__activity_exception_icon
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__activity_exception_icon
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__activity_exception_icon
 msgid "Icon"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_salt_minion__activity_exception_icon
 #: model:ir.model.fields,help:saltstack.field_salt_pillar__activity_exception_icon
 #: model:ir.model.fields,help:saltstack.field_saltstack_alert__activity_exception_icon
 msgid "Icon to indicate an exception activity."
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_form
 msgid "Identity"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_salt_minion__message_needaction
 #: model:ir.model.fields,help:saltstack.field_salt_pillar__message_needaction
 #: model:ir.model.fields,help:saltstack.field_saltstack_alert__message_needaction
 msgid "If checked, new messages require your attention."
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_salt_minion__message_has_error
 #: model:ir.model.fields,help:saltstack.field_salt_pillar__message_has_error
 #: model:ir.model.fields,help:saltstack.field_saltstack_alert__message_has_error
 msgid "If checked, some messages have a delivery error."
 msgstr ""
-
 #. module: saltstack
 #. odoo-python
 #: code:addons/saltstack/models/salt_pillar.py:0
 msgid "Import Pillar YAML"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_form
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_pillar_form
 msgid "Inaktiv"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_search
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_pillar_search
 msgid "Inaktiverade"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__salt_pillar__data_type__integer
 msgid "Integer"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__cron_interval_number
+msgid "Intervall"
+msgstr ""
 #. module: saltstack
 #. odoo-python
 #: code:addons/saltstack/models/salt_pillar.py:0
@@ -597,254 +555,295 @@ msgstr ""
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__message_is_follower
 msgid "Is Follower"
 msgstr ""
-
 #. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__json_payload
 #: model:ir.model.fields.selection,name:saltstack.selection__salt_pillar__data_type__json
 msgid "JSON"
 msgstr ""
-
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_form
+msgid "JSON (maskinläsbar)"
+msgstr "JSON (maskinläsbar)"
 #. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__saltstack_alert__category__kernel
 msgid "Kernel"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__key
 msgid "Key"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.ui.menu,name:saltstack.menu_saltstack_config
 msgid "Konfiguration"
 msgstr ""
-
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
+msgid "Kör nu"
+msgstr ""
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__is_container
 msgid "LXD Container"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__host_machine
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_search
 msgid "LXD Host"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__last_sync
 msgid "Last Grains Sync"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__last_occurrence
+msgid "Last Occurrence"
+msgstr "Senaste förekomst"
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__last_seen
 msgid "Last Seen"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__write_uid
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__write_uid
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__write_uid
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_api__write_uid
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__write_uid
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__write_uid
 msgid "Last Updated by"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__write_date
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__write_date
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__write_date
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_api__write_date
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__write_date
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__write_date
 msgid "Last Updated on"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields,help:saltstack.field_salt_minion__partner_id
+msgid ""
+"Linked res.partner, looked up by name from the customer grain at sync when "
+"not set."
+msgstr "Länkad res.partner, slås upp på namn från customer-grain vid synk om inte satt."
 #. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__salt_pillar__data_type__list
 msgid "List (YAML)"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__raw_log
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_form
+msgid "Logg"
+msgstr "Logg"
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__image
 msgid "Logo"
 msgstr "Logotyp"
-
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_salt_minion__image
 msgid ""
 "Logo for the minion. Filled automatically based on role at sync, but can be "
 "updated manually in the form."
-msgstr ""
-"Logotyp för minionen. Fylls automatiskt baserat på roll vid synk, men kan "
-"uppdateras manuellt i formuläret."
-
+msgstr "Logotyp för minionen. Fylls automatiskt baserat på roll vid synk, men kan uppdateras manuellt i formuläret."
 #. module: saltstack
 #: model_terms:ir.actions.act_window,help:saltstack.action_salt_pillar
 msgid "Manage SaltStack pillar data"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_alert_form
 msgid "Mark as resolved"
 msgstr "Markera löst"
-
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_salt_minion__is_demo
 msgid "Mark as test/demo minion. Excluded from production operations."
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_alert_form
 msgid "Mark this alert as resolved?"
 msgstr "Markera detta larm som löst?"
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__message_has_error
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__message_has_error
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__message_has_error
 msgid "Message Delivery error"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__message_ids
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__message_ids
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__message_ids
 msgid "Messages"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__cron_code
+msgid "Metod"
+msgstr ""
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__name
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_form
 msgid "Minion ID"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__minion_target
 msgid "Minion Target"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_salt_minion__state
-msgid "Minion-status: online (svarar), offline (ej svarar), faulty (fel)."
-msgstr ""
-
+msgid ""
+"Minion-status semaphore: faulty (olösta larm) > online (svarar) > offline "
+"(svarar ej)."
+msgstr "Minion-status-semafor: faulty (olösta larm) > online (svarar) > offline (svarar ej)."
 #. module: saltstack
 #: model:ir.actions.act_window,name:saltstack.action_salt_minion
 #: model:ir.ui.menu,name:saltstack.menu_salt_minion
 msgid "Minions"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_cron_line__cron_interval_type__minutes
+msgid "Minuter"
+msgstr ""
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__my_activity_date_deadline
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__my_activity_date_deadline
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__my_activity_date_deadline
 msgid "My Activity Deadline"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_cron_line__cron_interval_type__months
+msgid "Månader"
+msgstr ""
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__cron_name
+msgid "Namn"
+msgstr ""
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__activity_calendar_event_id
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__activity_calendar_event_id
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__activity_calendar_event_id
 msgid "Next Activity Calendar Event"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__activity_date_deadline
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__activity_date_deadline
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__activity_date_deadline
 msgid "Next Activity Deadline"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__activity_summary
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__activity_summary
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__activity_summary
 msgid "Next Activity Summary"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__activity_type_id
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__activity_type_id
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__activity_type_id
 msgid "Next Activity Type"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__normalized_trigger
+msgid "Normalized Trigger"
+msgstr "Normaliserad trigger"
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__notes
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_form
 msgid "Notes"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__message_needaction_counter
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__message_needaction_counter
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__message_needaction_counter
 msgid "Number of Actions"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__message_has_error_counter
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__message_has_error_counter
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__message_has_error_counter
 msgid "Number of errors"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_salt_minion__message_needaction_counter
 #: model:ir.model.fields,help:saltstack.field_salt_pillar__message_needaction_counter
 #: model:ir.model.fields,help:saltstack.field_saltstack_alert__message_needaction_counter
 msgid "Number of messages requiring action"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_salt_minion__message_has_error_counter
 #: model:ir.model.fields,help:saltstack.field_salt_pillar__message_has_error_counter
 #: model:ir.model.fields,help:saltstack.field_saltstack_alert__message_has_error_counter
 msgid "Number of messages with delivery error"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields,help:saltstack.field_salt_minion__open_alert_count
+msgid ""
+"Number of unresolved saltstack.alert records for this host. Maintained by "
+"the alert model and the minion sync."
+msgstr "Antal olösta saltstack.alert-poster för denna host. Underhålls av alert-modellen och minionsynken."
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__status__ok
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_search
+msgid "OK"
+msgstr ""
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_search
 msgid "OS"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__os_version
 msgid "OS Version"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__occurrences
+msgid "Occurrences"
+msgstr "Förekomster"
 #. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__saltstack_alert__category__odoo
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_kanban
 msgid "Odoo"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_salt_minion__odoo_has_demo_data
+msgid "Odoo Demo Data"
+msgstr "Odoo demodata"
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__run_type__translation
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__source__odoosa
+msgid "Odoo SA"
+msgstr ""
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__odoo_version
 msgid "Odoo Version"
 msgstr ""
-
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_search
+msgid "Odoo demodata"
+msgstr "Odoo demodata"
 #. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__salt_minion__state__offline
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_search
 msgid "Offline"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__salt_minion__state__online
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_search
 msgid "Online"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_salt_minion__open_alert_count
+msgid "Open Alerts"
+msgstr "Öppna larm"
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__os
 msgid "Operating System"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__saltstack_alert__category__other
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__run_type__other
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__source__other
 msgid "Other"
 msgstr "Övrigt"
-
 #. module: saltstack
-#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_alert__diagnosis_state__pending
-msgid "Pending"
-msgstr "Väntar"
-
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__cron_interval_type
+msgid "Period"
+msgstr ""
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_salt_minion__host_machine
 msgid "Physical machine hosting this container (e.g. \"fors\", \"strand\")"
@@ -854,25 +853,21 @@ msgstr ""
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__pillar_ids
 msgid "Pillar Data"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__pillar_file
 msgid "Pillar File"
 msgstr ""
-
 #. module: saltstack
 #. odoo-python
 #: code:addons/saltstack/models/salt_pillar.py:0
 msgid "Pillar YAML Export"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.actions.act_window,help:saltstack.action_salt_pillar
 msgid ""
 "Pillar data is key/value pairs assigned to minions.\n"
 "                Use <b>Secret</b> type for sensitive data."
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_salt_pillar__key
 msgid "Pillar key (e.g. \"postgres.version\", \"odoo.admin_password\")"
@@ -882,190 +877,212 @@ msgstr ""
 #: model:ir.model.fields,help:saltstack.field_salt_pillar__value
 msgid "Pillar value (stored as text; use data_type to interpret)"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.ui.menu,name:saltstack.menu_salt_pillar
 msgid "Pillars"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_form
 msgid "Ping"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Pings the Salt master and shows the number of responding minions."
 msgstr "Pingar Salt-mastern och visar antal svarande minions."
-
+#. module: saltstack
+#: model:ir.model.fields,help:saltstack.field_saltstack_cron_line__cron_lastcall
+msgid ""
+"Previous time the cron ran successfully, provided to the job through the "
+"context on the `lastcall` key"
+msgstr ""
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_salt_minion__private_ip
+msgid "Private IP"
+msgstr "Privat IP"
+#. module: saltstack
+#: model:ir.model.fields,help:saltstack.field_salt_minion__private_ip
+msgid ""
+"Private address — prefers the 192.168.11.0/24 management network, filled "
+"from grains at sync."
+msgstr "Privat adress — föredrar 192.168.11.0/24-nätet, fylls från grains vid synk."
 #. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__saltstack_alert__category__process
 msgid "Process"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_search
 msgid "Production"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__saltstack_alert__category__proxy
 msgid "Proxy"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_salt_minion__public_ip
+msgid "Public IP"
+msgstr "Publik IP"
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__rating_ids
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__rating_ids
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__rating_ids
 msgid "Ratings"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__raw_log
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_alert_form
 msgid "Raw log"
 msgstr "Rå logg"
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__resolved
 msgid "Resolved"
 msgstr "Löst"
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__activity_user_id
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__activity_user_id
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__activity_user_id
 msgid "Responsible User"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__source__restic
+msgid "Restic"
+msgstr "Restic"
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_form
+msgid "Result"
+msgstr "Resultat"
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__roles
 msgid "Roles"
 msgstr ""
-
 #. module: saltstack
-#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_alert_form
-msgid "Run diagnosis"
-msgstr "Kör diagnos"
-
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__name
+msgid "Rubrik"
+msgstr "Rubrik"
 #. module: saltstack
-#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_alert__diagnosis_state__running
-msgid "Running"
-msgstr "Pågår"
-
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_form
+msgid "Run"
+msgstr "Körning"
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__run_type
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_search
+msgid "Run type"
+msgstr "Körtyp"
 #. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__salt_minion__dc__ska
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_search
 msgid "SKA"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__salt_minion__dc__sto
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_search
 msgid "STO"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__source__salt
+msgid "Salt"
+msgstr "Salt"
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_res_config_settings__saltstack_api_token
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Salt API Token"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_res_config_settings__saltstack_api_url
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Salt API URL"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_res_config_settings__saltstack_auth_method
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Salt Auth Method"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Salt Master"
 msgstr "Salt Master"
-
 #. module: saltstack
 #: model:ir.model,name:saltstack.model_salt_minion
 msgid "Salt Minion Registry"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model,name:saltstack.model_salt_pillar
 msgid "Salt Pillar"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.actions.act_window,name:saltstack.action_salt_pillar
 msgid "Salt Pillars"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_salt_pillar__minion_target
 msgid "Salt target pattern for this pillar data"
 msgstr ""
-
 #. module: saltstack
+#: model:ir.model,name:saltstack.model_saltstack_api
+msgid "SaltStack API Client"
+msgstr ""
+#. module: saltstack
+#: model:ir.module.category,name:saltstack.module_category_saltstack
 #: model:ir.ui.menu,name:saltstack.menu_saltstack_root
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Saltstack"
 msgstr ""
-
 #. module: saltstack
 #: model:res.groups,name:saltstack.group_saltstack_admin
 msgid "Saltstack Administrator"
 msgstr "Saltstack-administratör"
-
+#. module: saltstack
+#: model:ir.model,name:saltstack.model_saltstack_cron_line
+msgid "Saltstack cron configuration line"
+msgstr ""
 #. module: saltstack
 #: model:res.groups,name:saltstack.group_saltstack_officer
 msgid "Saltstack-officer"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.actions.server,name:saltstack.cron_sync_minions_pillars_ir_actions_server
 msgid "Saltstack: synk minions & pillars"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__summary
+msgid "Sammanfattning"
+msgstr "Sammanfattning"
 #. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__salt_pillar__data_type__secret
 msgid "Secret"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_pillar_search
 msgid "Secrets"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__cron_lastcall
+msgid "Senaste körning"
+msgstr ""
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__sequence
 msgid "Sequence"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.actions.act_window,name:saltstack.action_saltstack_settings
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__settings_id
 #: model:ir.ui.menu,name:saltstack.menu_saltstack_settings
 msgid "Settings"
 msgstr "Inställningar"
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__severity
 msgid "Severity"
 msgstr "Allvarlighetsgrad"
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Shared webhook for Wazuh, Zabbix and Shuffle drift alerts."
 msgstr "Gemensam webhook för Wazuh, Zabbix och Shuffle-driftlarm."
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__source
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__source
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_alert_search
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_search
 msgid "Source"
 msgstr "Källa"
-
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_salt_pillar__pillar_file
 msgid "Source pillar file (e.g. \"odoo.sls\", \"postgres/init.sls\")"
@@ -1076,21 +1093,24 @@ msgstr ""
 msgid ""
 "Source system (Wazuh, Zabbix...). Extended by bridge modules via "
 "selection_add."
-msgstr ""
-"Källsystem (Wazuh, Zabbix...). Utökas av bryggmoduler via selection_add."
-
+msgstr "Källsystem (Wazuh, Zabbix...). Utökas av bryggmoduler via selection_add."
+#. module: saltstack
+#: model:ir.model.fields,help:saltstack.field_saltstack_runlog__source
+msgid "Source system that published the run."
+msgstr "Källsystem som publicerade körningen."
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_res_config_settings__alert_auto_diagnose
 msgid "Start AI diagnosis automatically when an alert arrives."
 msgstr "Starta AI-diagnos automatiskt vid larm."
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__state
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__status
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_alert_form
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_form
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_search
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_search
 msgid "Status"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_salt_minion__activity_state
 #: model:ir.model.fields,help:saltstack.field_salt_pillar__activity_state
@@ -1101,102 +1121,118 @@ msgid ""
 "Today: Activity date is today\n"
 "Planned: Future activities."
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__salt_pillar__data_type__string
 msgid "String"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__run_type__sync
+msgid "Sync"
+msgstr "Sync"
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_res_config_settings__sync_interval_number
 msgid "Sync interval"
 msgstr "Synk-intervall"
-
 #. module: saltstack
-#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_list
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_pillar_tree
 msgid "Sync with Salt Master"
 msgstr ""
-
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_list
+msgid "Synka minioner"
+msgstr ""
 #. module: saltstack
 #: model:ir.actions.server,name:saltstack.action_sync_minions_all
 #: model:ir.ui.menu,name:saltstack.menu_sync_minions
 msgid "Synka minions"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.actions.server,name:saltstack.action_sync_pillars_all
 #: model:ir.ui.menu,name:saltstack.menu_sync_pillars
 msgid "Synka pillars"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__saltstack_alert__category__system
 msgid "System"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__run_type__test
+msgid "Test"
+msgstr "Test"
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Test Salt connection"
 msgstr "Testa Salt-anslutning"
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Test the connection"
 msgstr "Testa anslutningen"
-
+#. module: saltstack
+#: model:ir.model.fields,help:saltstack.field_saltstack_cron_line__cron_failure_count
+msgid ""
+"The number of consecutive failures of this job. It is automatically reset on"
+" success."
+msgstr ""
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Time window for Zabbix correlation (±)."
 msgstr "Tidsfönster för Zabbix-korrelation (±)."
-
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_res_config_settings__alert_correlation_window
 msgid "Time window in seconds for Zabbix correlation (±)."
 msgstr "Tidsfönster i sekunder för Zabbix-korrelation (±)."
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__timestamp
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__timestamp
 msgid "Timestamp"
 msgstr "Larmtid"
-
+#. module: saltstack
+#: model:ir.model.fields,help:saltstack.field_saltstack_alert__last_occurrence
+msgid "Timestamp of the latest deduplicated repeat."
+msgstr "Tidsstämpel för senaste deduplicerade upprepningen."
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_cron_line__cron_interval_type__hours
+msgid "Timmar"
+msgstr ""
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_search
+msgid "Translations"
+msgstr "Översättningar"
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__trigger_name
 msgid "Trigger"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields,help:saltstack.field_salt_minion__odoo_has_demo_data
+msgid ""
+"True when the minion runs Odoo and its main database contains demo data. "
+"Checked at sync."
+msgstr "Sant när minionen kör Odoo och dess huvuddatabas innehåller demodata. Kontrolleras vid synk."
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_salt_minion__activity_exception_decoration
 #: model:ir.model.fields,help:saltstack.field_salt_pillar__activity_exception_decoration
 #: model:ir.model.fields,help:saltstack.field_saltstack_alert__activity_exception_decoration
 msgid "Type of the exception activity on record."
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_res_config_settings__alert_webhook_url
 msgid ""
 "URL that Wazuh/Zabbix call to send drift alerts (e.g. "
 "http://luke18:8069/saltstack/alert)."
-msgstr ""
-"URL som Wazuh/Zabbix anropar för att skicka driftlarm (t.ex. "
-"http://luke18:8069/saltstack/alert)."
-
+msgstr "URL som Wazuh/Zabbix anropar för att skicka driftlarm (t.ex. http://luke18:8069/saltstack/alert)."
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "URL that Wazuh/Zabbix/Shuffle call to send drift alerts."
 msgstr "URL som Wazuh/Zabbix/Shuffle anropar för att skicka driftlarm till."
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_alert_search
 msgid "Unresolved"
 msgstr "Olösta"
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__value
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_pillar_form
 msgid "Value"
 msgstr ""
-
 #. module: saltstack
 #. odoo-python
 #: code:addons/saltstack/models/salt_pillar.py:0
@@ -1210,199 +1246,92 @@ msgid "Value for key \"%s\" is not a valid integer"
 msgstr ""
 
 #. module: saltstack
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__wazuh_rule_id
-msgid "Wazuh Rule ID"
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__status__warning
+msgid "Varning"
+msgstr "Varning"
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_search
+msgid "Varningar"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_cron_line__cron_interval_type__weeks
+msgid "Veckor"
+msgstr ""
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__source__wazuh
+msgid "Wazuh"
+msgstr "Wazuh"
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_res_config_settings__alert_webhook_url
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Webhook URL"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_res_config_settings__alert_webhook_enabled
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Webhook enabled"
 msgstr "Webhook aktiverad"
-
 #. module: saltstack
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__zabbix_alert_id
-msgid "Zabbix Alert ID"
+#: model:ir.model.fields,help:saltstack.field_saltstack_cron_line__cron_code
+msgid ""
+"Write Python code that the action will execute. Some variables are available"
+" for use; help about python expression is given in the help tab."
 msgstr ""
-
 #. module: saltstack
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__zabbix_event_id
-msgid "Zabbix Event ID"
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__source__zabbix
+msgid "Zabbix"
+msgstr "Zabbix"
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_kanban
+msgid "demo"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "http://192.168.11.22:8377"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "https://ledningssystem.vertel.se/saltstack/alert"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_pillar_form
 msgid "pillar.key.name"
 msgstr ""
-
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid ""
 "token = directly from the setting. keykeep = read from keykeep.credential "
 "(requires the saltstack_keykeep module)"
-msgstr ""
-"token = direkt från inställningen. keykeep = läses från keykeep.credential "
-"(kräver saltstack_keykeep-modulen)"
-
+msgstr "token = direkt från inställningen. keykeep = läses från keykeep.credential (kräver saltstack_keykeep-modulen)"
 #. module: saltstack
 #: model:ir.actions.server,name:saltstack.action_fault_grow_log
 msgid "💾 Simulate disk full (growing log file)"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.actions.server,name:saltstack.action_fault_wazuh_bruteforce
 msgid "🚨 Simulate Wazuh security threat (brute force)"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.actions.server,name:saltstack.action_fault_stop_odoo
 msgid "🛑 Stoppa Odoo (felinjektion)"
 msgstr ""
-
+#. module: saltstack
+#: model:ir.actions.server,name:saltstack.action_simulate_chain_wazuh_bruteforce
+msgid "🧪 Simulate full alert chain (Wazuh brute force)"
+msgstr ""
+#. module: saltstack
+#: model:ir.actions.server,name:saltstack.action_simulate_chain_grow_log
+msgid "🧪 Simulate full alert chain (disk full)"
+msgstr ""
+#. module: saltstack
+#: model:ir.actions.server,name:saltstack.action_simulate_chain_stop_odoo
+msgid "🧪 Simulate full alert chain (stop odoo)"
+msgstr ""
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_form
 msgid "🧹 Rensa fel"
 msgstr ""
-
 #. module: saltstack
 #: model:ir.actions.server,name:saltstack.action_fault_cleanup
 msgid "🧹 Rensa felinjektioner"
 msgstr ""
-
-#. module: saltstack
-#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__run_type__backup
-msgid "Backup"
-msgstr "Backup"
-
-
-#. module: saltstack
-#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__run_type__highstate
-msgid "Highstate"
-msgstr "Highstate"
-
-
-#. module: saltstack
-#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_form
-msgid "JSON (maskinläsbar)"
-msgstr "JSON (maskinläsbar)"
-
-
-#. module: saltstack
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__raw_log
-#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_form
-msgid "Logg"
-msgstr "Logg"
-
-
-#. module: saltstack
-#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__source__odoosa
-msgid "OdooSA Translation"
-msgstr "OdooSA-översättning"
-
-
-#. module: saltstack
-#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__source__restic
-msgid "Restic"
-msgstr "Restic"
-
-
-#. module: saltstack
-#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_form
-msgid "Result"
-msgstr "Resultat"
-
-
-#. module: saltstack
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__name
-msgid "Rubrik"
-msgstr "Rubrik"
-
-
-#. module: saltstack
-#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_form
-msgid "Run"
-msgstr "Körning"
-
-
-#. module: saltstack
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__run_type
-#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_search
-msgid "Run type"
-msgstr "Körtyp"
-
-
-#. module: saltstack
-#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__source__salt
-msgid "Salt"
-msgstr "Salt"
-
-
-#. module: saltstack
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__summary
-msgid "Sammanfattning"
-msgstr "Sammanfattning"
-
-
-#. module: saltstack
-#: model:ir.model.fields,help:saltstack.field_saltstack_runlog__source
-msgid "Source system that published the run."
-msgstr "Källsystem som publicerade körningen."
-
-
-#. module: saltstack
-#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__run_type__sync
-msgid "Sync"
-msgstr "Sync"
-
-
-#. module: saltstack
-#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__run_type__test
-msgid "Test"
-msgstr "Test"
-
-
-#. module: saltstack
-#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__run_type__translation
-msgid "Translation"
-msgstr "Översättning"
-
-
-#. module: saltstack
-#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_search
-msgid "Translations"
-msgstr "Översättningar"
-
-
-#. module: saltstack
-#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__status__warning
-msgid "Varning"
-msgstr "Varning"
-
-
-#. module: saltstack
-#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__source__wazuh
-msgid "Wazuh"
-msgstr "Wazuh"
-
-
-#. module: saltstack
-#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__source__zabbix
-msgid "Zabbix"
-msgstr "Zabbix"
-
