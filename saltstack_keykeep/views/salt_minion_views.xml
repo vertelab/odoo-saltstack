@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_salt_minion_keykeep_form" model="ir.ui.view">
+        <field name="name">salt.minion.keykeep.form</field>
+        <field name="model">salt.minion</field>
+        <field name="inherit_id" ref="saltstack.view_salt_minion_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_deploy_keykeep_encryption_key"
+                        type="object" string="Deploy keykeep key"
+                        class="oe_highlight"
+                        groups="saltstack.group_saltstack_admin"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
