@@ -13,6 +13,7 @@
                 <field name="roles"/>
                 <field name="customer"/>
                 <field name="odoo_version"/>
+                <field name="odoo_has_demo_data"/>
                 <field name="state"/>
                 <field name="open_alert_count"/>
                 <field name="image"/>
