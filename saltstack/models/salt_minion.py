@@ -790,7 +790,7 @@ fi
             try:
                 res2 = api.salt_call(
                     'local', host, 'cmd.run',
-                    self._STORAGE_LXD_SCRIPT.format(minion=self.name),
+                    self._STORAGE_LXD_SCRIPT.replace('{minion}', self.name),
                     timeout=120,
                 )
                 raw = str(json.loads(res2).get('return', [{}])[0].get(host, '')).strip()
