@@ -547,7 +547,7 @@ done < <($PSQL -l 2>/dev/null | cut -d'|' -f1 | grep -vE '^(template0|template1|
         try:
             result = self._call_salt_api(
                 'local', self.name, 'cmd.run', self._ODOO_STATS_SCRIPT,
-                timeout=180,
+                timeout=180, shell='/bin/bash',
             )
         except Exception as e:
             _logger.warning('Odoo stats collection failed for %s: %s', self.name, e)
