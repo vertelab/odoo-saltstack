@@ -19,7 +19,8 @@ class ResPartnerSaltMinion(models.Model):
     @api.depends('name')
     def _compute_minion_count(self):
         for rec in self:
-            rec.minion_count = rec._minion_count()
+            rec.minion_count = self.env['salt.minion'].search_count(
+                [('partner_id', '=', rec.id), ('active', '=', True)])
 
     def action_view_partner_minions(self):
         """Smart button: list salt.minion records for this partner."""
