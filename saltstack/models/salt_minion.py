@@ -575,7 +575,7 @@ done < <($PSQL -l 2>/dev/null | cut -d'|' -f1 | grep -vE '^(template0|template1|
                 dbs.append('%s (demo)' % db)
             else:
                 dbs.append(db)
-            last_val = parts.get('last') or ''
+            last_val = (parts.get('last') or '').split('.')[0]  # drop microseconds
             if last_val and (not last_login or last_val > last_login):
                 last_login = last_val
 
