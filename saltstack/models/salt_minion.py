@@ -715,25 +715,51 @@ fi
 '''
 
     def _lxd_host_candidates(self):
-        """Salt minions that act as LXD hosts (not containers themselves)."""
-        hosts = []
+        """Salt minions that are REAL LXD hosts (run the lxc CLI).
+
+        The registry's is_container/host_machine data is unreliable, so the
+        host list is detected once with a bulk 'command -v lxc' check and
+        cached in ir.config_parameter.
+        """
+        param = 'saltstorage.lxd_hosts'
+        cached = self.env['ir.config_parameter'].get_param(param, '')
+        if cached:
+            return [h for h in cached.split(',') if h]
+        candidates = []
         for rec in self.env['salt.minion'].search([('active', '=', True)]):
             roles = [r.strip().lower() for r in (rec.roles or '').split(',') if r.strip()]
             if 'lxd' not in roles:
                 continue
             if rec.is_container:
                 continue
-            # A host normally reports itself as its own host_machine.
             if rec.host_machine and rec.host_machine != rec.name:
                 continue
-            hosts.append(rec.name)
+            candidates.append(rec.name)
+        if not candidates:
+            return []
+        tgt = 'L@' + ','.join(candidates)
+        try:
+            api = self.env['saltstack.api']
+            res = api.salt_call(
+                'local', tgt, 'cmd.run',
+                "command -v lxc >/dev/null 2>&1 && echo LXD_OK || echo NOLXD",
+                timeout=40,
+            )
+            ret = json.loads(res).get('return', [{}])[0] or {}
+        except Exception as e:
+            _logger.warning('LXD host detection failed: %s', e)
+            return []
+        hosts = [h for h, out in ret.items() if 'LXD_OK' in str(out)]
+        if hosts:
+            self.env['ir.config_parameter'].set_param(param, ','.join(hosts))
+        _logger.info('Detected %d real LXD hosts: %s', len(hosts), hosts)
         return hosts
 
     def _measure_lxd(self, api):
         """Return (host, bytes) for this minion's container on an LXD host.
 
-        Probes all candidate LXD hosts in ONE parallel Salt call
-        (list-target), then measures the container with du on the found host.
+        Probes all known LXD hosts in ONE parallel Salt call (list-target),
+        then measures the container with du on the found host.
         """
         hosts = self._lxd_host_candidates()
         if not hosts:
@@ -745,7 +771,7 @@ fi
                 'lxc list --format csv -c n 2>/dev/null',
                 timeout=45,
             )
-            returned = res.get('return', [{}])[0] or {}
+            returned = json.loads(res).get('return', [{}])[0] or {}
         except Exception as e:
             _logger.warning('LXD host probe failed: %s', e)
             return None, None
@@ -764,7 +790,7 @@ fi
                 self._STORAGE_LXD_SCRIPT.format(minion=self.name),
                 timeout=120,
             )
-            raw = str(res2.get('return', [{}])[0].get(found_host, '')).strip()
+            raw = str(json.loads(res2).get('return', [{}])[0].get(found_host, '')).strip()
         except Exception as e:
             _logger.warning('LXD usage measure on %s failed: %s', found_host, e)
             return None, None
@@ -808,7 +834,7 @@ fi
                     'du -sb /srv/backup/%s 2>/dev/null | awk \'{print $1}\'' % lxd_host,
                     timeout=1200,
                 )
-                raw = str(res.get('return', [{}])[0].get(dhost, '')).strip()
+                raw = str(json.loads(res).get('return', [{}])[0].get(dhost, '')).strip()
             except Exception as e:
                 _logger.warning('Dirvish du for %s on %s failed: %s',
                                 lxd_host, dhost, e)
@@ -842,7 +868,7 @@ fi
                 'cat /var/log/garage-backup/restic-status.json',
                 timeout=45,
             )
-            raw = res.get('return', [{}])[0].get('restic', '')
+            raw = json.loads(res).get('return', [{}])[0].get('restic', '')
         except Exception as e:
             _logger.warning('restic status read failed: %s', e)
             return None, None, None
@@ -902,7 +928,7 @@ fi
                 res = api.salt_call(
                     'local', lxd_host, 'cmd.run',
                     self._STORAGE_LXD_HOST_TOTAL_SCRIPT, timeout=300)
-                raw = str(res.get('return', [{}])[0].get(lxd_host, '')).strip()
+                raw = str(json.loads(res).get('return', [{}])[0].get(lxd_host, '')).strip()
                 if raw.isdigit():
                     lxd_total = int(raw)
             except Exception as e:
