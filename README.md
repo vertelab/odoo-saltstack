@@ -140,3 +140,22 @@ AGPL-3 — Copyright (C) 2026 Vertel Sverige AB
 - **"Deploy keykeep key"**: kör `state.apply keykeep` på minionen (Salt
   state `/srv/salt/keykeep/init.sls`) → genererar Fernet-nyckeln idempotent
   (bara om den saknas), skriver till odoo.conf, startar om Odoo.
+
+## Storage-fliken (v18.0.1.27.0)
+
+`salt.minion.storage` — fyra rader per minion + summa:
+
+| Rad | Källa | Metod |
+|-----|-------|-------|
+| **LXD-host** | container på LXD-hosten | `du -sb <pool>/containers/<minion>` på hosten (dir-pool, t.ex. `/var/lib/lxd_ext4` på fors). Host detekteras + cachas (`lxd_host`, `saltstorage.lxd_hosts`). |
+| **Dirvish** | backup-trädet `/srv/backup/<host>` | Dirvish backar HELA hosts → per-minion-andel = minion-LXD × kvot(dirvish/LXD). Kvoten beräknas med bakgrunds-du (nohup) + cachas (`saltstorage.dirvish_ratio.<host>`). |
+| **S3 (Garage)** | kundens src-bucket | `restic-status.json` på restic-minionen (`customers[].size`) |
+| **S3-backup** | restic-backup-bucket | `restic-status.json` (`customers[].backup_size`) |
+
+- "Mät storage"-knapp + gear server action (`action_measure_storage`).
+- Rader är redigerbara manuellt i fliken.
+- **res.partner**: smartknapp "Minioner" → listar kundens minioner.
+- Minion-listan: IP-kopiera-ikon (`saltstack_copy_value`), domän-öppna-ikon
+  (`act_url` ny flik), dc, lxd-host, storage-total, odoo-användare, 1M systemtokens.
+- `lxc.list`-Salt-modulen saknas och bulk-target (L@) är opålitlig via
+  netapi → sekventiell `cmd.run`-probing med korta timeouts + caching.
