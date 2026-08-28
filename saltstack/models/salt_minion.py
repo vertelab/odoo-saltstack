@@ -192,6 +192,11 @@ class SaltMinion(models.Model):
         compute='_compute_storage_total',
         digits=(12, 2),
     )
+    lxd_host = fields.Char(
+        string='LXD-host (cache)',
+        help="LXD host this minion's container runs on — detected by the "
+             'storage measurement and cached here to avoid re-probing.',
+    )
 
     @api.depends('storage_ids', 'storage_ids.size_gb')
     def _compute_storage_total(self):
@@ -746,7 +751,7 @@ fi
             try:
                 res = api.salt_call(
                     'local', name, 'cmd.run',
-                    "command -v lxc >/dev/null 2>&1 && echo LXD_OK || echo NOLXD",
+                    "lxc list >/dev/null 2>&1 && echo LXD_OK || echo NOLXD",
                     timeout=8,
                 )
                 ret = str(json.loads(res).get('return', [{}])[0].get(name, ''))
@@ -762,10 +767,13 @@ fi
     def _measure_lxd(self, api):
         """Return (host, bytes) for this minion's container on an LXD host.
 
-        Probes each known LXD host for the container (short timeout), then
-        measures the container with du on the found host.
+        Uses the cached lxd_host when known; otherwise probes each known
+        LXD host for the container (short timeout), measures with du on the
+        found host and caches the host on the minion.
         """
         hosts = self._lxd_host_candidates()
+        if self.lxd_host:
+            hosts = [self.lxd_host] + [h for h in hosts if h != self.lxd_host]
         for host in hosts:
             try:
                 res = api.salt_call(
@@ -790,6 +798,8 @@ fi
                 _logger.warning('LXD usage measure on %s failed: %s', host, e)
                 continue
             if raw and raw != 'NONE' and raw.isdigit():
+                if not self.lxd_host:
+                    self.lxd_host = host
                 return host, int(raw)
         return None, None
 
