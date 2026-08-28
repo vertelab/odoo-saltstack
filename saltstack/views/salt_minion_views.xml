@@ -139,6 +139,11 @@
                     <field name="state" widget="state_status"/>
                 </header>
                 <sheet>
+                    <div class="oe_title d-flex align-items-center gap-3">
+                        <field name="image" widget="image" class="oe_avatar"
+                               style="float: none;"/>
+                        <h1 class="mb-0"><field name="name" placeholder="Minion ID"/></h1>
+                    </div>
                     <div class="oe_button_box" name="button_box">
                         <button name="action_show_alerts" type="object"
                                 class="oe_stat_button" icon="fa-exclamation-triangle">
@@ -148,14 +153,12 @@
                             </div>
                         </button>
                     </div>
-                    <div class="oe_title">
-                        <field name="image" widget="image" class="oe_avatar"/>
-                        <h1><field name="name" placeholder="Minion ID"/></h1>
-                    </div>
                     <group>
                         <group string="Identity">
                             <field name="private_ip"/>
                             <field name="public_ip"/>
+                            <field name="external_domain"/>
+                            <field name="has_gateway"/>
                             <field name="os"/>
                             <field name="os_version"/>
                             <field name="dc"/>
@@ -173,13 +176,29 @@
                         </group>
                     </group>
                     <notebook>
+                        <page string="Odoo"
+                              invisible="not odoo_version and not odoo_databases">
+                            <group>
+                                <group>
+                                    <field name="odoo_version"/>
+                                    <field name="odoo_databases"/>
+                                    <field name="odoo_has_demo_data"/>
+                                    <field name="odoo_stats_synced"/>
+                                </group>
+                                <group>
+                                    <field name="odoo_user_count"/>
+                                    <field name="odoo_last_login"/>
+                                    <field name="odoo_coworker_count"/>
+                                    <field name="odoo_coworker_tokens_m"/>
+                                </group>
+                            </group>
+                        </page>
                         <page string="Status">
                             <group>
                                 <field name="state"/>
                                 <field name="open_alert_count"/>
                                 <field name="last_seen"/>
                                 <field name="last_sync"/>
-                                <field name="active"/>
                             </group>
                         </page>
                         <page string="Notes">

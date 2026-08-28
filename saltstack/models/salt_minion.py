@@ -78,15 +78,15 @@ class SaltMinion(models.Model):
     # ── Customer ─────────────────────────────────────────────────────────
 
     customer = fields.Char(
-        string='Customer',
+        string='Kund',
         help='Customer name if this is a customer container (grain mirror).',
     )
     partner_id = fields.Many2one(
         'res.partner',
-        string='Customer (Partner)',
+        string='Kund',
         ondelete='set null',
         help='Linked res.partner, looked up by name from the customer grain '
-             'at sync when not set.',
+             '(or from the minion name when the grain is missing) at sync.',
     )
     odoo_version = fields.Char(
         string='Odoo Version',
@@ -134,6 +134,50 @@ class SaltMinion(models.Model):
         max_height=256,
         help='Logo for the minion. Filled automatically based on role at '
              'sync, but can be updated manually in the form.',
+    )
+
+    # ── Topology / extern (uppdateras vid sync + server action) ──────────
+
+    external_domain = fields.Char(
+        string='Extern domän',
+        help='External/public domain for this minion, e.g. '
+             'svenskfast.azzar.org. Filled from grains at sync, can be '
+             'set manually or via the "Uppdatera grunduppgifter" action.',
+    )
+    has_gateway = fields.Boolean(
+        string='Gateway (GW)',
+        help='True when this minion hosts/exposes a gateway in front of the '
+             'service (role "gateway").',
+    )
+
+    # ── Odoo statistics (per Odoo-minion, via "Uppdatera grunduppgifter") ──
+
+    odoo_databases = fields.Char(
+        string='Odoo-databaser',
+        help='Comma-separated Odoo databases, with "(demo)" after the name '
+             'when demo data is present.',
+    )
+    odoo_user_count = fields.Integer(
+        string='Användare',
+        help='Total number of active users across the minion Odoo databases.',
+    )
+    odoo_last_login = fields.Datetime(
+        string='Senast inloggad',
+        help='Latest login across the minion Odoo databases.',
+    )
+    odoo_coworker_count = fields.Integer(
+        string='AI-medarbetare',
+        help='Number of active ai.coworker records across the minion Odoo '
+             'databases.',
+    )
+    odoo_coworker_tokens_m = fields.Integer(
+        string='Systemtokens (M)',
+        help='Monthly systemtoken budget in millions (1M base per coworker, '
+             'plus extra budgeted via monthly_cap_mtokens).',
+    )
+    odoo_stats_synced = fields.Datetime(
+        string='Statistik uppdaterad',
+        help='When the Odoo statistics were last collected.',
     )
     is_demo = fields.Boolean(
         string='Demo / Test',
@@ -370,6 +414,26 @@ class SaltMinion(models.Model):
             'context': {'search_default_unresolved': 1},
         }
 
+    def _search_partner_by_name(self, name):
+        """Best-effort res.partner lookup from a minion/customer name.
+
+        Tries an exact name match first, then a case-insensitive contains
+        match — accepted only when it resolves to a single partner.
+        """
+        if not name:
+            return self.env['res.partner']
+        Partner = self.env['res.partner']
+        exact = Partner.search([('name', '=', name)], limit=2)
+        if len(exact) == 1:
+            return exact
+        if len(exact) > 1:
+            return self.env['res.partner']  # ambiguous — leave unset
+        # Contains-match, accept only when unambiguous.
+        contains = Partner.search([('name', 'ilike', '%' + name + '%')], limit=2)
+        if len(contains) == 1:
+            return contains
+        return self.env['res.partner']
+
     def _apply_grains(self, grains):
         """Write grains data onto this record (no API call)."""
         self.ensure_one()
@@ -390,6 +454,12 @@ class SaltMinion(models.Model):
                 [('name', '=', customer)], limit=1)
             if partner:
                 partner_id = partner.id
+        # Fallback: infer the partner from the minion name when no customer
+        # grain is present (e.g. lxd-web-svenskfast / azzar-at).
+        if not partner_id:
+            partner = self._search_partner_by_name(customer or self.name)
+            if partner:
+                partner_id = partner.id
 
         is_container = bool(grains.get('lxc'))
         if is_container:
@@ -398,6 +468,10 @@ class SaltMinion(models.Model):
         dc = grains.get('dc') or self._infer_dc(grains.get('host'), private_ip)
         if not dc:
             dc = False
+
+        role_list = [r.strip().lower() for r in roles.split(',') if r.strip()]
+        has_gateway = 'gateway' in role_list or bool(grains.get('gw'))
+        external_domain = grains.get('external_domain') or ''
 
         self.write({
             'private_ip': private_ip,
@@ -411,6 +485,8 @@ class SaltMinion(models.Model):
             'odoo_version': grains.get('odoo_version') or grains.get('odoo_full_version'),
             'is_container': is_container,
             'host_machine': grains.get('host'),
+            'external_domain': external_domain,
+            'has_gateway': has_gateway,
             'grains_json': json.dumps(grains, indent=2, default=str),
             'last_sync': fields.Datetime.now(),
         })
@@ -428,6 +504,137 @@ class SaltMinion(models.Model):
             return False
         grains = result.get('return', [{}])[0].get(self.name, {})
         return self._apply_grains(grains)
+
+    # ── Odoo statistics ────────────────────────────────────────────────
+
+    _ODOO_STATS_SCRIPT = r'''
+set -uo pipefail
+CONF=/etc/odoo/odoo.conf
+DB_HOST=$(awk -F' = ' '/^db_host/{print $2; exit}' "$CONF")
+DB_PORT=$(awk -F' = ' '/^db_port/{print $2; exit}' "$CONF")
+DB_USER=$(awk -F' = ' '/^db_user/{print $2; exit}' "$CONF")
+DB_PASS=$(awk -F' = ' '/^db_password/{print $2; exit}' "$CONF")
+export PGPASSWORD="$DB_PASS"
+PSQL="psql -h ${DB_HOST:-localhost} -p ${DB_PORT:-5432} -U ${DB_USER:-odoo} -tA"
+while read -r db; do
+  [ -z "$db" ] && continue
+  is_odoo=$($PSQL -d "$db" -tAc "SELECT 1 FROM information_schema.tables WHERE table_name='res_users'" 2>/dev/null | head -1)
+  [ "$is_odoo" != "1" ] && continue
+  users=$($PSQL -d "$db" -tAc "SELECT count(*) FROM res_users WHERE active" 2>/dev/null | head -1)
+  last_login=$($PSQL -d "$db" -tAc "SELECT max(create_date) FROM res_users_log" 2>/dev/null | head -1)
+  if [ -z "$last_login" ]; then
+    last_login=$($PSQL -d "$db" -tAc "SELECT max(log_date) FROM res_log WHERE log_action='login'" 2>/dev/null | head -1)
+  fi
+  coworkers=$($PSQL -d "$db" -tAc "SELECT count(*) FROM ai_coworker WHERE active" 2>/dev/null | head -1)
+  tokens=$($PSQL -d "$db" -tAc "SELECT COALESCE(SUM(GREATEST(monthly_cap_mtokens, 1)), 0) FROM ai_coworker WHERE active" 2>/dev/null | head -1)
+  demo=$($PSQL -d "$db" -tAc "SELECT count(*) FROM res_company WHERE name ILIKE '%(san francisco)%' OR name ILIKE '%(chicago)%' OR name ILIKE '%(demo)%'" 2>/dev/null | head -1)
+  echo "DB|$db|users=${users:-0}|last=${last_login:-}|coworkers=${coworkers:-0}|tokens=${tokens:-0}|demo=${demo:-0}"
+done < <($PSQL -l 2>/dev/null | cut -d'|' -f1 | grep -vE '^(template0|template1|postgres|_errors)$')
+'''
+
+    def _collect_odoo_stats(self):
+        """Collect Odoo statistics from this minion via Salt API.
+
+        Runs a bash script on the minion that reads db_* from odoo.conf and
+        reports, per Odoo database: active users, last login, ai.coworker
+        count, monthly systemtoken budget (M) and demo-data presence.
+        Best-effort: any failure leaves the fields untouched.
+        """
+        self.ensure_one()
+        roles = [r.strip().lower() for r in (self.roles or '').split(',') if r.strip()]
+        if 'odoo' not in roles and not self.odoo_version:
+            return False
+        try:
+            result = self._call_salt_api(
+                'local', self.name, 'cmd.run', self._ODOO_STATS_SCRIPT,
+                timeout=180,
+            )
+        except Exception as e:
+            _logger.warning('Odoo stats collection failed for %s: %s', self.name, e)
+            return False
+        raw = result.get('return', [{}])[0].get(self.name, '')
+        if not isinstance(raw, str):
+            raw = ''
+
+        dbs = []
+        users_total = 0
+        coworkers_total = 0
+        tokens_total = 0
+        last_login = None
+        for line in raw.splitlines():
+            if not line.startswith('DB|'):
+                continue
+            parts = dict(
+                p.split('=', 1) for p in line.split('|')[2:] if '=' in p
+            )
+            db = line.split('|')[1]
+            users_total += int(parts.get('users') or 0)
+            coworkers_total += int(parts.get('coworkers') or 0)
+            tokens_total += int(parts.get('tokens') or 0)
+            if parts.get('demo') and parts['demo'] not in ('0', ''):
+                dbs.append('%s (demo)' % db)
+            else:
+                dbs.append(db)
+            last_val = parts.get('last') or ''
+            if last_val and (not last_login or last_val > last_login):
+                last_login = last_val
+
+        vals = {
+            'odoo_databases': ', '.join(dbs),
+            'odoo_user_count': users_total,
+            'odoo_coworker_count': coworkers_total,
+            'odoo_coworker_tokens_m': tokens_total,
+            'odoo_stats_synced': fields.Datetime.now(),
+        }
+        if last_login:
+            try:
+                vals['odoo_last_login'] = fields.Datetime.to_datetime(last_login)
+            except (ValueError, TypeError):
+                _logger.warning('Could not parse last login %r for %s',
+                                last_login, self.name)
+        self.write(vals)
+        return True
+
+    def action_update_basic_info(self):
+        """Server action (gear): update basic info for the selected minions.
+
+        Primarily fills missed/unfilled identity fields (grains sync when
+        stale) and always refreshes Odoo statistics (databases, users, last
+        login, AI coworkers) for Odoo minions.
+        """
+        results = []
+        for rec in self:
+            touched = []
+            # 1. Grains sync when stale or missing identity fields.
+            stale = (not rec.last_sync
+                     or rec.last_sync < fields.Datetime.subtract(
+                         fields.Datetime.now(), hours=24)
+                     or not rec.roles)
+            if stale:
+                try:
+                    if rec.action_sync_from_grains():
+                        touched.append('grains')
+                except Exception as e:
+                    _logger.warning('Grains sync failed for %s: %s', rec.name, e)
+            # 2. Odoo statistics (always for Odoo minions).
+            roles = [r.strip().lower() for r in (rec.roles or '').split(',') if r.strip()]
+            if 'odoo' in roles or rec.odoo_version:
+                try:
+                    if rec._collect_odoo_stats():
+                        touched.append('odoo-stats')
+                except Exception as e:
+                    _logger.warning('Odoo stats failed for %s: %s', rec.name, e)
+            results.append('%s: %s' % (rec.name, ', '.join(touched) or 'oförändrad'))
+
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Grunduppgifter uppdaterade'),
+                'message': '\n'.join(results),
+                'type': 'success',
+            },
+        }
 
     def action_sync_all_minions(self):
         """List all minions via Salt API and create/update records.

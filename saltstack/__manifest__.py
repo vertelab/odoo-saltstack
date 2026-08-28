@@ -2,7 +2,7 @@
 
 {
     'name': 'SaltStack Infrastructure',
-    'version': '18.0.1.25.0',
+    'version': '18.0.1.26.0',
     'category': 'Infrastructure',
     'summary': 'Manage SaltStack minions, pillar anchors and infrastructure',
     'description': """
@@ -30,6 +30,7 @@ Features:
         'data/fault_actions.xml',
         'data/sync_cron.xml',
         'data/sync_actions.xml',
+        'data/minion_update_actions.xml',
         'views/saltstack_menu_views.xml',
         'views/res_config_settings_views.xml',
         'views/salt_pillar_views.xml',

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Server action (gear menu) — update minion basic info.
+         Fills missed/unfilled identity fields (grains sync when stale) and
+         refreshes Odoo statistics (databases, users, last login, coworkers). -->
+    <record id="action_update_minion_basic_info" model="ir.actions.server">
+        <field name="name">Uppdatera grunduppgifter</field>
+        <field name="model_id" ref="model_salt_minion"/>
+        <field name="binding_model_id" ref="model_salt_minion"/>
+        <field name="binding_type">action</field>
+        <field name="state">code</field>
+        <field name="code">records.action_update_basic_info()</field>
+    </record>
+</odoo>

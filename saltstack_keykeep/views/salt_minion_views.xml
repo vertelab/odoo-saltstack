@@ -5,7 +5,24 @@
         <field name="model">salt.minion</field>
         <field name="inherit_id" ref="saltstack.view_salt_minion_form"/>
         <field name="arch" type="xml">
+            <!-- Smart button: Keykeep-nycklar -->
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_keykeep_keys" type="object"
+                        class="oe_stat_button" icon="fa-key"
+                        groups="saltstack.group_saltstack_admin,keykeep.group_devops,keykeep.group_admin">
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Keykeep-nycklar</span>
+                        <field name="keykeep_key_count" class="o_stat_value" widget="statinfo"/>
+                    </div>
+                </button>
+            </xpath>
+            <!-- Header: fetch master key + deploy -->
             <xpath expr="//header" position="inside">
+                <button name="action_fetch_keykeep_master_key"
+                        type="object" string="Hämta Keykeep masternyckel"
+                        icon="fa-download"
+                        groups="saltstack.group_saltstack_admin"
+                        help="Read keykeep_encryption_key from this minion's odoo.conf and store it as a Keykeep credential (encrypted, audited)."/>
                 <button name="action_deploy_keykeep_encryption_key"
                         type="object" string="Deploy keykeep key"
                         class="oe_highlight"

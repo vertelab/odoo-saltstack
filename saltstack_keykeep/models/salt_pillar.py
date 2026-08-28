@@ -141,6 +141,10 @@ class SaltPillar(models.Model):
             ('purpose', '=', purpose),
         ], limit=1)
 
+        minion = self.env['salt.minion'].search([
+            ('name', '=', self.minion_target),
+        ], limit=1) if self.minion_target else self.env['salt.minion']
+
         if not cred:
             cred = self.env['keykeep.credential'].create({
                 'name': self.key,
@@ -149,11 +153,14 @@ class SaltPillar(models.Model):
                 'environment': 'production',
                 'purpose': purpose,
                 'key_value': str(original_value),
+                'minion_id': minion.id or False,
                 'notes': _(
                     'Auto-synced from Salt pillar: %s\nFile: %s\nMinion: %s'
                 ) % (self.key, self.pillar_file or 'N/A',
                      self.minion_target or 'N/A'),
             })
+        elif minion and not cred.minion_id:
+            cred.minion_id = minion.id
         return cred
 
     def action_sync_bifrost_to_keykeep(self):
