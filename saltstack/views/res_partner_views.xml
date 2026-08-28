@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Smart button on res.partner: list the customer's minions -->
+    <record id="view_partner_salt_minion_button" model="ir.ui.view">
+        <field name="name">res.partner.salt.minion.button</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_partner_minions" type="object"
+                        class="oe_stat_button" icon="fa-server"
+                        groups="saltstack.group_saltstack_officer">
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Minioner</span>
+                        <field name="minion_count" class="o_stat_value" widget="statinfo"/>
+                    </div>
+                </button>
+            </xpath>
+        </field>
+    </record>
+</odoo>

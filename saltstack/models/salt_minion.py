@@ -179,6 +179,25 @@ class SaltMinion(models.Model):
         string='Statistik uppdaterad',
         help='When the Odoo statistics were last collected.',
     )
+
+    # ── Storage (mätt via "Mät storage") ────────────────────────────────
+
+    storage_ids = fields.One2many(
+        'salt.minion.storage',
+        'minion_id',
+        string='Storage',
+    )
+    storage_total_gb = fields.Float(
+        string='Totalt diskutnyttjande (GB)',
+        compute='_compute_storage_total',
+        digits=(12, 2),
+    )
+
+    @api.depends('storage_ids', 'storage_ids.size_gb')
+    def _compute_storage_total(self):
+        for rec in self:
+            rec.storage_total_gb = round(
+                sum(rec.storage_ids.mapped('size_gb')), 2)
     is_demo = fields.Boolean(
         string='Demo / Test',
         default=False,
@@ -401,6 +420,37 @@ class SaltMinion(models.Model):
         except Exception as e:
             _logger.warning('Ping failed for %s: %s', self.name, e)
             return {'success': False, 'minion': self.name, 'error': str(e)}
+
+    def action_copy_private_ip(self):
+        """Copy the minion private IP to the clipboard (list-view button)."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'saltstack_copy_value',
+            'params': {'value': self.private_ip or ''},
+        }
+
+    def action_open_external_domain(self):
+        """Open the external domain in a new tab (list-view button)."""
+        self.ensure_one()
+        if not self.external_domain:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Extern domän saknas'),
+                    'message': _('No external domain set for %s.') % self.name,
+                    'type': 'warning',
+                },
+            }
+        url = self.external_domain
+        if '://' not in url:
+            url = 'https://' + url
+        return {
+            'type': 'ir.actions.act_url',
+            'url': url,
+            'target': 'new',
+        }
 
     def action_show_alerts(self):
         """Open the alert list filtered to this host (smart button)."""
@@ -631,6 +681,254 @@ done < <($PSQL -l 2>/dev/null | cut -d'|' -f1 | grep -vE '^(template0|template1|
             'tag': 'display_notification',
             'params': {
                 'title': _('Grunduppgifter uppdaterade'),
+                'message': '\n'.join(results),
+                'type': 'success',
+            },
+        }
+
+    # ── Storage measurement ──────────────────────────────────────────────
+
+    _STORAGE_LXD_SCRIPT = r'''
+base=$(mount | awk '$3 ~ /lxd/ && $1 !~ /snap|tmpfs|nsfs/ {print $3; exit}')
+if [ -z "$base" ] && [ -d /var/snap/lxd/common/lxd/storage-pools ]; then
+  base=/var/snap/lxd/common/lxd/storage-pools
+fi
+found=""
+if [ -n "$base" ]; then
+  for d in "$base/containers/{minion}" "$base"/*/containers/{minion}; do
+    if [ -d "$d" ]; then found="$d"; break; fi
+  done
+fi
+if [ -z "$found" ]; then echo "NONE"; else du -sb "$found" | awk '{print $1}'; fi
+'''
+
+    _STORAGE_LXD_HOST_TOTAL_SCRIPT = r'''
+base=$(mount | awk '$3 ~ /lxd/ && $1 !~ /snap|tmpfs|nsfs/ {print $3; exit}')
+if [ -z "$base" ] && [ -d /var/snap/lxd/common/lxd/storage-pools ]; then
+  base=/var/snap/lxd/common/lxd/storage-pools
+fi
+if [ -n "$base" ] && [ -d "$base/containers" ]; then
+  du -sb "$base/containers" | awk '{print $1}'
+else
+  echo "NONE"
+fi
+'''
+
+    def _lxd_host_candidates(self):
+        """Salt minions that act as LXD hosts (not containers themselves)."""
+        hosts = []
+        for rec in self.env['salt.minion'].search([('active', '=', True)]):
+            roles = [r.strip().lower() for r in (rec.roles or '').split(',') if r.strip()]
+            if 'lxd' not in roles:
+                continue
+            if rec.is_container:
+                continue
+            # A host normally reports itself as its own host_machine.
+            if rec.host_machine and rec.host_machine != rec.name:
+                continue
+            hosts.append(rec.name)
+        return hosts
+
+    def _measure_lxd(self, api):
+        """Return (host, bytes) for this minion's container on an LXD host."""
+        for host in self._lxd_host_candidates():
+            try:
+                res = api.salt_call(
+                    'local', host, 'cmd.run',
+                    'lxc list --format csv -c n 2>/dev/null | grep -x %s' % self.name,
+                    timeout=45,
+                )
+                found = res.get('return', [{}])[0].get(host, '')
+            except Exception as e:
+                _logger.warning('LXD host probe %s failed: %s', host, e)
+                continue
+            if self.name not in str(found):
+                continue
+            try:
+                res2 = api.salt_call(
+                    'local', host, 'cmd.run',
+                    self._STORAGE_LXD_SCRIPT.format(minion=self.name),
+                    timeout=120,
+                )
+                raw = str(res2.get('return', [{}])[0].get(host, '')).strip()
+            except Exception as e:
+                _logger.warning('LXD usage measure on %s failed: %s', host, e)
+                continue
+            if raw and raw != 'NONE' and raw.isdigit():
+                return host, int(raw)
+        return None, None
+
+    def _dirvish_hosts(self):
+        """Salt minions that run dirvish/backup."""
+        return self.env['salt.minion'].search([
+            ('active', '=', True),
+            ('roles', 'ilike', '%backup%'),
+        ]).mapped('name')
+
+    def _dirvish_ratio(self, api, lxd_host, lxd_host_total_bytes):
+        """Cached dirvish/LXD ratio for a host, computing it when missing.
+
+        Dirvish backs up whole hosts (e.g. fors, strand) — there is no
+        per-container backup tree. The per-minion Dirvish share is therefore
+        estimated as minion_LXD_usage × ratio, where
+        ratio = dirvish_tree(host) / lxd_total(host). The first computation
+        runs a (slow) du on the dirvish host and caches the ratio.
+        """
+        if not lxd_host or not lxd_host_total_bytes:
+            return None
+        param = 'saltstorage.dirvish_ratio.%s' % lxd_host
+        cached = self.env['ir.config_parameter'].get_param(param, '')
+        if cached:
+            try:
+                return float(cached)
+            except ValueError:
+                pass
+        dirvish_hosts = self._dirvish_hosts()
+        if not dirvish_hosts:
+            return None
+        dirvish_bytes = None
+        for dhost in dirvish_hosts:
+            try:
+                res = api.salt_call(
+                    'local', dhost, 'cmd.run',
+                    'du -sb /srv/backup/%s 2>/dev/null | awk \'{print $1}\'' % lxd_host,
+                    timeout=1200,
+                )
+                raw = str(res.get('return', [{}])[0].get(dhost, '')).strip()
+            except Exception as e:
+                _logger.warning('Dirvish du for %s on %s failed: %s',
+                                lxd_host, dhost, e)
+                continue
+            if raw.isdigit():
+                dirvish_bytes = int(raw)
+                break
+        if not dirvish_bytes:
+            return None
+        ratio = dirvish_bytes / float(lxd_host_total_bytes)
+        self.env['ir.config_parameter'].set_param(param, '%.4f' % ratio)
+        _logger.info('Dirvish ratio for %s computed: %.4f (dirvish=%d, lxd=%d)',
+                     lxd_host, ratio, dirvish_bytes, lxd_host_total_bytes)
+        return ratio
+
+    def _measure_s3(self, api):
+        """Return (src_gb, backup_gb, customer) from the restic status report.
+
+        The restic minion publishes /var/log/garage-backup/restic-status.json
+        with per-customer src bucket size and restic backup bucket size.
+        """
+        restic_minion = self.env['salt.minion'].search([
+            ('active', '=', True),
+            ('name', '=', 'restic'),
+        ], limit=1)
+        if not restic_minion:
+            return None, None, None
+        try:
+            res = api.salt_call(
+                'local', 'restic', 'cmd.run',
+                'cat /var/log/garage-backup/restic-status.json',
+                timeout=45,
+            )
+            raw = res.get('return', [{}])[0].get('restic', '')
+        except Exception as e:
+            _logger.warning('restic status read failed: %s', e)
+            return None, None, None
+        try:
+            data = json.loads(str(raw))
+        except (ValueError, TypeError):
+            return None, None, None
+        customer = (self.customer or '').strip().lower() or self.name.lower()
+        for row in data.get('customers') or []:
+            if str(row.get('customer', '')).strip().lower() == customer:
+                src = row.get('size') or 0
+                backup = row.get('backup_size') or 0
+                return (src / 1024.0 ** 3, backup / 1024.0 ** 3,
+                        row.get('customer'))
+        return None, None, None
+
+    def _upsert_storage(self, storage_type, size_gb, provider, method):
+        """Create or update one storage row for this minion."""
+        self.ensure_one()
+        if size_gb is None:
+            return
+        row = self.env['salt.minion.storage'].search([
+            ('minion_id', '=', self.id),
+            ('storage_type', '=', storage_type),
+        ], limit=1)
+        vals = {
+            'size_gb': round(size_gb, 2),
+            'provider': provider or '',
+            'method': method or '',
+            'measured_at': fields.Datetime.now(),
+        }
+        if row:
+            row.write(vals)
+        else:
+            self.env['salt.minion.storage'].create({
+                'minion_id': self.id,
+                'storage_type': storage_type,
+                **vals,
+            })
+
+    def _measure_storage(self):
+        """Measure/estimate the four storage rows for this minion."""
+        self.ensure_one()
+        api = self.env['saltstack.api']
+
+        # 1. LXD host usage (du on the host filesystem, per container).
+        lxd_host, lxd_bytes = self._measure_lxd(api)
+        if lxd_bytes:
+            self._upsert_storage(
+                'lxd_host', lxd_bytes / 1024.0 ** 3, lxd_host,
+                'du -sb %s/containers/%s' % (lxd_host, self.name))
+
+        # 2. Dirvish — estimated share of the host backup tree.
+        lxd_total = None
+        if lxd_host:
+            try:
+                res = api.salt_call(
+                    'local', lxd_host, 'cmd.run',
+                    self._STORAGE_LXD_HOST_TOTAL_SCRIPT, timeout=300)
+                raw = str(res.get('return', [{}])[0].get(lxd_host, '')).strip()
+                if raw.isdigit():
+                    lxd_total = int(raw)
+            except Exception as e:
+                _logger.warning('LXD host total failed for %s: %s', lxd_host, e)
+        ratio = self._dirvish_ratio(api, lxd_host, lxd_total)
+        if ratio and lxd_bytes:
+            self._upsert_storage(
+                'dirvish',
+                (lxd_bytes * ratio) / 1024.0 ** 3,
+                'dirvish',
+                'minion-LXD × dirvish/LXD-kvot (%.2f)' % ratio)
+
+        # 3 + 4. S3 source + S3 backup from the restic status report.
+        src_gb, backup_gb, customer = self._measure_s3(api)
+        if src_gb is not None:
+            self._upsert_storage(
+                's3', src_gb, customer,
+                'restic-status.json src bucket (Garage)')
+        if backup_gb is not None:
+            self._upsert_storage(
+                's3_backup', backup_gb, '%s-backup' % (customer or ''),
+                'restic-status.json backup bucket')
+        return True
+
+    def action_measure_storage(self):
+        """Server action (gear/button): measure storage for the selected minions."""
+        results = []
+        for rec in self:
+            try:
+                rec._measure_storage()
+                total = rec.storage_total_gb
+                results.append('%s: %.1f GB total' % (rec.name, total))
+            except Exception as e:
+                _logger.exception('Storage measurement failed for %s', rec.name)
+                results.append('%s: fel (%s)' % (rec.name, e))
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Storage mätt'),
                 'message': '\n'.join(results),
                 'type': 'success',
             },

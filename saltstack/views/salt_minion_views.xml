@@ -99,6 +99,13 @@
                 </header>
                 <field name="name"/>
                 <field name="private_ip"/>
+                <button name="action_copy_private_ip" type="object"
+                        icon="fa-copy" class="btn-link"
+                        title="Kopiera IP till urklipp"/>
+                <field name="external_domain"/>
+                <button name="action_open_external_domain" type="object"
+                        icon="fa-globe" class="btn-link"
+                        title="Öppna extern domän i ny flik"/>
                 <field name="public_ip"/>
                 <field name="dc"/>
                 <field name="os"/>
@@ -108,6 +115,9 @@
                 <field name="odoo_version"/>
                 <field name="odoo_has_demo_data" widget="boolean"/>
                 <field name="host_machine"/>
+                <field name="storage_total_gb" string="Storage (GB)"/>
+                <field name="odoo_user_count" string="Odoo-användare"/>
+                <field name="odoo_coworker_tokens_m" string="1M systemtokens"/>
                 <field name="state" decoration-danger="state == 'faulty'"
                        decoration-success="state == 'online'"
                        decoration-muted="state == 'offline'"/>
@@ -131,6 +141,11 @@
                             string="Ping"
                             type="object"
                             icon="fa-plug"/>
+                    <button name="action_measure_storage"
+                            string="Mät storage"
+                            type="object"
+                            icon="fa-database"
+                            help="Measure/estimate the four storage rows (LXD host, Dirvish, S3, S3-backup)."/>
                     <button name="action_fault_cleanup"
                             string="🧹 Rensa fel"
                             type="object"
@@ -176,6 +191,21 @@
                         </group>
                     </group>
                     <notebook>
+                        <page string="Storage">
+                            <group>
+                                <field name="storage_total_gb"
+                                       string="Totalt diskutnyttjande (GB)"/>
+                                <field name="storage_ids" nolabel="1" colspan="2">
+                                    <list editable="bottom">
+                                        <field name="storage_type"/>
+                                        <field name="provider"/>
+                                        <field name="size_gb"/>
+                                        <field name="method"/>
+                                        <field name="measured_at"/>
+                                    </list>
+                                </field>
+                            </group>
+                        </page>
                         <page string="Odoo"
                               invisible="not odoo_version and not odoo_databases">
                             <group>

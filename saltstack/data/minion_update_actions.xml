@@ -11,4 +11,13 @@
         <field name="state">code</field>
         <field name="code">records.action_update_basic_info()</field>
     </record>
+
+    <record id="action_measure_minion_storage" model="ir.actions.server">
+        <field name="name">Mät storage</field>
+        <field name="model_id" ref="model_salt_minion"/>
+        <field name="binding_model_id" ref="model_salt_minion"/>
+        <field name="binding_type">action</field>
+        <field name="state">code</field>
+        <field name="code">records.action_measure_storage()</field>
+    </record>
 </odoo>
