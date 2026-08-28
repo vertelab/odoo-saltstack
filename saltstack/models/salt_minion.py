@@ -718,38 +718,42 @@ fi
         """Salt minions that are REAL LXD hosts (run the lxc CLI).
 
         The registry's is_container/host_machine data is unreliable, so the
-        host list is detected once with a bulk 'command -v lxc' check and
-        cached in ir.config_parameter.
+        host list is detected once: filter to online minions with the lxd
+        role, probe each with a short 'command -v lxc' check, and cache the
+        result in ir.config_parameter.
         """
         param = 'saltstorage.lxd_hosts'
         cached = self.env['ir.config_parameter'].get_param(param, '')
         if cached:
             return [h for h in cached.split(',') if h]
+        api = self.env['saltstack.api']
+        online = []
+        try:
+            res = api.salt_call('runner', None, 'manage.status', timeout=30)
+            online = json.loads(res).get('return', [{}])[0].get('up', []) or []
+        except Exception as e:
+            _logger.warning('manage.status failed for LXD detection: %s', e)
         candidates = []
         for rec in self.env['salt.minion'].search([('active', '=', True)]):
             roles = [r.strip().lower() for r in (rec.roles or '').split(',') if r.strip()]
-            if 'lxd' not in roles:
+            if 'lxd' not in roles or rec.is_container:
                 continue
-            if rec.is_container:
-                continue
-            if rec.host_machine and rec.host_machine != rec.name:
+            if online and rec.name not in online:
                 continue
             candidates.append(rec.name)
-        if not candidates:
-            return []
-        tgt = 'L@' + ','.join(candidates)
-        try:
-            api = self.env['saltstack.api']
-            res = api.salt_call(
-                'local', tgt, 'cmd.run',
-                "command -v lxc >/dev/null 2>&1 && echo LXD_OK || echo NOLXD",
-                timeout=40,
-            )
-            ret = json.loads(res).get('return', [{}])[0] or {}
-        except Exception as e:
-            _logger.warning('LXD host detection failed: %s', e)
-            return []
-        hosts = [h for h, out in ret.items() if 'LXD_OK' in str(out)]
+        hosts = []
+        for name in candidates:
+            try:
+                res = api.salt_call(
+                    'local', name, 'cmd.run',
+                    "command -v lxc >/dev/null 2>&1 && echo LXD_OK || echo NOLXD",
+                    timeout=8,
+                )
+                ret = str(json.loads(res).get('return', [{}])[0].get(name, ''))
+                if 'LXD_OK' in ret:
+                    hosts.append(name)
+            except Exception:
+                continue
         if hosts:
             self.env['ir.config_parameter'].set_param(param, ','.join(hosts))
         _logger.info('Detected %d real LXD hosts: %s', len(hosts), hosts)
@@ -758,44 +762,35 @@ fi
     def _measure_lxd(self, api):
         """Return (host, bytes) for this minion's container on an LXD host.
 
-        Probes all known LXD hosts in ONE parallel Salt call (list-target),
-        then measures the container with du on the found host.
+        Probes each known LXD host for the container (short timeout), then
+        measures the container with du on the found host.
         """
         hosts = self._lxd_host_candidates()
-        if not hosts:
-            return None, None
-        tgt = 'L@' + ','.join(hosts)
-        try:
-            res = api.salt_call(
-                'local', tgt, 'cmd.run',
-                'lxc list --format csv -c n 2>/dev/null',
-                timeout=45,
-            )
-            returned = json.loads(res).get('return', [{}])[0] or {}
-        except Exception as e:
-            _logger.warning('LXD host probe failed: %s', e)
-            return None, None
-        found_host = None
-        for host, out in returned.items():
-            if not isinstance(out, str):
+        for host in hosts:
+            try:
+                res = api.salt_call(
+                    'local', host, 'cmd.run',
+                    'lxc list --format csv -c n 2>/dev/null',
+                    timeout=10,
+                )
+                out = str(json.loads(res).get('return', [{}])[0].get(host, ''))
+            except Exception as e:
+                _logger.warning('LXD host probe %s failed: %s', host, e)
                 continue
-            if self.name in out.splitlines():
-                found_host = host
-                break
-        if not found_host:
-            return None, None
-        try:
-            res2 = api.salt_call(
-                'local', found_host, 'cmd.run',
-                self._STORAGE_LXD_SCRIPT.format(minion=self.name),
-                timeout=120,
-            )
-            raw = str(json.loads(res2).get('return', [{}])[0].get(found_host, '')).strip()
-        except Exception as e:
-            _logger.warning('LXD usage measure on %s failed: %s', found_host, e)
-            return None, None
-        if raw and raw != 'NONE' and raw.isdigit():
-            return found_host, int(raw)
+            if self.name not in out.splitlines():
+                continue
+            try:
+                res2 = api.salt_call(
+                    'local', host, 'cmd.run',
+                    self._STORAGE_LXD_SCRIPT.format(minion=self.name),
+                    timeout=120,
+                )
+                raw = str(json.loads(res2).get('return', [{}])[0].get(host, '')).strip()
+            except Exception as e:
+                _logger.warning('LXD usage measure on %s failed: %s', host, e)
+                continue
+            if raw and raw != 'NONE' and raw.isdigit():
+                return host, int(raw)
         return None, None
 
     def _dirvish_hosts(self):
