@@ -984,18 +984,28 @@ fi
                 'du -sb %s/containers/%s' % (lxd_host, self.name))
 
         # 2. Dirvish — estimated share of the host backup tree.
-        lxd_total = None
-        if lxd_host:
-            try:
-                res = api.salt_call(
-                    'local', lxd_host, 'cmd.run',
-                    self._STORAGE_LXD_HOST_TOTAL_SCRIPT, timeout=300)
-                raw = str(json.loads(res).get('return', [{}])[0].get(lxd_host, '')).strip()
-                if raw.isdigit():
-                    lxd_total = int(raw)
-            except Exception as e:
-                _logger.warning('LXD host total failed for %s: %s', lxd_host, e)
-        ratio = self._dirvish_ratio(api, lxd_host, lxd_total)
+        ratio = None
+        if lxd_host and lxd_bytes:
+            ratio_param = 'saltstorage.dirvish_ratio.%s' % lxd_host
+            cached_ratio = self.env['ir.config_parameter'].get_param(ratio_param, '')
+            if cached_ratio:
+                try:
+                    ratio = float(cached_ratio)
+                except ValueError:
+                    ratio = None
+            else:
+                # Ratio unknown — need the host total (slow du) once.
+                lxd_total = None
+                try:
+                    res = api.salt_call(
+                        'local', lxd_host, 'cmd.run',
+                        self._STORAGE_LXD_HOST_TOTAL_SCRIPT, timeout=300)
+                    raw = str(json.loads(res).get('return', [{}])[0].get(lxd_host, '')).strip()
+                    if raw.isdigit():
+                        lxd_total = int(raw)
+                except Exception as e:
+                    _logger.warning('LXD host total failed for %s: %s', lxd_host, e)
+                ratio = self._dirvish_ratio(api, lxd_host, lxd_total)
         if ratio and lxd_bytes:
             self._upsert_storage(
                 'dirvish',
