@@ -730,32 +730,46 @@ fi
         return hosts
 
     def _measure_lxd(self, api):
-        """Return (host, bytes) for this minion's container on an LXD host."""
-        for host in self._lxd_host_candidates():
-            try:
-                res = api.salt_call(
-                    'local', host, 'cmd.run',
-                    'lxc list --format csv -c n 2>/dev/null | grep -x %s' % self.name,
-                    timeout=45,
-                )
-                found = res.get('return', [{}])[0].get(host, '')
-            except Exception as e:
-                _logger.warning('LXD host probe %s failed: %s', host, e)
+        """Return (host, bytes) for this minion's container on an LXD host.
+
+        Probes all candidate LXD hosts in ONE parallel Salt call
+        (list-target), then measures the container with du on the found host.
+        """
+        hosts = self._lxd_host_candidates()
+        if not hosts:
+            return None, None
+        tgt = 'L@' + ','.join(hosts)
+        try:
+            res = api.salt_call(
+                'local', tgt, 'cmd.run',
+                'lxc list --format csv -c n 2>/dev/null',
+                timeout=45,
+            )
+            returned = res.get('return', [{}])[0] or {}
+        except Exception as e:
+            _logger.warning('LXD host probe failed: %s', e)
+            return None, None
+        found_host = None
+        for host, out in returned.items():
+            if not isinstance(out, str):
                 continue
-            if self.name not in str(found):
-                continue
-            try:
-                res2 = api.salt_call(
-                    'local', host, 'cmd.run',
-                    self._STORAGE_LXD_SCRIPT.format(minion=self.name),
-                    timeout=120,
-                )
-                raw = str(res2.get('return', [{}])[0].get(host, '')).strip()
-            except Exception as e:
-                _logger.warning('LXD usage measure on %s failed: %s', host, e)
-                continue
-            if raw and raw != 'NONE' and raw.isdigit():
-                return host, int(raw)
+            if self.name in out.splitlines():
+                found_host = host
+                break
+        if not found_host:
+            return None, None
+        try:
+            res2 = api.salt_call(
+                'local', found_host, 'cmd.run',
+                self._STORAGE_LXD_SCRIPT.format(minion=self.name),
+                timeout=120,
+            )
+            raw = str(res2.get('return', [{}])[0].get(found_host, '')).strip()
+        except Exception as e:
+            _logger.warning('LXD usage measure on %s failed: %s', found_host, e)
+            return None, None
+        if raw and raw != 'NONE' and raw.isdigit():
+            return found_host, int(raw)
         return None, None
 
     def _dirvish_hosts(self):
