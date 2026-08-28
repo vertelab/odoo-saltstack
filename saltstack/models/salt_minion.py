@@ -78,7 +78,7 @@ class SaltMinion(models.Model):
     # ── Customer ─────────────────────────────────────────────────────────
 
     customer = fields.Char(
-        string='Kund',
+        string='Kund (grain)',
         help='Customer name if this is a customer container (grain mirror).',
     )
     partner_id = fields.Many2one(
