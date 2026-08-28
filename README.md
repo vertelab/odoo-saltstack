@@ -108,3 +108,35 @@ openspec list --json
 ## Licens
 
 AGPL-3 — Copyright (C) 2026 Vertel Sverige AB
+
+## Minion-registret (salt.minion) — v18.0.1.26.0
+
+- **Logga**: visas till vänster om namnet i formuläret (Odoo 18 `.oe_avatar`
+  floatar höger — överrids med `style="float:none"`).
+- **IDENTITY**: `private_ip`, `public_ip`, `external_domain` (t.ex.
+  svenskfast.azzar.org), `has_gateway`, `os`, `dc`, `roles`.
+- **Odoo-fliken** (visas för Odoo-minioner): Odoo-version, Odoo-databaser
+  (komma-separerad, `(demo)` efter db-namn vid demodata), antal användare,
+  senaste inloggning, antal AI-medarbetare + M systemtokens (1M bas per
+  medarbetare + extra budgeterat via `monthly_cap_mtokens`).
+- **Kund** (partner_id): sätts från `customer`-grain, fallback till
+  minion-namn-baserad `res.partner`-lookup (`_search_partner_by_name`).
+- **Kugg menyn**: server action "Uppdatera grunduppgifter"
+  (`action_update_basic_info`) — grains-sync när fält saknas/är gamla +
+  Odoo-statistik (bash via Salt API, läser `db_*` ur odoo.conf, kör som
+  root med PGPASSWORD).
+- `active` visas inte som fält — inaktiva minioner markeras med ribbon
+  "Inaktiv".
+
+## saltstack_keykeep (v18.0.1.0.4)
+
+- `keykeep.credential.minion_id` — kopplar nycklar till minionen (sätts vid
+  pillar-sync och masternyckel-hämtning).
+- **Smartknapp "Keykeep-nycklar"** på minion-formuläret: räknare + öppnar
+  minionens keykeep-credentials.
+- **"Hämta Keykeep masternyckel"**: läser `keykeep_encryption_key` ur
+  minionens odoo.conf och valvar den som keykeep.credential (krypterad,
+  auditerad) — en av nycklarna är masternyckeln.
+- **"Deploy keykeep key"**: kör `state.apply keykeep` på minionen (Salt
+  state `/srv/salt/keykeep/init.sls`) → genererar Fernet-nyckeln idempotent
+  (bara om den saknas), skriver till odoo.conf, startar om Odoo.
