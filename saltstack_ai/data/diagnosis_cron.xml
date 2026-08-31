@@ -4,12 +4,18 @@
         <!-- Asynkron AI-diagnos (2026-08-31): webhook/knapp sätter saltstack.alert
              till 'pending'; denna cron plockar upp pending-alerts och kör
              _start_diagnosis i bakgrunden (via färsk cursor per alert) så HTTP-
-             svaret inte blockerar i den långa coworker.run() (minuter). -->
-        <record id="cron_salt_alert_diagnosis" model="ir.cron">
+             svaret inte blockerar i den långa coworker.run() (minuter).
+             Odoo 18: ir.cron refererar en ir.actions.server via ir_actions_server_id. -->
+        <record id="action_salt_alert_process_diagnoses" model="ir.actions.server">
             <field name="name">Saltstack AI: Process pending diagnoses</field>
             <field name="model_id" ref="model_saltstack_alert"/>
             <field name="state">code</field>
             <field name="code">model._run_pending_diagnoses()</field>
+        </record>
+
+        <record id="cron_salt_alert_diagnosis" model="ir.cron">
+            <field name="name">Saltstack AI: Process pending diagnoses</field>
+            <field name="ir_actions_server_id" ref="action_salt_alert_process_diagnoses"/>
             <field name="interval_number">1</field>
             <field name="interval_type">minutes</field>
             <field name="numbercall">-1</field>
