@@ -58,6 +58,13 @@ class SaltAlert(models.Model):
                 return None
 
             prompt = self._build_diagnosis_prompt()
+            # Kör diagnosen med coworkerns EGNA access-grupper
+            # (Infrastructure Operator) så salt/zabbix-verktygen är
+            # tillgängliga oavsett vem som triggar (webhook=kör som admin,
+            # knappklick=kör som inloggad användare). Utan detta nekas
+            # verktygen för användare utan "Infrastructure Operator"-gruppen
+            # och diagnosen blir blind (2026-08-31).
+            coworker = coworker.with_context(_ai_force_coworker_groups=True)
             result = coworker.run(prompt)
             result_str = str(result)[:5000] if result else ''
             self.diagnosis_result = result_str
