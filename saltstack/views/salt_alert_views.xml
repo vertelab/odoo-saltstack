@@ -32,16 +32,16 @@
                     <button name="action_mark_resolved" type="object"
                             string="Mark as resolved" icon="fa-check"
                             confirm="Mark this alert as resolved?"
-                            attrs="{'invisible': [('state', 'in', ('resolved', 'aborted'))]}"/>
+                            invisible="state in ('resolved', 'aborted')"/>
                     <button name="action_mark_deployed" type="object"
                             string="Deploy / Åtgärda" icon="fa-wrench"
-                            attrs="{'invisible': [('state', 'not in', ('reported',))]}"/>
+                            invisible="state != 'reported'"/>
                     <button name="action_mark_error" type="object"
                             string="Flag error" icon="fa-exclamation-triangle"
-                            attrs="{'invisible': [('state', 'in', ('resolved', 'aborted', 'error'))]}"/>
+                            invisible="state in ('resolved', 'aborted', 'error')"/>
                     <button name="action_mark_aborted" type="object"
                             string="Avbryt" icon="fa-ban"
-                            attrs="{'invisible': [('state', 'in', ('resolved', 'aborted'))]}"/>
+                            invisible="state in ('resolved', 'aborted')"/>
                     <field name="state" widget="statusbar"
                            statusbar_visible="reported,deployed,resolved,error,aborted"/>
                 </header>
