@@ -64,7 +64,16 @@ class SaltAlert(models.Model):
             # knappklick=kör som inloggad användare). Utan detta nekas
             # verktygen för användare utan "Infrastructure Operator"-gruppen
             # och diagnosen blir blind (2026-08-31).
-            coworker = coworker.with_context(_ai_force_coworker_groups=True)
+            coworker = coworker.with_context(
+                _ai_force_coworker_groups=True)
+            # Supervisor-kontextoptimering (2026-08-31): begränsa var
+            # diagnosis-coworkern ser till en UPPGIFTSRELEVANT verktygsuppsättning.
+            # Alla 50+ verktyg i payload:en får LLM:en att svälja tool_calls i
+            # content-text och misslyckas; ~8-12 relevanta → native tool_calls.
+            whitelist = self._diagnosis_tool_whitelist()
+            if whitelist:
+                coworker = coworker.with_context(
+                    _ai_tool_whitelist=whitelist)
             result = coworker.run(prompt)
             result_str = str(result)[:5000] if result else ''
             self.diagnosis_result = result_str
@@ -159,6 +168,56 @@ class SaltAlert(models.Model):
         )
 
     # ── Chatter / Writeback ────────────────────────────────────────────
+
+    def _diagnosis_tool_whitelist(self):
+        """Rekommendera en begränsad, uppgiftsrelevant verktygsuppsättning.
+
+        Supervisor-kontextoptimering: istället för att exponera alla 50+
+        verktyg för diagnosis-coworkern (som då SVÄLJER tool_calls i text),
+        välj per kategori en kompakt uppsättning (~8-14) med bas-driftverktyg
+        + kategorispecifika. Returnerar lista av a:tool-namn (eller [] för att
+        behålla alla som fallback).
+        """
+        BASE = [
+            'describe_model', 'odoo_search', 'odoo_call_method',
+            'salt_test_ping', 'salt_cmd_run',
+            'driftlarm_update_assessment', 'create_helpdesk_ticket',
+        ]
+        by_cat = {
+            'kernel': [
+                'salt_cmd_run', 'salt_journal_errors', 'salt_memory_usage',
+                'salt_process_list', 'document_nonconformity'],
+            'process': [
+                'salt_service_status', 'salt_service_restart',
+                'salt_process_list', 'tail_odoo_log', 'grep_odoo_errors'],
+            'database': [
+                'pg_isready', 'pg_stat_activity', 'pg_replication_lag',
+                'odoo_cron_status', 'salt_service_status'],
+            'proxy': [
+                'caddy_status', 'caddy_recent_errors',
+                'caddy_upstream_health', 'salt_service_status'],
+            'odoo': [
+                'tail_odoo_log', 'grep_odoo_errors', 'odoo_cron_status',
+                'salt_service_status'],
+            'system': [
+                'salt_disk_usage', 'salt_memory_usage', 'salt_system_load',
+                'salt_journal_errors', 'salt_grains_items'],
+            'other': [
+                'zabbix_get_problems', 'zabbix_get_host', 'zabbix_get_triggers',
+                'salt_pillar_items', 'salt_grains_items', 'salt_service_status',
+                'salt_system_load', 'salt_journal_errors'],
+        }
+        extras = by_cat.get(self.category, by_cat['other'])
+        # Deduplicera, bevara ordning
+        out = []
+        seen = set()
+        for n in BASE + extras:
+            if n not in seen:
+                seen.add(n)
+                out.append(n)
+        _logger.info('diagnosis whitelist (%s): %d verktyg',
+                     self.category, len(out))
+        return out
 
     def _post_diagnosis_start(self):
         """Post diagnosis start as chatter on the alert record."""
