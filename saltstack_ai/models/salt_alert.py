@@ -325,10 +325,11 @@ class SaltAlert(models.Model):
         self.ensure_one()
         if not self.host:
             return
-        Minion = self.env['salt.minion']
-        minion = Minion.search([('name', '=', self.host)], limit=1)
+        # host är Many2one → salt.minion; använd recordet direkt
+        minion = self.host
         if not minion:
-            _logger.info('No minion record for host %s — skipping chatter', self.host)
+            _logger.info('No minion record for host %s — skipping chatter',
+                         self.host)
             return
         source_label = dict(self._fields['source'].selection).get(
             self.source, self.source or 'unknown')

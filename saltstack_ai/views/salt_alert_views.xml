@@ -22,16 +22,11 @@
                         string="Run diagnosis" class="btn-primary"
                         icon="fa-stethoscope"/>
             </xpath>
-            <xpath expr="//form/sheet/group/group[hasclass('status-group')]" position="after">
-                <group string="Diagnosis" class="diagnosis-group">
-                    <field name="coworker_session_id"/>
-                    <field name="diagnosis_state"/>
-                </group>
-            </xpath>
-            <xpath expr="//form/sheet/group[hasclass('description-group')]" position="after">
-                <group string="Diagnosis result" class="diagnosis-result-group">
-                    <field name="diagnosis_result" nolabel="1" colspan="2"/>
-                </group>
+            <xpath expr="//page[@name='diagnosis']/group[@name='diagnosis_group']" position="inside">
+                <field name="coworker_session_id"/>
+                <field name="diagnosis_state"/>
+                <separator string="Diagnosis result"/>
+                <field name="diagnosis_result" nolabel="1"/>
             </xpath>
         </field>
     </record>

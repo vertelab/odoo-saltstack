@@ -7,16 +7,18 @@
         <field name="name">saltstack.alert.list</field>
         <field name="model">saltstack.alert</field>
         <field name="arch" type="xml">
-            <list decoration-danger="severity >= 12 and not resolved"
-                  decoration-muted="resolved == True">
+            <list decoration-danger="state in ('error', 'aborted')"
+                  decoration-success="state in ('reported', 'deployed')"
+                  decoration-muted="state == 'resolved'">
                 <field name="name"/>
+                <field name="state" widget="badge" decoration-danger="state in ('error','aborted')" decoration-success="state in ('reported','deployed')" decoration-muted="state=='resolved'"/>
                 <field name="host"/>
+                <field name="dc"/>
                 <field name="source"/>
                 <field name="category"/>
                 <field name="severity"/>
                 <field name="occurrences"/>
                 <field name="last_occurrence"/>
-                <field name="resolved"/>
                 <field name="create_date"/>
             </list>
         </field>
@@ -52,28 +54,37 @@
                     <div class="oe_title">
                         <h1><field name="name"/></h1>
                     </div>
-                    <group>
-                        <group string="Alert" class="alert-group">
-                            <field name="host"/>
-                            <field name="source"/>
-                            <field name="category"/>
-                            <field name="severity"/>
-                            <field name="trigger_name"/>
-                            <field name="timestamp"/>
-                        </group>
-                        <group string="Status" class="status-group">
-                            <field name="state"/>
-                            <field name="resolved"/>
-                            <field name="occurrences"/>
-                            <field name="last_occurrence"/>
-                        </group>
-                    </group>
-                    <group string="Description" class="description-group">
-                        <field name="description" nolabel="1" colspan="2"/>
-                    </group>
-                    <group string="Raw log" class="rawlog-group">
-                        <field name="raw_log" nolabel="1" colspan="2"/>
-                    </group>
+                    <notebook>
+                        <page string="Översikt" name="overview">
+                            <group>
+                                <group string="Alert" class="alert-group">
+                                    <field name="host"/>
+                                    <field name="dc"/>
+                                    <field name="source"/>
+                                    <field name="category"/>
+                                    <field name="severity"/>
+                                    <field name="trigger_name"/>
+                                </group>
+                                <group string="Status" class="status-group">
+                                    <field name="state"/>
+                                    <field name="occurrences"/>
+                                    <field name="last_occurrence"/>
+                                    <field name="timestamp"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Detaljer" name="details">
+                            <group string="Description" class="description-group">
+                                <field name="description" nolabel="1" colspan="2"/>
+                            </group>
+                            <separator string="Raw log"/>
+                            <field name="raw_log" nolabel="1" colspan="2"/>
+                        </page>
+                        <page string="Diagnos" name="diagnosis">
+                            <group name="diagnosis_group">
+                            </group>
+                        </page>
+                    </notebook>
                 </sheet>
                 <chatter/>
             </form>

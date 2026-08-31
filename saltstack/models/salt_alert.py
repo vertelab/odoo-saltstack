@@ -23,7 +23,17 @@ class SaltAlert(models.Model):
         compute='_compute_name',
         store=True,
     )
-    host = fields.Char(required=True, string='Host')
+    # host = den berörda minionen (Many2one → salt.minion). Klickbar till
+    # minion-posten. Minions matchas i process_webhook via host-namn.
+    host = fields.Many2one(
+        'salt.minion', string='Host', ondelete='cascade',
+        required=False,
+        help='Berörd minion (salt.minion). Klickbar.')
+    # Datacenter — hämtas från minionen (ska/sto osv)
+    dc = fields.Selection(
+        selection=[], store=True,
+        related='host.dc', string='Datacenter',
+        help='Datacenter för hosten (från salt.minion).')
     source = fields.Selection(
         selection=[],
         string='Source',
@@ -150,19 +160,22 @@ class SaltAlert(models.Model):
     def _compute_name(self):
         for rec in self:
             source = dict(rec._fields['source'].selection).get(rec.source, rec.source or '')
-            rec.name = '%s — %s (%s)' % (
-                rec.host or '?', rec.trigger_name or 'Alert',
+            host_label = rec.host.name if rec.host else (rec.host or '')
+            # Löpnummer-prefix (L00001, L00002, ...) — deterministiskt från
+            # record-id så det aldrig dupliceras.
+            num = ('L%05d' % rec.id) if rec.id else ''
+            rec.name = '%s %s — %s (%s)' % (
+                num, host_label or '?', rec.trigger_name or 'Alert',
                 source or rec.category or '?')
 
     # ── Minion state coupling ────────────────────────────────────────────
 
-    def _recompute_minions(self, hosts):
-        """Refresh open_alert_count/state for minions matching the hosts."""
-        hosts = {h for h in (hosts or set()) if h}
-        if not hosts:
-            return
-        minions = self.env['salt.minion'].search([('name', 'in', list(hosts))])
-        minions._update_open_alert_count()
+    def _recompute_minions(self, minions):
+        """Refresh open_alert_count/state for minions."""
+        minions = self.env['salt.minion'].browse(
+            [m.id for m in (minions or []) if m])
+        if minions:
+            minions._update_open_alert_count()
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -196,10 +209,10 @@ class SaltAlert(models.Model):
         base guards with hasattr so it runs without any bridge installed.
         """
         try:
-            host = str(payload.get('host', '')).strip()
+            host_name = str(payload.get('host', '')).strip()
             source = str(payload.get('source', '')).strip()
             category = str(payload.get('category', '')).strip()
-            if not host:
+            if not host_name:
                 return {'status': 'error', 'error': 'Missing host'}
             if category not in dict(self._fields['category'].selection):
                 category = 'other'
@@ -207,9 +220,17 @@ class SaltAlert(models.Model):
             trigger = str(payload.get('trigger_name', '') or '')
             norm = self._normalize_trigger(trigger)
 
+            # Matcha/find-or-create salt.minion för host-namnet. host (Many2one)
+            # pekar på minion-posten.
+            minion = self.env['salt.minion'].search(
+                [('name', '=', host_name)], limit=1)
+            if not minion:
+                minion = self.env['salt.minion'].create({'name': host_name})
+            host_id = minion.id
+
             # ── Dedup: same host + normalized trigger, previous not resolved
             existing = self.search([
-                ('host', '=', host),
+                ('host', '=', host_id),
                 ('resolved', '=', False),
                 ('normalized_trigger', '=', norm),
             ], limit=1) if norm else self.env['saltstack.alert']
@@ -222,7 +243,7 @@ class SaltAlert(models.Model):
                 })
                 _logger.info(
                     'Dedup alert for %s (%s): alert #%s now occurrences=%s',
-                    host, norm, existing.id, existing.occurrences + 1)
+                    host_name, norm, existing.id, existing.occurrences + 1)
                 return {
                     'status': 'ok',
                     'alert_id': existing.id,
@@ -233,7 +254,7 @@ class SaltAlert(models.Model):
 
             now = fields.Datetime.now()
             alert = self.create({
-                'host': host,
+                'host': host_id,
                 'source': source or False,
                 'category': category,
                 'severity': self._parse_severity(payload.get('severity')),
@@ -309,7 +330,7 @@ class SaltAlert(models.Model):
                 body=(
                     f'🚨 <b>Driftlarm</b> (severity {self.severity})<br/>'
                     f'<b>Source:</b> {source_label}<br/>'
-                    f'<b>Host:</b> {self.host}<br/>'
+                    f'<b>Host:</b> {self.host.name if self.host else self.host}<br/>'
                     f'<b>Category:</b> {self.category}<br/>'
                     f'<b>Trigger:</b> {self.trigger_name}<br/>'
                     f'{self.description or ""}'
