@@ -17,10 +17,10 @@
         <field name="model">saltstack.alert</field>
         <field name="inherit_id" ref="saltstack.view_salt_alert_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//form/sheet/group/group[hasclass('alert-group')]" position="inside">
+            <xpath expr="//group[hasclass('alert-group')]" position="inside">
                 <field name="zabbix_event_id"/>
             </xpath>
-            <xpath expr="//form/sheet/group/group[hasclass('status-group')]" position="inside">
+            <xpath expr="//group[hasclass('status-group')]" position="inside">
                 <field name="correlated_zabbix_alert"/>
                 <field name="zabbix_alert_id"/>
             </xpath>

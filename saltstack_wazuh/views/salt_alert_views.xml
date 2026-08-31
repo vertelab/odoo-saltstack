@@ -6,7 +6,7 @@
         <field name="model">saltstack.alert</field>
         <field name="inherit_id" ref="saltstack.view_salt_alert_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//form/sheet/group/group[hasclass('alert-group')]" position="inside">
+            <xpath expr="//group[hasclass('alert-group')]" position="inside">
                 <field name="wazuh_rule_id"/>
             </xpath>
         </field>
