@@ -241,17 +241,23 @@ class SaltAlert(models.Model):
             if alert.severity >= 12:
                 alert._notify_channel()
 
-            # AI-diagnos (only when saltstack_ai installed)
+            # AI-diagnos (only when saltstack_ai installed). Asynkront via
+            # _schedule_diagnosis (queue_job) när tillgängligt — webhook-svaret
+            # returnerar direkt i stället för att blockera i coworker.run()
+            # (som kan ta minuter). Synkron _start_diagnosis som fallback.
             if (hasattr(alert, '_auto_diagnose_enabled')
                     and alert._auto_diagnose_enabled()):
-                alert._start_diagnosis()
+                if hasattr(alert, '_schedule_diagnosis'):
+                    alert._schedule_diagnosis()
+                else:
+                    alert._start_diagnosis()
 
             return {
                 'status': 'ok',
                 'correlated_zabbix_alert': getattr(
                     alert, 'correlated_zabbix_alert', False),
                 'diagnosis_started': getattr(alert, 'diagnosis_state', '') in (
-                    'running', 'done', 'unavailable'),
+                    'pending', 'running', 'done', 'unavailable'),
                 'coworker_session_id': getattr(
                     alert, 'coworker_session_id', '') or '',
                 'alert_id': alert.id,

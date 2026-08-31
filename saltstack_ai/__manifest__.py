@@ -35,6 +35,7 @@ Contains zero infrastructure-specific knowledge — safe to open-source.
         'data/infrastructure_operator.xml',
         'data/agent_tools.xml',
         'data/domain_tools.xml',
+        'data/diagnosis_cron.xml',
     ],
     'installable': True,
     'application': False,

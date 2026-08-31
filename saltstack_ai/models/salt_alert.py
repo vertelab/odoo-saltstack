@@ -11,6 +11,16 @@ import logging
 
 from odoo import api, fields, models
 
+# queue_job (OCA) för asynkron diagnos-körning: webhook/knapp dispatcher
+# jobbet i bakgrunden i stället för att blockera i `coworker.run()` (som kan
+# ta minuter vid nere minioner).
+try:
+    from odoo.addons.queue_job.job import job as queue_job_job
+    _queue_job = True
+except ImportError:
+    queue_job_job = None
+    _queue_job = False
+
 _logger = logging.getLogger(__name__)
 
 
@@ -35,8 +45,64 @@ class SaltAlert(models.Model):
         return self.env['ir.config_parameter'].get_param(
             'saltstack.alert.auto_diagnose', 'True') in ('True', 'true', '1')
 
+    def _schedule_diagnosis(self):
+        """Planera AI-diagnos asynkront.
+
+        Anropas synkront från process_webhook / action_diagnose-knappen.
+        Sätter diagnosen till 'pending' så webhook/HTTP-svar returnerar
+        OMEDELBART (coworker.run() kan ta minuter, särskilt vid nere
+        minioner). En Odoo-cron (_run_pending_diagnoses) plockar upp
+        pending-alerts och exekverar _start_diagnosis i bakgrunden.
+        """
+        self.ensure_one()
+        self.diagnosis_state = 'pending'
+        self.diagnosis_result = ''
+        return True
+
+    def _run_pending_diagnoses(self, limit=5):
+        """Cron: exekvera köade (pending) diagnoser i bakgrunden.
+
+        Kör _start_diagnosis på upp till `limit` pending-alerts. Den hänger
+        med en egen cursor (queue_job-from-cron-mönster) så en lång
+        coworker.run() inte påverkar andra requests. Idempotent per alert.
+        """
+        from odoo import api as _api, registry as _registry
+        from odoo.service.db import check_db_management_enabled  # noqa
+        # Använd den nuvarande registryn med en färsk cursor per alert för
+        # att undvika teardown-att-problem under långa LLM-körningar.
+        cr = self._cr
+        dbname = cr.dbname
+        uid = self.env.uid
+        ctx = dict(self.env.context)
+        recs = self.sudo().search([
+            ('diagnosis_state', '=', 'pending')], order='write_date asc',
+            limit=limit)
+        for rec in recs:
+            # Ny registry/cursor per körning (long-running)
+            try:
+                new_cr = _registry(dbname).cursor()
+                rec_env = _api.Environment(
+                    new_cr, self.env.uid, dict(
+                        ctx, _ai_force_coworker_groups=True))
+                rec = rec_env['saltstack.alert'].browse(rec.id)
+                rec._start_diagnosis()
+                new_cr.commit()
+            except Exception:
+                _logger.exception('pending diagnosis failed for alert %s',
+                                  rec.id)
+                try:
+                    new_cr.rollback()
+                except Exception:
+                    pass
+            finally:
+                try:
+                    new_cr.close()
+                except Exception:
+                    pass
+        return True
+
     def _start_diagnosis(self):
-        """Start AI diagnosis via the selected AI coworker."""
+        """Start AI diagnosis via the selected AI coworker (kört av cron)."""
         self.ensure_one()
         self.diagnosis_state = 'running'
         self._post_diagnosis_start()
@@ -291,7 +357,7 @@ class SaltAlert(models.Model):
     # ── Actions ──────────────────────────────────────────────────────────
 
     def action_diagnose(self):
-        """Manually (re)run diagnosis."""
+        """Manually (re)run diagnosis (asynkront via queue_job)."""
         for rec in self:
-            rec._start_diagnosis()
+            rec._schedule_diagnosis()
         return True
