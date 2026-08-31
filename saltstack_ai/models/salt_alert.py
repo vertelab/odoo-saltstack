@@ -28,7 +28,12 @@ class SaltAlert(models.Model):
     _inherit = 'saltstack.alert'
 
     # ── Correlation & diagnosis ──────────────────────────────────────────
-    coworker_session_id = fields.Char(string='Coworker session')
+    # Klickbar länk till ai.coworker.session (chat/diagnos-session i Odoo).
+    # Many2one: id:et renderas som en klickbar länk till sessionen.
+    coworker_session_id = fields.Many2one(
+        'ai.coworker.session', string='Coworker session', ondelete='set null',
+        help='Länk till den AI-coworker-session (ai.coworker.session) som '
+             'körde/använde denna diagnos. Klickbar till chatten.')
     diagnosis_result = fields.Text(string='Diagnosis result')
     diagnosis_state = fields.Selection([
         ('pending', 'Pending'),
@@ -300,13 +305,17 @@ class SaltAlert(models.Model):
     def _post_diagnosis_result(self, result, action_taken):
         """Post diagnosis result + action taken as chatter on the alert record."""
         self.ensure_one()
+        from markupsafe import escape as html_escape
         msg = f'<b>Diagnos klar</b>'
         if action_taken:
             msg += f'<br/>🔧 <b>Åtgärd:</b> {action_taken}'
         if result:
             excerpt = result[:3000] if len(result) > 3000 else result
-            msg += f'<br/><pre>{excerpt}</pre>'
-        self.message_post(body=msg, message_type='notification')
+            # Escape resultatet så LLM:ens HTML/markdown visas som TEXT (inte
+            # renderas rå) — förhindrar "html i klartext" och injektion.
+            msg += f'<br/><pre>{html_escape(excerpt)}</pre>'
+        self.message_post(body=msg, message_type='notification',
+                          subtype_xmlid='mail.mt_note')
 
     def _post_minion_chatter(self, result):
         """Post a summary of the alert + diagnosis on the related minion record.

@@ -67,6 +67,17 @@ class SaltAlert(models.Model):
     resolved = fields.Boolean(string='Resolved', default=False)
     active = fields.Boolean(string='Active', default=True)
 
+    # ── Lifecycle state (2026-08-31) ────────────────────────────────────
+    state = fields.Selection([
+        ('reported', 'Reported'),
+        ('deployed', 'Deployed'),
+        ('resolved', 'Resolved'),
+        ('error', 'Error'),
+        ('aborted', 'Aborted'),
+    ], string='Status', default='reported',
+        help='Livscykel: reported (inrapporterad) → deployed (åtgärd pågår) → '
+             'resolved (löst). Error = fel vid bearbetning, aborted = avbruten.')
+
     # ── Computed ─────────────────────────────────────────────────────────
 
     @staticmethod
@@ -135,6 +146,7 @@ class SaltAlert(models.Model):
         except (ValueError, TypeError):
             return 0
 
+    @api.depends('host', 'trigger_name', 'source', 'category')
     def _compute_name(self):
         for rec in self:
             source = dict(rec._fields['source'].selection).get(rec.source, rec.source or '')
@@ -259,7 +271,10 @@ class SaltAlert(models.Model):
                 'diagnosis_started': getattr(alert, 'diagnosis_state', '') in (
                     'pending', 'running', 'done', 'unavailable'),
                 'coworker_session_id': getattr(
-                    alert, 'coworker_session_id', '') or '',
+                    alert, 'coworker_session_id', '') and (
+                    alert.coworker_session_id.id
+                    if hasattr(alert.coworker_session_id, 'id')
+                    else alert.coworker_session_id) or '',
                 'alert_id': alert.id,
                 'deduplicated': False,
             }
@@ -308,4 +323,20 @@ class SaltAlert(models.Model):
     # ── Actions ──────────────────────────────────────────────────────────
 
     def action_mark_resolved(self):
-        self.write({'resolved': True})
+        self.write({'resolved': True, 'state': 'resolved'})
+        return True
+
+    def action_mark_deployed(self):
+        """Mark as deployed (åtgärd pågår)."""
+        self.write({'state': 'deployed', 'resolved': False})
+        return True
+
+    def action_mark_error(self):
+        """Flag as error (bearbetning misslyckades)."""
+        self.write({'state': 'error', 'resolved': False})
+        return True
+
+    def action_mark_aborted(self):
+        """Mark as aborted (avbruten)."""
+        self.write({'state': 'aborted', 'resolved': False})
+        return True
