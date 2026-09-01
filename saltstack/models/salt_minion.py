@@ -720,12 +720,13 @@ fi
 '''
 
     def _lxd_host_candidates(self):
-        """Salt minions that are REAL LXD hosts (run the lxc CLI).
+        """Salt minions that are REAL LXD hosts (not containers).
 
-        The registry's is_container/host_machine data is unreliable, so the
-        host list is detected once: filter to online minions with the lxd
-        role, probe each with a short 'command -v lxc' check, and cache the
-        result in ir.config_parameter.
+        A real LXD host has the lxd role and runs the lxc CLI AND is not
+        itself a container (grains virtual != container — containers with a
+        shared lxd socket would otherwise pass an 'lxc list' check). The
+        host list is detected once, cached in ir.config_parameter, and
+        refreshed when empty.
         """
         param = 'saltstorage.lxd_hosts'
         cached = self.env['ir.config_parameter'].get_param(param, '')
@@ -743,6 +744,13 @@ fi
             roles = [r.strip().lower() for r in (rec.roles or '').split(',') if r.strip()]
             if 'lxd' not in roles or rec.is_container:
                 continue
+            # Skip minions that are themselves containers (virtual grain).
+            try:
+                virtual = json.loads(rec.grains_json or '{}').get('virtual', '')
+            except (ValueError, TypeError):
+                virtual = rec.grains_json or ''
+            if str(virtual).strip().lower() == 'container':
+                continue
             if online and rec.name not in online:
                 continue
             candidates.append(rec.name)
@@ -752,7 +760,7 @@ fi
                 res = api.salt_call(
                     'local', name, 'cmd.run',
                     "lxc list >/dev/null 2>&1 && echo LXD_OK || echo NOLXD",
-                    timeout=8,
+                    timeout=6,
                 )
                 ret = str(json.loads(res).get('return', [{}])[0].get(name, ''))
                 if 'LXD_OK' in ret:
@@ -779,7 +787,7 @@ fi
                 res = api.salt_call(
                     'local', host, 'cmd.run',
                     'lxc list --format csv -c n 2>/dev/null',
-                    timeout=10,
+                    timeout=6,
                 )
                 out = str(json.loads(res).get('return', [{}])[0].get(host, ''))
             except Exception as e:
