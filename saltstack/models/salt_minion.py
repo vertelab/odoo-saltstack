@@ -818,19 +818,20 @@ fi
             ('roles', 'ilike', '%backup%'),
         ]).mapped('name')
 
-    def _dirvish_ratio(self, api, lxd_host, lxd_host_total_bytes):
-        """Cached dirvish/LXD ratio for a host, kicked off asynchronously.
+    def _dirvish_ratio(self, api, lxd_host):
+        """Dirvish/LXD ratio for a host.
 
         Dirvish backs up whole hosts (e.g. fors, strand) — there is no
-        per-container backup tree. The per-minion Dirvish share is therefore
-        estimated as minion_LXD_usage × ratio, where
+        per-container backup tree. The per-minion Dirvish share is estimated
+        as minion_LXD_usage × ratio, where
         ratio = dirvish_tree(host) / lxd_total(host).
 
-        The first call starts the (slow) du on the dirvish host as a
-        background Salt job and returns None — later calls pick up the
-        computed ratio from ir.config_parameter once the job finished.
+        Returns the cached ratio when available, otherwise the configurable
+        default (`saltstorage.dirvish_ratio_default`, default 2.0) so the
+        Dirvish row appears immediately. A background du on the dirvish host
+        refines the ratio later (cached in ir.config_parameter).
         """
-        if not lxd_host or not lxd_host_total_bytes:
+        if not lxd_host:
             return None
         param = 'saltstorage.dirvish_ratio.%s' % lxd_host
         cached = self.env['ir.config_parameter'].get_param(param, '')
@@ -839,36 +840,31 @@ fi
                 return float(cached)
             except ValueError:
                 pass
+        default = float(self.env['ir.config_parameter'].get_param(
+            'saltstorage.dirvish_ratio_default', '2.0'))
+        # Kick off the slow du once (background) to refine the ratio later.
         dirvish_hosts = self._dirvish_hosts()
-        if not dirvish_hosts:
-            return None
-        size_file = '/tmp/saltstorage_dirvish_%s.size' % lxd_host
-        try:
-            res = api.salt_call(
-                'local', dirvish_hosts[0], 'cmd.run',
-                'test -s %s && echo DONE || echo PENDING' % size_file,
-                timeout=15,
-            )
-            status = str(json.loads(res).get('return', [{}])[0].get(dirvish_hosts[0], '')).strip()
-        except Exception:
-            status = 'PENDING'
-        if status == 'PENDING':
-            # Finished du available? Read + cache it, else kick off a job.
-            done = self._read_dirvish_size(api, dirvish_hosts[0], lxd_host)
-            if done:
-                return self._dirvish_ratio(api, lxd_host, lxd_host_total_bytes)
-            # Start the slow du in the background (no blocking).
-            cmd = ('nohup sh -c "du -sb /srv/backup/%s > %s 2>/dev/null" '
-                   '>/dev/null 2>&1 & echo started' % (lxd_host, size_file))
+        if dirvish_hosts:
+            size_file = '/tmp/saltstorage_dirvish_%s.size' % lxd_host
             try:
-                api.salt_call('local', dirvish_hosts[0], 'cmd.run', cmd, timeout=15)
-            except Exception as e:
-                _logger.warning('Dirvish du kick-off failed for %s: %s', lxd_host, e)
-            return None
-        # DONE — read + cache the ratio now.
-        if self._read_dirvish_size(api, dirvish_hosts[0], lxd_host):
-            return self._dirvish_ratio(api, lxd_host, lxd_host_total_bytes)
-        return None
+                res = api.salt_call(
+                    'local', dirvish_hosts[0], 'cmd.run',
+                    'test -s %s && echo DONE || echo PENDING' % size_file,
+                    timeout=15,
+                )
+                status = str(json.loads(res).get('return', [{}])[0].get(dirvish_hosts[0], '')).strip()
+            except Exception:
+                status = 'PENDING'
+            if status == 'PENDING':
+                if self._read_dirvish_size(api, dirvish_hosts[0], lxd_host):
+                    return self._dirvish_ratio(api, lxd_host)
+                cmd = ('nohup sh -c "du -sb /srv/backup/%s > %s 2>/dev/null" '
+                       '>/dev/null 2>&1 & echo started' % (lxd_host, size_file))
+                try:
+                    api.salt_call('local', dirvish_hosts[0], 'cmd.run', cmd, timeout=15)
+                except Exception as e:
+                    _logger.warning('Dirvish du kick-off failed for %s: %s', lxd_host, e)
+        return default
 
     def _read_dirvish_size(self, api, dhost, lxd_host):
         """Read a finished du size file; cache the ratio. Returns True when cached."""
@@ -991,29 +987,11 @@ fi
                 'lxd_host', lxd_bytes / 1024.0 ** 3, lxd_host,
                 'du -sb %s/containers/%s' % (lxd_host, self.name))
 
-        # 2. Dirvish — estimated share of the host backup tree.
+        # 2. Dirvish — estimated share of the host backup tree. Uses the
+        # cached ratio or the configurable default (no slow lxd-total du).
         ratio = None
         if lxd_host and lxd_bytes:
-            ratio_param = 'saltstorage.dirvish_ratio.%s' % lxd_host
-            cached_ratio = self.env['ir.config_parameter'].get_param(ratio_param, '')
-            if cached_ratio:
-                try:
-                    ratio = float(cached_ratio)
-                except ValueError:
-                    ratio = None
-            else:
-                # Ratio unknown — need the host total (slow du) once.
-                lxd_total = None
-                try:
-                    res = api.salt_call(
-                        'local', lxd_host, 'cmd.run',
-                        self._STORAGE_LXD_HOST_TOTAL_SCRIPT, timeout=300)
-                    raw = str(json.loads(res).get('return', [{}])[0].get(lxd_host, '')).strip()
-                    if raw.isdigit():
-                        lxd_total = int(raw)
-                except Exception as e:
-                    _logger.warning('LXD host total failed for %s: %s', lxd_host, e)
-                ratio = self._dirvish_ratio(api, lxd_host, lxd_total)
+            ratio = self._dirvish_ratio(api, lxd_host)
         if ratio and lxd_bytes:
             self._upsert_storage(
                 'dirvish',
