@@ -33,6 +33,7 @@ class SaltRunlog(models.Model):
         ('odoosa', 'Odoo SA'),
         ('dirvish', 'Dirvish'),
             ('github-backup', 'GitHub backup'),
+            ('hosts-update', 'Hosts Update'),
         ('salt', 'Salt'),
         ('zabbix', 'Zabbix'),
         ('wazuh', 'Wazuh'),
@@ -45,6 +46,7 @@ class SaltRunlog(models.Model):
         ('sync', 'Sync'),
         ('translation', 'Odoo SA'),
         ('test', 'Test'),
+        ('inventory', 'Inventory'),
         ('other', 'Other'),
     ], string='Run type', default='other')
     host = fields.Char(string='Host')
