@@ -83,6 +83,8 @@
                 <separator/>
                 <filter name="odoosa" string="Translations"
                         domain="[('source', '=', 'odoosa')]"/>
+                    <filter name="hosts_update" string="Hosts Update"
+                            domain="[('source', '=', 'hosts-update')]"/>
                 <group expand="0" string="Group By">
                     <filter name="group_host" string="Host"
                             context="{'group_by': 'host'}"/>
