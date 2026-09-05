@@ -28,7 +28,11 @@
                 <header>
                     <field name="status" widget="statusbar"
                            options="{'clickable': False}"/>
-                </header>
+                        <button name="action_copy_raw_log" type="object"
+                                string="Kopiera hosts-lista"
+                                class="btn-secondary" icon="fa-copy"
+                                invisible="source != 'hosts-update'"/>
+                    </header>
                 <sheet>
                     <div class="oe_title">
                         <h1><field name="name"/></h1>

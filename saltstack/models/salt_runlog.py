@@ -137,3 +137,12 @@ class SaltRunlog(models.Model):
         except Exception as e:
             _logger.exception('Driftslogg-webhook misslyckades: %s', e)
             return {'status': 'error', 'error': str(e)}
+
+    def action_copy_raw_log(self):
+        """Copy the full raw_log (hosts list) to the clipboard (form button)."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'saltstack_copy_value',
+            'params': {'value': self.raw_log or ''},
+        }
