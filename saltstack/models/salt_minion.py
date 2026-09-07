@@ -435,6 +435,39 @@ class SaltMinion(models.Model):
             'params': {'value': self.private_ip or ''},
         }
 
+    def action_copy_hosts_list(self):
+        """Copy a /etc/hosts-formatted list of all minions to the clipboard.
+
+        Collective list-view header action: builds one hosts list from the
+        private_ip of every active salt.minion record (no live Salt call),
+        ready to paste into /etc/hosts.
+        """
+        lines = []
+        lines.append('# Hosts Update — genererad av SaltStack (salt.minion)')
+        lines.append('# Klistra in i din /etc/hosts (ersätt hela filen — listan är komplett).')
+        lines.append('#')
+        lines.append('# ── Maskiner med IP ───────────────────────────────────')
+        entries = []
+        for rec in self.search([('active', '=', True)]):
+            if rec.private_ip:
+                entries.append((rec.private_ip, rec.name))
+        for ip, name in sorted(entries):
+            lines.append('%-18s%s' % (ip, name))
+        no_ip = [
+            rec.name for rec in self.search([('active', '=', True)])
+            if not rec.private_ip
+        ]
+        if no_ip:
+            lines.append('#')
+            lines.append('# ── Ej anslutna / IP saknas ───────────────────────')
+            for name in sorted(no_ip):
+                lines.append('# %s' % name)
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'saltstack_copy_value',
+            'params': {'value': '\n'.join(lines)},
+        }
+
     def action_open_external_domain(self):
         """Open the external domain in a new tab (list-view button)."""
         self.ensure_one()

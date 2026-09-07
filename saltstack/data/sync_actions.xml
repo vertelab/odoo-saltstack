@@ -28,4 +28,11 @@ else:
     msg_type = 'success'
 action = {'type': 'ir.actions.client', 'tag': 'display_notification', 'params': {'title': 'Pillar-synk', 'message': message, 'type': msg_type, 'sticky': False}}</field>
     </record>
+
+        <record id="action_copy_hosts_list" model="ir.actions.server">
+            <field name="name">Kopiera hosts-lista</field>
+            <field name="model_id" ref="model_salt_minion"/>
+            <field name="state">code</field>
+            <field name="code">action = env['salt.minion'].sudo().action_copy_hosts_list()</field>
+        </record>
 </odoo>

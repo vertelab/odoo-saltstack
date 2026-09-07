@@ -96,6 +96,10 @@
                             display="always"
                             string="Synka minioner"
                             class="btn-primary" icon="fa-refresh"/>
+                        <button name="saltstack.action_copy_hosts_list" type="action"
+                                display="always"
+                                string="Kopiera hosts-lista"
+                                icon="fa-copy"/>
                 </header>
                 <field name="name"/>
                 <field name="private_ip"/>
