@@ -71,8 +71,28 @@ class SaltRunlog(models.Model):
                 rec.status, rec.status or '?')
             ts = rec.timestamp or rec.create_date
             when = fields.Datetime.to_string(ts)[:16] if ts else ''
-            rec.name = '%s — %s (%s) %s' % (
-                rec.host or '?', run_type or 'Run', status, when)
+            # Visa lokal tid (Europe/Stockholm) i stället för UTC —
+            # posterna lagras som naive UTC, så konvertera explicit.
+            # (Driftfix 2026-09-10: rubriken visade 04:16 (UTC) när
+            # backupen kördes 06:16 lokal tid.)
+            try:
+                from datetime import datetime
+                import pytz
+                local = pytz.timezone('Europe/Stockholm')
+                when = datetime.strptime(when, '%Y-%m-%d %H:%M') \
+                    .replace(tzinfo=pytz.utc).astimezone(local).strftime('%Y-%m-%d %H:%M')
+            except Exception:
+                pass
+            # Lägg till omfattning (kundantal) från summary om möjligt —
+            # t.ex. "24 kunder" ur "24 kunder — 24 ✅ / 0 ⚠️ ...".
+            scope = ''
+            if rec.summary:
+                import re
+                m = re.match(r'^(\d+)\s+kunder', rec.summary)
+                if m:
+                    scope = f" {m.group(1)} kunder"
+            rec.name = '%s — %s (%s)%s %s' % (
+                rec.host or '?', run_type or 'Run', status, scope, when)
 
     # ── Webhook-processing ──────────────────────────────────────────────
 
