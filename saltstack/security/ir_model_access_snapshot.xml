@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ── salt.minion.snapshot (Återskapa data) ──────────────────────── -->
+    <!-- Read for all internal users; officers may maintain rows (the cron
+         runs as admin). Same pattern as salt.minion.storage. -->
+    <record id="access_salt_minion_snapshot_officer" model="ir.model.access">
+        <field name="name">salt.minion.snapshot.officer</field>
+        <field name="model_id" ref="model_salt_minion_snapshot"/>
+        <field name="group_id" ref="saltstack.group_saltstack_officer"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    <record id="access_salt_minion_snapshot_user" model="ir.model.access">
+        <field name="name">salt.minion.snapshot.user</field>
+        <field name="model_id" ref="model_salt_minion_snapshot"/>
+        <field name="group_id" ref="base.group_user"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+</odoo>

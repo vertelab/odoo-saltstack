@@ -1,329 +1,349 @@
 <?xml version="1.0" encoding="utf-8"?>
-<odoo>
-    <!-- ── Kanban View ───────────────────────────────────────────── -->
-    <record id="view_salt_minion_kanban" model="ir.ui.view">
-        <field name="name">salt.minion.kanban</field>
-        <field name="model">salt.minion</field>
-        <field name="arch" type="xml">
-            <kanban class="o_kanban_mobile">
-                <field name="name"/>
-                <field name="private_ip"/>
-                <field name="public_ip"/>
-                <field name="dc"/>
-                <field name="roles"/>
-                <field name="customer"/>
-                <field name="odoo_version"/>
-                <field name="odoo_has_demo_data"/>
-                <field name="state"/>
-                <field name="open_alert_count"/>
-                <field name="image"/>
-                <field name="is_demo"/>
-                <field name="is_container"/>
-                <field name="host_machine"/>
-                <t t-name="card">
-                    <div t-attf-class="oe_kanban_global_click position-relative">
-                        <!-- DC ribbon -->
-                        <div t-if="record.dc.raw_value" class="ribbon ribbon-top-right">
-                            <span t-att-class="record.dc.raw_value == 'ska' ? 'text-bg-primary' : 'text-bg-dark'">
-                                <field name="dc"/>
-                            </span>
-                        </div>
-                        <!-- Demo ribbon -->
-                        <div t-if="record.is_demo.raw_value" class="ribbon ribbon-top-right"
-                             style="top: 34px;">
-                            <span class="text-bg-warning">Demo</span>
-                        </div>
-                        <aside class="o_kanban_aside_full">
-                            <t t-if="record.image.raw_value">
-                                <field name="image" widget="background_image"
-                                       options="{'preview_image': 'image'}"
-                                       class="d-block position-relative"/>
-                            </t>
-                            <t t-else="">
-                                <div class="d-flex align-items-center justify-content-center bg-100 bg-gradient"
-                                     style="min-height: 100px;">
-                                    <i class="fa fa-server fa-3x text-secondary opacity-50"/>
+    <odoo>
+        <!-- ── Kanban View ───────────────────────────────────────────── -->
+        <record id="view_salt_minion_kanban" model="ir.ui.view">
+            <field name="name">salt.minion.kanban</field>
+            <field name="model">salt.minion</field>
+            <field name="arch" type="xml">
+                <kanban class="o_kanban_mobile">
+                    <field name="name"/>
+                    <field name="private_ip"/>
+                    <field name="public_ip"/>
+                    <field name="dc"/>
+                    <field name="roles"/>
+                    <field name="customer"/>
+                    <field name="odoo_version"/>
+                    <field name="odoo_has_demo_data"/>
+                    <field name="state"/>
+                    <field name="open_alert_count"/>
+                    <field name="image"/>
+                    <field name="is_demo"/>
+                    <field name="is_container"/>
+                    <field name="host_machine"/>
+                    <t t-name="card">
+                        <div t-attf-class="oe_kanban_global_click position-relative">
+                            <!-- DC ribbon -->
+                            <div t-if="record.dc.raw_value" class="ribbon ribbon-top-right">
+                                <span t-att-class="record.dc.raw_value == 'ska' ? 'text-bg-primary' : 'text-bg-dark'">
+                                    <field name="dc"/>
+                                </span>
+                            </div>
+                            <!-- Demo ribbon -->
+                            <div t-if="record.is_demo.raw_value" class="ribbon ribbon-top-right"
+                                 style="top: 34px;">
+                                <span class="text-bg-warning">Demo</span>
+                            </div>
+                            <aside class="o_kanban_aside_full">
+                                <t t-if="record.image.raw_value">
+                                    <field name="image" widget="background_image"
+                                           options="{'preview_image': 'image'}"
+                                           class="d-block position-relative"/>
+                                </t>
+                                <t t-else="">
+                                    <div class="d-flex align-items-center justify-content-center bg-100 bg-gradient"
+                                         style="min-height: 100px;">
+                                        <i class="fa fa-server fa-3x text-secondary opacity-50"/>
+                                    </div>
+                                </t>
+                            </aside>
+                            <div class="o_kanban_details">
+                                <strong class="o_kanban_record_title">
+                                    <field name="name"/>
+                                </strong>
+                                <div class="text-muted">
+                                    <field name="private_ip"/>
+                                    <span t-if="record.public_ip.raw_value"> · <field name="public_ip"/></span>
+                                    <span t-if="record.roles.raw_value"> · <field name="roles"/></span>
                                 </div>
-                            </t>
-                        </aside>
-                        <div class="o_kanban_details">
-                            <strong class="o_kanban_record_title">
-                                <field name="name"/>
-                            </strong>
-                            <div class="text-muted">
-                                <field name="private_ip"/>
-                                <span t-if="record.public_ip.raw_value"> · <field name="public_ip"/></span>
-                                <span t-if="record.roles.raw_value"> · <field name="roles"/></span>
+                                <div class="text-muted" t-if="record.customer.raw_value">
+                                    <i class="fa fa-user"/> <field name="customer"/>
+                                </div>
+                                <div class="text-muted" t-if="record.odoo_version.raw_value">
+                                    Odoo <field name="odoo_version"/>
+                                    <span t-if="record.odoo_has_demo_data.raw_value"
+                                          class="badge text-bg-warning ms-1">demo</span>
+                                </div>
                             </div>
-                            <div class="text-muted" t-if="record.customer.raw_value">
-                                <i class="fa fa-user"/> <field name="customer"/>
-                            </div>
-                            <div class="text-muted" t-if="record.odoo_version.raw_value">
-                                Odoo <field name="odoo_version"/>
-                                <span t-if="record.odoo_has_demo_data.raw_value"
-                                      class="badge text-bg-warning ms-1">demo</span>
+                            <div class="o_kanban_record_bottom">
+                                <span class="d-inline-flex align-items-center me-2"
+                                      style="width:12px;height:12px;border-radius:50%;"
+                                      t-att-class="record.state.raw_value == 'online' ? 'bg-success' : record.state.raw_value == 'faulty' ? 'bg-danger' : 'bg-secondary'"/>
+                                <field name="state" widget="badge"
+                                       decoration-success="state == 'online'"
+                                       decoration-warning="state == 'faulty'"
+                                       decoration-muted="state == 'offline'"/>
+                                <span t-if="record.open_alert_count.raw_value &gt; 0"
+                                      class="badge text-bg-danger ms-2">
+                                    <i class="fa fa-exclamation-triangle"/> <field name="open_alert_count"/>
+                                </span>
                             </div>
                         </div>
-                        <div class="o_kanban_record_bottom">
-                            <span class="d-inline-flex align-items-center me-2"
-                                  style="width:12px;height:12px;border-radius:50%;"
-                                  t-att-class="record.state.raw_value == 'online' ? 'bg-success' : record.state.raw_value == 'faulty' ? 'bg-danger' : 'bg-secondary'"/>
-                            <field name="state" widget="badge"
-                                   decoration-success="state == 'online'"
-                                   decoration-warning="state == 'faulty'"
-                                   decoration-muted="state == 'offline'"/>
-                            <span t-if="record.open_alert_count.raw_value &gt; 0"
-                                  class="badge text-bg-danger ms-2">
-                                <i class="fa fa-exclamation-triangle"/> <field name="open_alert_count"/>
-                            </span>
-                        </div>
-                    </div>
-                </t>
-            </kanban>
-        </field>
-    </record>
-
-    <!-- ── List View ─────────────────────────────────────────────── -->
-    <record id="view_salt_minion_list" model="ir.ui.view">
-        <field name="name">salt.minion.list</field>
-        <field name="model">salt.minion</field>
-        <field name="arch" type="xml">
-            <list decoration-danger="active == False"
-                  decoration-warning="is_demo == True"
-                  decoration-info="state == 'offline' and active == True">
-                <header>
-                    <button name="saltstack.action_sync_minions_all" type="action"
-                            display="always"
-                            string="Synka minioner"
-                            class="btn-primary" icon="fa-refresh"/>
-                        <button name="saltstack.action_copy_hosts_list" type="action"
+                    </t>
+                </kanban>
+            </field>
+        </record>
+    
+        <!-- ── List View ─────────────────────────────────────────────── -->
+        <record id="view_salt_minion_list" model="ir.ui.view">
+            <field name="name">salt.minion.list</field>
+            <field name="model">salt.minion</field>
+            <field name="arch" type="xml">
+                <list decoration-danger="active == False"
+                      decoration-warning="is_demo == True"
+                      decoration-info="state == 'offline' and active == True">
+                    <header>
+                        <button name="saltstack.action_sync_minions_all" type="action"
                                 display="always"
-                                string="Kopiera hosts-lista"
-                                icon="fa-copy"/>
-                </header>
-                <field name="name"/>
-                <field name="private_ip"/>
-                <button name="action_copy_private_ip" type="object"
-                        icon="fa-copy" class="btn-link"
-                        title="Kopiera IP till urklipp"/>
-                <field name="external_domain"/>
-                <button name="action_open_external_domain" type="object"
-                        icon="fa-globe" class="btn-link"
-                        title="Öppna extern domän i ny flik"/>
-                <field name="public_ip"/>
-                <field name="dc"/>
-                <field name="os"/>
-                <field name="roles"/>
-                <field name="customer"/>
-                <field name="partner_id"/>
-                <field name="odoo_version"/>
-                <field name="odoo_has_demo_data" widget="boolean"/>
-                <field name="host_machine"/>
-                <field name="storage_total_gb" string="Storage (GB)"/>
-                <field name="odoo_user_count" string="Odoo-användare"/>
-                <field name="odoo_coworker_tokens_m" string="1M systemtokens"/>
-                <field name="state" decoration-danger="state == 'faulty'"
-                       decoration-success="state == 'online'"
-                       decoration-muted="state == 'offline'"/>
-                <field name="open_alert_count"/>
-                <field name="is_container" widget="boolean"/>
-                <field name="is_demo" widget="boolean"/>
-                <field name="last_seen"/>
-                <field name="active" column_invisible="True"/>
-            </list>
-        </field>
-    </record>
-
-    <!-- ── Form View ─────────────────────────────────────────────── -->
-    <record id="view_salt_minion_form" model="ir.ui.view">
-        <field name="name">salt.minion.form</field>
-        <field name="model">salt.minion</field>
-        <field name="arch" type="xml">
-            <form>
-                <header>
-                    <button name="action_ping"
-                            string="Ping"
-                            type="object"
-                            icon="fa-plug"/>
-                    <button name="action_measure_storage"
-                            string="Mät storage"
-                            type="object"
-                            icon="fa-database"
-                            help="Measure/estimate the four storage rows (LXD host, Dirvish, S3, S3-backup)."/>
-                    <button name="action_fault_cleanup"
-                            string="🧹 Rensa fel"
-                            type="object"
-                            icon="fa-broom"
-                            confirm="Clear all fault injections on this minion?"/>
-                    <field name="state" widget="state_status"/>
-                </header>
-                <sheet>
-                    <div class="oe_title d-flex align-items-center gap-3">
-                        <field name="image" widget="image" class="oe_avatar"
-                               style="float: none;"/>
-                        <h1 class="mb-0"><field name="name" placeholder="Minion ID"/></h1>
-                    </div>
-                    <div class="oe_button_box" name="button_box">
-                        <button name="action_show_alerts" type="object"
-                                class="oe_stat_button" icon="fa-exclamation-triangle">
-                            <div class="o_stat_info">
-                                <span class="o_stat_text">Driftslarm</span>
-                                <field name="open_alert_count" class="o_stat_value" widget="statinfo"/>
-                            </div>
-                        </button>
-                    </div>
-                    <group>
-                        <group string="Identity">
-                            <field name="private_ip"/>
-                            <field name="public_ip"/>
-                            <field name="external_domain"/>
-                            <field name="has_gateway"/>
-                            <field name="os"/>
-                            <field name="os_version"/>
-                            <field name="dc"/>
-                            <field name="roles"/>
+                                string="Synka minioner"
+                                class="btn-primary" icon="fa-refresh"/>
+                            <button name="saltstack.action_copy_hosts_list" type="action"
+                                    display="always"
+                                    string="Kopiera hosts-lista"
+                                    icon="fa-copy"/>
+                    </header>
+                    <field name="name"/>
+                    <field name="private_ip"/>
+                    <button name="action_copy_private_ip" type="object"
+                            icon="fa-copy" class="btn-link"
+                            title="Kopiera IP till urklipp"/>
+                    <field name="external_domain"/>
+                    <button name="action_open_external_domain" type="object"
+                            icon="fa-globe" class="btn-link"
+                            title="Öppna extern domän i ny flik"/>
+                    <field name="public_ip"/>
+                    <field name="dc"/>
+                    <field name="os"/>
+                    <field name="roles"/>
+                    <field name="customer"/>
+                    <field name="partner_id"/>
+                    <field name="odoo_version"/>
+                    <field name="odoo_has_demo_data" widget="boolean"/>
+                    <field name="host_machine"/>
+                    <field name="storage_total_gb" string="Storage (GB)"/>
+                    <field name="odoo_user_count" string="Odoo-användare"/>
+                    <field name="odoo_coworker_tokens_m" string="1M systemtokens"/>
+                    <field name="state" decoration-danger="state == 'faulty'"
+                           decoration-success="state == 'online'"
+                           decoration-muted="state == 'offline'"/>
+                    <field name="open_alert_count"/>
+                    <field name="is_container" widget="boolean"/>
+                    <field name="is_demo" widget="boolean"/>
+                    <field name="last_seen"/>
+                    <field name="active" column_invisible="True"/>
+                </list>
+            </field>
+        </record>
+    
+        <!-- ── Form View ─────────────────────────────────────────────── -->
+        <record id="view_salt_minion_form" model="ir.ui.view">
+            <field name="name">salt.minion.form</field>
+            <field name="model">salt.minion</field>
+            <field name="arch" type="xml">
+                <form>
+                    <header>
+                        <button name="action_ping"
+                                string="Ping"
+                                type="object"
+                                icon="fa-plug"/>
+                        <button name="action_measure_storage"
+                                string="Mät storage"
+                                type="object"
+                                icon="fa-database"
+                                help="Measure/estimate the four storage rows (LXD host, Dirvish, S3, S3-backup)."/>
+                        <button name="action_fault_cleanup"
+                                string="🧹 Rensa fel"
+                                type="object"
+                                icon="fa-broom"
+                                confirm="Clear all fault injections on this minion?"/>
+                        <field name="state" widget="state_status"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_title d-flex align-items-center gap-3">
+                            <field name="image" widget="image" class="oe_avatar"
+                                   style="float: none;"/>
+                            <h1 class="mb-0"><field name="name" placeholder="Minion ID"/></h1>
+                        </div>
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_show_alerts" type="object"
+                                    class="oe_stat_button" icon="fa-exclamation-triangle">
+                                <div class="o_stat_info">
+                                    <span class="o_stat_text">Driftslarm</span>
+                                    <field name="open_alert_count" class="o_stat_value" widget="statinfo"/>
+                                </div>
+                            </button>
+                        </div>
+                        <group>
+                            <group string="Identity">
+                                <field name="private_ip"/>
+                                <field name="public_ip"/>
+                                <field name="external_domain"/>
+                                <field name="has_gateway"/>
+                                <field name="os"/>
+                                <field name="os_version"/>
+                                <field name="dc"/>
+                                <field name="roles"/>
+                            </group>
+                            <group string="Context">
+                                <field name="customer"/>
+                                <field name="partner_id"/>
+                                <field name="odoo_version"/>
+                                <field name="odoo_has_demo_data"/>
+                                <field name="is_container"/>
+                                <field name="host_machine"
+                                       invisible="not is_container"/>
+                                <field name="is_demo"/>
+                            </group>
                         </group>
-                        <group string="Context">
-                            <field name="customer"/>
-                            <field name="partner_id"/>
-                            <field name="odoo_version"/>
-                            <field name="odoo_has_demo_data"/>
-                            <field name="is_container"/>
-                            <field name="host_machine"
-                                   invisible="not is_container"/>
-                            <field name="is_demo"/>
-                        </group>
+                        <notebook>
+                            <page string="Storage">
+                                <group>
+                                    <field name="storage_total_gb"
+                                           string="Totalt diskutnyttjande (GB)"/>
+                                    <field name="storage_ids" nolabel="1" colspan="2">
+                                        <list editable="bottom">
+                                            <field name="storage_type"/>
+                                            <field name="provider"/>
+                                            <field name="size_gb"/>
+                                            <field name="method"/>
+                                            <field name="measured_at"/>
+                                        </list>
+                                    </field>
+                                </group>
+                            </page>
+                            <page string="Återskapa data"
+                                  invisible="not snapshot_ids">
+                                <group>
+                                    <p>Senaste restic-snapshots för kundens backup-bucket. Klicka på kopiera-knappen för att få exakt restore-kommando för det datumet. Data återskapas på restic-minionen under /restore/&lt;kund&gt;.</p>
+                                    <field name="snapshot_ids" nolabel="1" colspan="2">
+                                        <list>
+                                            <field name="time"/>
+                                            <field name="short_id"/>
+                                            <field name="tags"/>
+                                            <field name="size"/>
+                                            <field name="file_count"/>
+                                            <button name="action_copy_restore_cmd"
+                                                    type="object"
+                                                    icon="fa-copy"
+                                                    class="btn-link"
+                                                    title="Kopiera restore-kommando till urklipp"/>
+                                        </list>
+                                    </field>
+                                </group>
+                            </page>
+                            <page string="Odoo"
+                                  invisible="not odoo_version and not odoo_databases">
+                                <group>
+                                    <group>
+                                        <field name="odoo_version"/>
+                                        <field name="odoo_databases"/>
+                                        <field name="odoo_has_demo_data"/>
+                                        <field name="odoo_stats_synced"/>
+                                    </group>
+                                    <group>
+                                        <field name="odoo_user_count"/>
+                                        <field name="odoo_last_login"/>
+                                        <field name="odoo_coworker_count"/>
+                                        <field name="odoo_coworker_tokens_m"/>
+                                    </group>
+                                </group>
+                            </page>
+                            <page string="Status">
+                                <group>
+                                    <field name="state"/>
+                                    <field name="open_alert_count"/>
+                                    <field name="last_seen"/>
+                                    <field name="last_sync"/>
+                                </group>
+                            </page>
+                            <page string="Notes">
+                                <group>
+                                    <field name="notes" nolabel="1" colspan="2"/>
+                                </group>
+                            </page>
+                            <page string="Grains">
+                                <group>
+                                    <field name="grains_json" nolabel="1" colspan="2"/>
+                                </group>
+                            </page>
+                        </notebook>
+                        <widget name="web_ribbon" title="Inaktiv"
+                                bg_color="text-bg-danger"
+                                invisible="active"/>
+                    </sheet>
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+    
+        <!-- ── Search View ───────────────────────────────────────────── -->
+        <record id="view_salt_minion_search" model="ir.ui.view">
+            <field name="name">salt.minion.search</field>
+            <field name="model">salt.minion</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="name"/>
+                    <field name="private_ip"/>
+                    <field name="public_ip"/>
+                    <field name="customer"/>
+                    <field name="partner_id"/>
+                    <field name="dc"/>
+                    <field name="roles"/>
+                    <field name="host_machine"/>
+                    <separator/>
+                    <filter name="inactive" string="Inaktiverade"
+                            domain="[('active', '=', False)]"/>
+                    <filter name="active_only" string="Aktiva"
+                            domain="[('active', '=', True)]"/>
+                    <separator/>
+                    <filter name="online" string="Online"
+                            domain="[('state', '=', 'online')]"/>
+                    <filter name="offline" string="Offline"
+                            domain="[('state', '=', 'offline')]"/>
+                    <filter name="faulty" string="Har larm (faulty)"
+                            domain="[('state', '=', 'faulty')]"/>
+                    <filter name="containers" string="Containers"
+                            domain="[('is_container', '=', True)]"/>
+                    <separator/>
+                    <filter name="demo" string="Demo/Test"
+                            domain="[('is_demo', '=', True)]"/>
+                    <filter name="production" string="Production"
+                            domain="[('is_demo', '=', False)]"/>
+                    <filter name="demo_data" string="Odoo demodata"
+                            domain="[('odoo_has_demo_data', '=', True)]"/>
+                    <separator/>
+                    <filter name="ska" string="SKA" domain="[('dc', '=', 'ska')]"/>
+                    <filter name="sto" string="STO" domain="[('dc', '=', 'sto')]"/>
+                    <separator/>
+                    <group expand="0" string="Group By">
+                        <filter name="group_by_dc" string="Datacenter"
+                                context="{'group_by':'dc'}"/>
+                        <filter name="group_by_state" string="Status"
+                                context="{'group_by':'state'}"/>
+                        <filter name="group_by_os" string="OS"
+                                context="{'group_by':'os'}"/>
+                        <filter name="group_by_host" string="LXD Host"
+                                context="{'group_by':'host_machine'}"/>
+                        <filter name="group_by_customer" string="Customer"
+                                context="{'group_by':'partner_id'}"/>
                     </group>
-                    <notebook>
-                        <page string="Storage">
-                            <group>
-                                <field name="storage_total_gb"
-                                       string="Totalt diskutnyttjande (GB)"/>
-                                <field name="storage_ids" nolabel="1" colspan="2">
-                                    <list editable="bottom">
-                                        <field name="storage_type"/>
-                                        <field name="provider"/>
-                                        <field name="size_gb"/>
-                                        <field name="method"/>
-                                        <field name="measured_at"/>
-                                    </list>
-                                </field>
-                            </group>
-                        </page>
-                        <page string="Odoo"
-                              invisible="not odoo_version and not odoo_databases">
-                            <group>
-                                <group>
-                                    <field name="odoo_version"/>
-                                    <field name="odoo_databases"/>
-                                    <field name="odoo_has_demo_data"/>
-                                    <field name="odoo_stats_synced"/>
-                                </group>
-                                <group>
-                                    <field name="odoo_user_count"/>
-                                    <field name="odoo_last_login"/>
-                                    <field name="odoo_coworker_count"/>
-                                    <field name="odoo_coworker_tokens_m"/>
-                                </group>
-                            </group>
-                        </page>
-                        <page string="Status">
-                            <group>
-                                <field name="state"/>
-                                <field name="open_alert_count"/>
-                                <field name="last_seen"/>
-                                <field name="last_sync"/>
-                            </group>
-                        </page>
-                        <page string="Notes">
-                            <group>
-                                <field name="notes" nolabel="1" colspan="2"/>
-                            </group>
-                        </page>
-                        <page string="Grains">
-                            <group>
-                                <field name="grains_json" nolabel="1" colspan="2"/>
-                            </group>
-                        </page>
-                    </notebook>
-                    <widget name="web_ribbon" title="Inaktiv"
-                            bg_color="text-bg-danger"
-                            invisible="active"/>
-                </sheet>
-                <chatter/>
-            </form>
-        </field>
-    </record>
-
-    <!-- ── Search View ───────────────────────────────────────────── -->
-    <record id="view_salt_minion_search" model="ir.ui.view">
-        <field name="name">salt.minion.search</field>
-        <field name="model">salt.minion</field>
-        <field name="arch" type="xml">
-            <search>
-                <field name="name"/>
-                <field name="private_ip"/>
-                <field name="public_ip"/>
-                <field name="customer"/>
-                <field name="partner_id"/>
-                <field name="dc"/>
-                <field name="roles"/>
-                <field name="host_machine"/>
-                <separator/>
-                <filter name="inactive" string="Inaktiverade"
-                        domain="[('active', '=', False)]"/>
-                <filter name="active_only" string="Aktiva"
-                        domain="[('active', '=', True)]"/>
-                <separator/>
-                <filter name="online" string="Online"
-                        domain="[('state', '=', 'online')]"/>
-                <filter name="offline" string="Offline"
-                        domain="[('state', '=', 'offline')]"/>
-                <filter name="faulty" string="Har larm (faulty)"
-                        domain="[('state', '=', 'faulty')]"/>
-                <filter name="containers" string="Containers"
-                        domain="[('is_container', '=', True)]"/>
-                <separator/>
-                <filter name="demo" string="Demo/Test"
-                        domain="[('is_demo', '=', True)]"/>
-                <filter name="production" string="Production"
-                        domain="[('is_demo', '=', False)]"/>
-                <filter name="demo_data" string="Odoo demodata"
-                        domain="[('odoo_has_demo_data', '=', True)]"/>
-                <separator/>
-                <filter name="ska" string="SKA" domain="[('dc', '=', 'ska')]"/>
-                <filter name="sto" string="STO" domain="[('dc', '=', 'sto')]"/>
-                <separator/>
-                <group expand="0" string="Group By">
-                    <filter name="group_by_dc" string="Datacenter"
-                            context="{'group_by':'dc'}"/>
-                    <filter name="group_by_state" string="Status"
-                            context="{'group_by':'state'}"/>
-                    <filter name="group_by_os" string="OS"
-                            context="{'group_by':'os'}"/>
-                    <filter name="group_by_host" string="LXD Host"
-                            context="{'group_by':'host_machine'}"/>
-                    <filter name="group_by_customer" string="Customer"
-                            context="{'group_by':'partner_id'}"/>
-                </group>
-            </search>
-        </field>
-    </record>
-
-    <!-- ── Action ───────────────────────────────────────────────── -->
-    <record id="action_salt_minion" model="ir.actions.act_window">
-        <field name="name">Minions</field>
-        <field name="res_model">salt.minion</field>
-        <field name="view_mode">kanban,list,form</field>
-        <field name="search_view_id" ref="view_salt_minion_search"/>
-    </record>
-
-    <!-- ── Menu ──────────────────────────────────────────────────── -->
-    <menuitem id="menu_salt_minion"
-              name="Minions"
-              parent="menu_saltstack_root"
-              action="action_salt_minion"
-              groups="saltstack.group_saltstack_officer"
-              sequence="30"/>
-
-</odoo>
+                </search>
+            </field>
+        </record>
+    
+        <!-- ── Action ───────────────────────────────────────────────── -->
+        <record id="action_salt_minion" model="ir.actions.act_window">
+            <field name="name">Minions</field>
+            <field name="res_model">salt.minion</field>
+            <field name="view_mode">kanban,list,form</field>
+            <field name="search_view_id" ref="view_salt_minion_search"/>
+        </record>
+    
+        <!-- ── Menu ──────────────────────────────────────────────────── -->
+        <menuitem id="menu_salt_minion"
+                  name="Minions"
+                  parent="menu_saltstack_root"
+                  action="action_salt_minion"
+                  groups="saltstack.group_saltstack_officer"
+                  sequence="30"/>
+    
+    </odoo>

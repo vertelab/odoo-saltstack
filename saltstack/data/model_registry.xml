@@ -1,16 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<odoo>
-    <!-- Register model references for ir.model.access.csv -->
-    <record id="model_salt_minion" model="ir.model">
-        <field name="name">salt.minion</field>
-        <field name="model">salt.minion</field>
-    </record>
-    <record id="model_salt_pillar" model="ir.model">
-        <field name="name">salt.pillar</field>
-        <field name="model">salt.pillar</field>
-    </record>
-    <record id="model_saltstack_alert" model="ir.model">
-        <field name="name">saltstack.alert</field>
-        <field name="model">saltstack.alert</field>
-    </record>
-</odoo>
+    <odoo>
+        <!-- Register model references for ir.model.access.csv -->
+        <record id="model_salt_minion" model="ir.model">
+            <field name="name">salt.minion</field>
+            <field name="model">salt.minion</field>
+        </record>
+        <record id="model_salt_pillar" model="ir.model">
+            <field name="name">salt.pillar</field>
+            <field name="model">salt.pillar</field>
+        </record>
+        <record id="model_saltstack_alert" model="ir.model">
+            <field name="name">saltstack.alert</field>
+            <field name="model">saltstack.alert</field>
+        </record>
+        <record id="model_salt_minion_snapshot" model="ir.model">
+            <field name="name">salt.minion.snapshot</field>
+            <field name="model">salt.minion.snapshot</field>
+        </record>
+    </odoo>

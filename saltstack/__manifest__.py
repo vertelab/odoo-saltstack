@@ -2,7 +2,7 @@
 
 {
     'name': 'SaltStack Infrastructure',
-    'version': '18.0.1.28.0',
+    'version': '18.0.1.30.0',
     'category': 'Infrastructure',
     'summary': 'Manage SaltStack minions, pillar anchors and infrastructure',
     'description': """
@@ -17,6 +17,8 @@ Features:
 - Fault injection server actions for testing the monitoring chain
 - Driftlarm webhook (/saltstack/alert) med auto-genererad API-nyckel
 - SaltStack API configuration in Settings
+- Restic-snapshots per minion ("Återskapa data"): senaste 25 snapshots med
+  kopiera-restore-kommando per rad, synkade från restic-status.json
     """,
     'author': 'Vertel Sverige AB',
     'license': 'AGPL-3',
@@ -26,9 +28,12 @@ Features:
         'security/saltstack_groups.xml',
         'data/model_registry.xml',
         'security/ir_model_access.xml',
+        'security/ir_model_access_snapshot.xml',
         'data/config_data.xml',
         'data/fault_actions.xml',
         'data/sync_cron.xml',
+        'data/sync_snapshot_cron.xml',
+        'data/auto_resolve_cron.xml',
         'data/sync_actions.xml',
         'data/minion_update_actions.xml',
         'views/saltstack_menu_views.xml',

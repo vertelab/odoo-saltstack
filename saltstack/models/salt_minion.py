@@ -187,6 +187,14 @@ class SaltMinion(models.Model):
         'minion_id',
         string='Storage',
     )
+    snapshot_ids = fields.One2many(
+        'salt.minion.snapshot',
+        'minion_id',
+        string='Restic-snapshots (Återskapa data)',
+        help='Senaste restic-snapshots för kundens backup-bucket — synkade '
+             'från restic-status.json. Används för att återskapa data ur ett '
+             'tidigare datum.',
+    )
     storage_total_gb = fields.Float(
         string='Totalt diskutnyttjande (GB)',
         compute='_compute_storage_total',
