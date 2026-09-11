@@ -232,7 +232,7 @@
                                 </group>
                             </page>
                             <page string="Återskapa data"
-                                  invisible="not snapshot_ids">
+                                  invisible="not snapshot_ids and not dirvish_snapshot_ids">
                                 <!-- Tydlig informationsruta: VAR körs kommandot? -->
                                 <div class="alert alert-info" role="alert">
                                     <h4 class="alert-title">
@@ -245,16 +245,27 @@
                                         klistra in kommandot — eller använd <b>SSH-kommandot</b>
                                         (kopiera-knappen längst till höger), som redan innehåller
                                         både maskin och <code>sudo</code> och kan klistras in varifrån som helst.
-                                        Data hamnar under <code>/restore/&lt;kund&gt;</code> på den maskinen.
                                     </p>
                                     <p class="mb-0">
                                         <i class="fa fa-info-circle me-1"/>
-                                        Kommandot måste köras därför att kundens credentials
-                                        (<code>/etc/rclone/&lt;kund&gt;.conf</code> och
-                                        <code>/etc/garage-backup/restic-password</code>) bara finns på den maskinen.
+                                        <b>Restic</b>-rader: kommandot måste köras därför att kundens
+                                        credentials (<code>/etc/rclone/&lt;kund&gt;.conf</code> och
+                                        <code>/etc/garage-backup/restic-password</code>) bara finns på
+                                        den maskinen. Data hamnar under <code>/restore/&lt;kund&gt;</code>.
+                                        <br/>
+                                        <b>Dirvish</b>-rader: listan visar bara datum som har data
+                                        (branches med <code>tree/</code>). Datumkataloger utan data
+                                        (misslyckade backuper) visas inte — det finns inget att
+                                        återskapa där. Data hamnar under
+                                        <code>/restore/&lt;vault&gt;-&lt;datum&gt;</code>.
                                     </p>
                                 </div>
-                                <group>
+                                <!-- ── Restic-snapshots ─────────────────────────── -->
+                                <group invisible="not snapshot_ids">
+                                    <h4>
+                                        <i class="fa fa-database me-1"/>
+                                        Restic (Garage S3)
+                                    </h4>
                                     <field name="snapshot_ids" nolabel="1" colspan="2">
                                         <list>
                                             <field name="time"/>
@@ -268,6 +279,31 @@
                                                     icon="fa-terminal"
                                                     class="btn-link"
                                                     title="Kopiera kommandot (att köra PÅ backup-servern)"/>
+                                            <button name="action_copy_restore_cmd_ssh"
+                                                    type="object"
+                                                    icon="fa-copy"
+                                                    class="btn-link"
+                                                    title="Kopiera SSH-kommandot (innehåller maskinen — kan köras varifrån som helst)"/>
+                                        </list>
+                                    </field>
+                                </group>
+                                <!-- ── Dirvish-snapshots ────────────────────────── -->
+                                <group invisible="not dirvish_snapshot_ids">
+                                    <h4>
+                                        <i class="fa fa-hdd-o me-1"/>
+                                        Dirvish
+                                    </h4>
+                                    <field name="dirvish_snapshot_ids" nolabel="1" colspan="2">
+                                        <list>
+                                            <field name="time"/>
+                                            <field name="vault"/>
+                                            <field name="server_label" string="Körs på"/>
+                                            <field name="path"/>
+                                            <button name="action_copy_restore_cmd"
+                                                    type="object"
+                                                    icon="fa-terminal"
+                                                    class="btn-link"
+                                                    title="Kopiera kommandot (att köra PÅ dirvish-servern)"/>
                                             <button name="action_copy_restore_cmd_ssh"
                                                     type="object"
                                                     icon="fa-copy"

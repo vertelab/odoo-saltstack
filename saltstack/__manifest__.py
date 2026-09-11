@@ -2,7 +2,7 @@
 
 {
     'name': 'SaltStack Infrastructure',
-    'version': '18.0.1.34.0',
+    'version': '18.0.1.35.0',
     'category': 'Infrastructure',
     'summary': 'Manage SaltStack minions, pillar anchors and infrastructure',
     'description': """
@@ -22,6 +22,10 @@ Features:
   Backup-server-registret (salt.backup.server) gör att varje rad visar
   VILKEN maskin kommandot körs på — och att fler backup-servrar kan läggas
   till utan kodändring.
+- Dirvish-snapshots i samma flik: en rad per branch MED data (tree/) i
+  varje vault, synkade från dirvish-status.json + dirvish-restore.sh --list.
+  Branches utan tree/ (misslyckade backuper, tomma datumkataloger) tas
+  aldrig med.
         """,
     'author': 'Vertel Sverige AB',
     'license': 'AGPL-3',
@@ -36,6 +40,7 @@ Features:
         'data/fault_actions.xml',
         'data/sync_cron.xml',
         'data/sync_snapshot_cron.xml',
+        'data/sync_dirvish_snapshot_cron.xml',
         'data/auto_resolve_cron.xml',
         'data/backup_server_data.xml',
         'data/sync_actions.xml',

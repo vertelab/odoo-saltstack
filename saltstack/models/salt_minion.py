@@ -199,9 +199,19 @@ class SaltMinion(models.Model):
         'salt.minion.snapshot',
         'minion_id',
         string='Restic-snapshots (Återskapa data)',
+        domain=[('backup_type', '=', 'restic')],
         help='Senaste restic-snapshots för kundens backup-bucket — synkade '
              'från restic-status.json. Används för att återskapa data ur ett '
              'tidigare datum.',
+    )
+    dirvish_snapshot_ids = fields.One2many(
+        'salt.minion.snapshot',
+        'minion_id',
+        string='Dirvish-snapshots (Återskapa data)',
+        domain=[('backup_type', '=', 'dirvish')],
+        help='Dirvish-branches MED data (tree/) för denna maskins vault — '
+             'synkade från dirvish-status.json + dirvish-restore.sh --list. '
+             'Datumkataloger utan data (misslyckade backuper) tas aldrig med.',
     )
     restore_target_info = fields.Char(
         string='Kör restore-kommandon på',
@@ -247,7 +257,8 @@ class SaltMinion(models.Model):
             rec.storage_estimated_gb = round(
                 sum((rows - measured).mapped('size_gb')), 2)
 
-    @api.depends('snapshot_ids', 'snapshot_ids.server_label')
+    @api.depends('snapshot_ids', 'snapshot_ids.server_label',
+                 'dirvish_snapshot_ids', 'dirvish_snapshot_ids.server_label')
     def _compute_restore_target_info(self):
         """Vilken maskin restore-kommandona körs på.
 
@@ -255,19 +266,22 @@ class SaltMinion(models.Model):
         rader faller vi tillbaka på backup-server-registret/config-parametern
         så att texten alltid är korrekt — även för en ny kund innan första
         synken hunnit köra.
+
+        Har minionen både restic- och dirvish-rader visas båda maskinerna
+        (de kan vara olika).
         """
         Server = self.env['salt.backup.server']
         for rec in self:
-            label = ''
-            for snap in rec.snapshot_ids:
-                if snap.server_label:
-                    label = snap.server_label
-                    break
-            if not label:
+            labels = []
+            for snap in (rec.snapshot_ids | rec.dirvish_snapshot_ids):
+                if snap.server_label and snap.server_label not in labels:
+                    labels.append(snap.server_label)
+            if not labels:
                 fb_name, fb_host, _h, _b = Server._fallback_server_info()
                 if fb_name:
-                    label = '%s (%s)' % (fb_name, fb_host) if fb_host else fb_name
-            rec.restore_target_info = label or False
+                    labels.append(
+                        '%s (%s)' % (fb_name, fb_host) if fb_host else fb_name)
+            rec.restore_target_info = ' / '.join(labels) or False
     is_demo = fields.Boolean(
         string='Demo / Test',
         default=False,

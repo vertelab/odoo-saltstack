@@ -1,13 +1,19 @@
 # Copyright (C) 2026 Vertel Sverige AB (<https://vertel.se>).
-"""Restic snapshots per minion — the "Återskapa data" tab.
+"""Backup-snapshots per minion — the "Återskapa data" tab.
 
-Each row is one restic snapshot for a customer bucket, synced from the
-restic minion's /var/log/garage-backup/restic-status.json (which lists the
-25 most recent snapshots per customer — matching the retention policy
-7d + 4w + 12m + 2y ≈ 25 restorable dates).
+Två typer av backup hanteras:
 
-The row carries the exact restore command for that snapshot so an operator
-can copy it and restore data from any given date.
+* **Restic** (`backup_type='restic'`) — en rad per restic-snapshot för en
+  kundbucket, synkad från restic-minionens
+  /var/log/garage-backup/restic-status.json (25 senaste per kund = retention
+  7d + 4w + 12m + 2y ≈ 25 återställbara datum).
+* **Dirvish** (`backup_type='dirvish'`) — en rad per **branch med data** i en
+  dirvish-vault, synkad från serverns dirvish-status.json. Endast branches
+  som har `tree/` tas med: en branch utan `tree/` är en misslyckad backup
+  (t.ex. disk full → error (11)) och har ingen data att återskapa.
+
+Varje rad bär det exakta restore-kommandot för just den tidpunkten, så att
+en operatör kan kopiera det och återskapa data från valfritt datum.
 """
 
 import json
@@ -22,9 +28,26 @@ _logger = logging.getLogger(__name__)
 
 class SaltMinionSnapshot(models.Model):
     _name = 'salt.minion.snapshot'
-    _description = 'Restic-snapshot (Återskapa data)'
+    _description = 'Backup-snapshot (Återskapa data)'
     _order = 'time desc, id desc'
 
+    backup_type = fields.Selection(
+        selection=[
+            ('restic', 'Restic'),
+            ('dirvish', 'Dirvish'),
+        ],
+        string='Backup-typ',
+        default='restic',
+        required=True,
+        index=True,
+        help='Vilken typ av backup raden kommer från — styr vilken maskin '
+             'och vilket restore-kommando som används.',
+    )
+    vault = fields.Char(
+        string='Vault',
+        help='Dirvish-vaultens namn (samma som minionens namn). Tomt för '
+             'Restic-rader.',
+    )
     minion_id = fields.Many2one(
         'salt.minion',
         string='Minion',
@@ -89,10 +112,16 @@ class SaltMinionSnapshot(models.Model):
     )
 
     _sql_constraints = [
+        # Namnet är ändrat (till _uniq2) eftersom den gamla constrainten
+        # (minion_snapshot_uniq på minion_id,snapshot_id) ligger kvar i
+        # databasen med sitt gamla namn — Odoo skulle då hoppa över att skapa
+        # den nya. Med ett nytt namn skapas den korrekt (additivt, ingen data
+        # rörs). Den gamla constrainten är striktare men harmlös: dirvish- och
+        # restic-rader har unika snapshot_id per minion ändå.
         (
-            'minion_snapshot_uniq',
-            'unique (minion_id, snapshot_id)',
-            'En snapshot-rad för denna minion finns redan.',
+            'minion_snapshot_uniq2',
+            'unique (minion_id, backup_type, snapshot_id)',
+            'En snapshot-rad för denna minion och backup-typ finns redan.',
         ),
     ]
 
@@ -314,6 +343,206 @@ class SaltMinionSnapshot(models.Model):
         if unmatched:
             _logger.warning(
                 'Snapshot sync: %d kund(er) utan minion - ej synkade: %s',
+                len(unmatched), ', '.join(sorted(unmatched)))
+        return {'created': created, 'updated': updated,
+                'removed': removed, 'unmatched': sorted(unmatched)}
+
+    # ── Dirvish-synk ─────────────────────────────────────────────────────
+    #
+    # Dirvish backar upp HELA maskiner (vault = maskinens namn, t.ex. tull0,
+    # fors, tull1). Varje branch är en datumkatalog /srv/backup/<vault>/<datum>/.
+    # En branch UTAN tree/ är en misslyckad backup (disk full → error (11)) och
+    # har ingen data — sådana tas ALDRIG med ("där finns ingen data att
+    # återskapa"). Bara branches med tree/ blir rader i fliken.
+
+    # Backup-servrar som kör dirvish och deras vaults. Vaultens namn är
+    # minionens namn (tull0, fors, tull1). Servern är den maskin där
+    # /srv/backup ligger och restore-kommandot körs.
+    DIRVISH_SERVERS = (
+        # (salt-minion, dirvish-status.json-sökväg)
+        'dirvishtull0',
+        'dirvishtull1',
+        'strand',
+    )
+
+    @api.model
+    def _read_dirvish_status(self, minion_name):
+        """Läs dirvish-status.json från en dirvish-server via Salt API."""
+        try:
+            result = self.env['saltstack.api'].salt_call(
+                'local', minion_name, 'cmd.run',
+                'cat /var/log/dirvish-status/dirvish-status.json',
+                timeout=45,
+            )
+            raw = json.loads(result).get('return', [{}])[0].get(minion_name, '')
+        except Exception as e:
+            _logger.warning('dirvish status read failed on %s: %s',
+                            minion_name, e)
+            return None
+        try:
+            return json.loads(str(raw))
+        except (ValueError, TypeError):
+            _logger.warning('dirvish status JSON unparsable on %s', minion_name)
+            return None
+
+    @api.model
+    def _read_dirvish_restorable(self, minion_name, vault):
+        """Läs återskapsbara datum (branches MED tree/) för en vault.
+
+        Kör dirvish-restore.sh --list på dirvish-servern — den filtrerar bort
+        branches utan tree/ (tomma datumkataloger). Returnerar en lista av
+        datum-strängar, nyast först.
+        """
+        try:
+            result = self.env['saltstack.api'].salt_call(
+                'local', minion_name, 'cmd.run',
+                '/usr/local/bin/dirvish-restore.sh %s --list' % vault,
+                timeout=60,
+            )
+            raw = json.loads(result).get('return', [{}])[0].get(minion_name, '')
+        except Exception as e:
+            _logger.warning('dirvish restore list failed on %s/%s: %s',
+                            minion_name, vault, e)
+            return []
+        dates = []
+        for line in str(raw).splitlines():
+            line = line.strip()
+            # Datumrader är 8 siffror (YYYYMMDD) — allt annat är rubriker.
+            if len(line) == 8 and line.isdigit():
+                dates.append(line)
+        return dates
+
+    @api.model
+    def _dirvish_server_for_vault(self, vault):
+        """Hitta backup-servern (salt.backup.server) för en dirvish-vault.
+
+        Matchar serverns `customers`-lista mot vaultens namn (samma mönster
+        som Restic). Faller tillbaka på en dirvish-server utan kundlista.
+        """
+        BackupServer = self.env['salt.backup.server']
+        servers = BackupServer.search([
+            ('active', '=', True), ('role', '=', 'dirvish')])
+        vault_l = (vault or '').strip().lower()
+        for srv in servers:
+            if vault_l in srv.customer_list():
+                return srv
+        for srv in servers:
+            if not srv.customer_list():
+                return srv
+        return BackupServer.browse()
+
+    @api.model
+    def action_sync_dirvish_snapshots(self):
+        """Synka dirvish-branches (MED data) till snapshot-rader.
+
+        För varje dirvish-server och varje vault på den:
+          * läs återskapsbara datum via dirvish-restore.sh --list
+            (filtrerar bort branches utan tree/ = tomma datumkataloger)
+          * matcha vaultens namn mot en salt.minion
+          * skapa/uppdatera en rad per datum med restore-kommandot
+
+        Idempotent: befintliga rader uppdateras, försvunna datum tas bort.
+        Rör aldrig restic-rader (backup_type='dirvish' är filtret).
+        """
+        BackupServer = self.env['salt.backup.server']
+        created = updated = removed = 0
+        unmatched = set()
+
+        for minion_name in self.DIRVISH_SERVERS:
+            status = self._read_dirvish_status(minion_name)
+            if not status:
+                continue
+            vaults = status.get('vaults') or []
+            for v in vaults:
+                vault = (v.get('name') or '').strip()
+                if not vault:
+                    continue
+                # Bara vaults som faktiskt är aktiva/initierade — en vault utan
+                # init har ingen data alls.
+                if v.get('init') != '✅':
+                    continue
+
+                minion = self.env['salt.minion'].search(
+                    [('name', '=', vault)], limit=1)
+                if not minion:
+                    unmatched.add(vault)
+                    continue
+
+                dates = self._read_dirvish_restorable(minion_name, vault)
+                if not dates:
+                    continue
+
+                srv = self._dirvish_server_for_vault(vault)
+                if srv:
+                    srv_host = srv.effective_login_host()
+                    helper = srv.helper_path or '/usr/local/bin/dirvish-restore.sh'
+                    srv_label = srv.restore_display()
+                    srv_target = srv.ssh_target()
+                    cmd_prefix = srv.command_prefix()
+                else:
+                    srv_host = ''
+                    helper = '/usr/local/bin/dirvish-restore.sh'
+                    srv_label = minion_name
+                    srv_target = ''
+                    cmd_prefix = 'sudo '
+
+                existing = {
+                    r.snapshot_id: r
+                    for r in self.search([
+                        ('minion_id', '=', minion.id),
+                        ('backup_type', '=', 'dirvish'),
+                    ])
+                }
+                keep = set()
+
+                for date in dates:
+                    keep.add(date)
+                    plain = '%s%s %s %s' % (
+                        cmd_prefix, helper, vault, date)
+                    ssh_cmd = ('ssh %s "%s"' % (srv_target, plain)
+                               if srv_target else plain)
+                    # Branch-datumet (YYYYMMDD) → datetime så att tidsordning
+                    # och visning fungerar som för restic-raderna.
+                    try:
+                        t = datetime.strptime(date, '%Y%m%d')
+                    except ValueError:
+                        t = False
+                    vals = {
+                        'minion_id': minion.id,
+                        'backup_type': 'dirvish',
+                        'vault': vault,
+                        'server_id': srv.id if srv else False,
+                        'server_label': srv_label,
+                        'server_host': srv_host,
+                        'snapshot_id': date,
+                        'short_id': date,
+                        'time': t,
+                        'hostname': vault,
+                        'tags': 'dirvish',
+                        'path': '/srv/backup/%s/%s/tree' % (vault, date),
+                        'restore_cmd': plain,
+                        'restore_cmd_ssh': ssh_cmd,
+                        'synced_at': fields.Datetime.now(),
+                    }
+                    rec = existing.get(date)
+                    if rec:
+                        rec.write(vals)
+                        updated += 1
+                    else:
+                        self.create(vals)
+                        created += 1
+
+                for date, rec in existing.items():
+                    if date not in keep:
+                        rec.unlink()
+                        removed += 1
+
+        _logger.info(
+            'Dirvish snapshot sync: %d created, %d updated, %d removed',
+            created, updated, removed)
+        if unmatched:
+            _logger.warning(
+                'Dirvish sync: %d vault(s) utan minion - ej synkade: %s',
                 len(unmatched), ', '.join(sorted(unmatched)))
         return {'created': created, 'updated': updated,
                 'removed': removed, 'unmatched': sorted(unmatched)}

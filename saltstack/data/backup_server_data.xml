@@ -29,5 +29,62 @@ Inloggning: ssh ubuntu@192.168.11.112 (ubuntu-kontot har NOPASSWD-sudo,
 verifierat 2026-09-10). Root-inloggning är också tillåten
 (PermitRootLogin yes) men ubuntu är standard.</field>
         </record>
+
+        <!-- ── Dirvish-servrar ──────────────────────────────────────── -->
+        <!-- Var och en backar upp bestämda maskiner (vaults). `customers`
+             listar vault-namnen (= minionens namn) så att varje dirvish-rad
+             pekar ut RÄTT maskin. Verifierat 2026-09-11:
+               strand        → tull0
+               dirvishtull0   → tull1 (+ dirvish-t1, kind)
+               dirvishtull1   → fors (+ övriga ~50 vaults) -->
+        <record id="backup_server_strand" model="salt.backup.server">
+            <field name="name">strand</field>
+            <field name="role">dirvish</field>
+            <field name="login_host">62.109.49.53</field>
+            <field name="login_user">ubuntu</field>
+            <field name="use_sudo" eval="True"/>
+            <field name="helper_path">/usr/local/bin/dirvish-restore.sh</field>
+            <field name="restore_base">/restore</field>
+            <field name="sequence">20</field>
+            <field name="active" eval="True"/>
+            <field name="customers">tull0</field>
+            <field name="notes">Dirvish-server. Backar upp tull0
+(vault /srv/backup/tull0). Restore körs här — /srv/backup ligger lokalt.
+
+Listan över återskapsbara datum kommer från
+dirvish-restore.sh &lt;vault&gt; --list, som filtrerar bort branches utan
+tree/ (tomma datumkataloger = misslyckade backuper).</field>
+        </record>
+        <record id="backup_server_dirvishtull0" model="salt.backup.server">
+            <field name="name">dirvishtull0</field>
+            <field name="role">dirvish</field>
+            <field name="login_host">192.168.11.93</field>
+            <field name="login_user">ubuntu</field>
+            <field name="use_sudo" eval="True"/>
+            <field name="helper_path">/usr/local/bin/dirvish-restore.sh</field>
+            <field name="restore_base">/restore</field>
+            <field name="sequence">21</field>
+            <field name="active" eval="True"/>
+            <field name="customers">tull1
+kind
+dirvish-t1</field>
+            <field name="notes">Dirvish-server (192.168.11.93). Backar upp tull1
+(vault /srv/backup/tull1) samt kind och dirvish-t1.</field>
+        </record>
+        <record id="backup_server_dirvishtull1" model="salt.backup.server">
+            <field name="name">dirvishtull1</field>
+            <field name="role">dirvish</field>
+            <field name="login_host">192.168.11.98</field>
+            <field name="login_user">ubuntu</field>
+            <field name="use_sudo" eval="True"/>
+            <field name="helper_path">/usr/local/bin/dirvish-restore.sh</field>
+            <field name="restore_base">/restore</field>
+            <field name="sequence">22</field>
+            <field name="active" eval="True"/>
+            <field name="notes">Dirvish-server (192.168.11.98). Backar upp fors
+(vault /srv/backup/fors) och ca 50 övriga vaults. Tomt
+`customers`-fält = standard-server för dirvish-vaults som inte matchar
+en annan server.</field>
+        </record>
     </data>
 </odoo>
