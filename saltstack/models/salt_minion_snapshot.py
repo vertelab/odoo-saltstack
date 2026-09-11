@@ -32,6 +32,22 @@ class SaltMinionSnapshot(models.Model):
         ondelete='cascade',
         index=True,
     )
+    server_id = fields.Many2one(
+        'salt.backup.server',
+        string='Backup-server',
+        ondelete='set null',
+        help='Maskinen där restore-kommandot körs (ur backup-server-registret).',
+    )
+    server_label = fields.Char(
+        string='Körs på',
+        help='Visningstext med maskinen, t.ex. "restic (192.168.11.112)". '
+             'Sätts vid synken så att den alltid finns — även om servern inte '
+             'är registrerad än.',
+    )
+    server_host = fields.Char(
+        string='Inloggningsadress',
+        help='Adress att SSH:a till för att köra kommandot.',
+    )
     snapshot_id = fields.Char(
         string='Snapshot-ID',
         required=True,
@@ -60,7 +76,12 @@ class SaltMinionSnapshot(models.Model):
     )
     restore_cmd = fields.Char(
         string='Restore-kommando',
-        help='Exakt kommando för att återskapa data ur just detta snapshot.',
+        help='Kommando att köra PÅ backup-servern (anges i kolumnen Server).',
+    )
+    restore_cmd_ssh = fields.Char(
+        string='SSH-kommando',
+        help='Fullt kommando som kan klistras in varifrån som helst med '
+             'SSH-åtkomst — det innehåller självt vilken maskin det körs på.',
     )
     synced_at = fields.Datetime(
         string='Synkad',
@@ -91,6 +112,15 @@ class SaltMinionSnapshot(models.Model):
             'type': 'ir.actions.client',
             'tag': 'saltstack_copy_value',
             'params': {'value': self.restore_cmd or ''},
+        }
+
+    def action_copy_restore_cmd_ssh(self):
+        """Copy the full SSH one-liner (states which machine to log into)."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'saltstack_copy_value',
+            'params': {'value': self.restore_cmd_ssh or self.restore_cmd or ''},
         }
 
     # ── Synk ─────────────────────────────────────────────────────────────
@@ -126,18 +156,35 @@ class SaltMinionSnapshot(models.Model):
     def _find_minion(self, customer):
         """Match a restic customer to a salt.minion record.
 
-        Matches on the minion name first, then on the customer grain —
-        the same convention used by _measure_s3.
+        Prioritet:
+        1. ``snapshot_customer`` - det explicita fältet. Behovs när
+           bucketnamnet skiljer sig från minionen (t.ex. bucketen
+           "sparv" på minionen "sparv-test") och när grain
+           ``customer`` skrivs över av ``odoo.grains`` (= minion-id).
+        2. Exakt minionnamn.
+        3. ``customer``-grain (ilike).
+
+        Loggar en varning när inget matchar - annars försvinner
+        kunder tyst ur "Återskapa data".
         """
         customer = (customer or '').strip().lower()
         if not customer:
             return self.env['salt.minion']
-        m = self.env['salt.minion'].search(
-            [('name', '=', customer)], limit=1)
+        Minion = self.env['salt.minion']
+        m = Minion.search([('snapshot_customer', '=', customer)], limit=1)
         if m:
             return m
-        return self.env['salt.minion'].search(
-            [('customer', 'ilike', customer)], limit=1)
+        m = Minion.search([('name', '=', customer)], limit=1)
+        if m:
+            return m
+        m = Minion.search([('customer', 'ilike', customer)], limit=1)
+        if m:
+            return m
+        _logger.warning(
+            'Restic-snapshot: ingen minion matchar kund %r - sätt '
+            '"Backup-kund (bucket)" på rätt minion för att '
+            'få fliken "Återskapa data".', customer)
+        return Minion
 
     @api.model
     def _parse_time(self, value):
@@ -167,17 +214,44 @@ class SaltMinionSnapshot(models.Model):
         existing rows are updated by (minion_id, snapshot_id), stale rows
         (snapshots expired by retention) are removed, and the list is capped
         at 25 per minion.
+
+        Varje rad får `server_id` + `server_host` så att det framgår **vilken
+        maskin** restore-kommandot körs på, samt två kommandon:
+        `restore_cmd` (att köra på backup-servern) och `restore_cmd_ssh`
+        (fullt SSH-kommando, självförklarande).
         """
         data = self._read_restic_status()
         if not data:
             return {'error': 'kunde inte läsa restic-status.json', 'created': 0,
                     'updated': 0, 'removed': 0}
 
+        BackupServer = self.env['salt.backup.server']
+        fb_name, fb_host, fb_helper, _fb_base = BackupServer._fallback_server_info()
+
         created = updated = removed = 0
+        unmatched = []
         for row in data.get('customers', []):
-            minion = self._find_minion(row.get('customer', ''))
+            customer = (row.get('customer') or '').strip()
+            minion = self._find_minion(customer)
             if not minion:
+                unmatched.append(customer)
                 continue
+
+            # Vilken maskin kör restore-kommandot för denna kund?
+            srv = BackupServer._find_for_customer(customer)
+            if srv:
+                srv_host = srv.effective_login_host()
+                helper = srv.helper_path or fb_helper
+                srv_label = srv.restore_display()
+                srv_target = srv.ssh_target()
+                cmd_prefix = srv.command_prefix()
+            else:
+                srv_host = fb_host
+                helper = fb_helper
+                srv_label = '%s (%s)' % (fb_name, fb_host) if fb_host else fb_name
+                srv_target = 'ubuntu@%s' % fb_host if fb_host else ''
+                cmd_prefix = 'sudo '
+
             snaps = row.get('snapshots') or []
             # Senaste snapshot (max tid) får storlek/filer från kundraden.
             latest_time = max(
@@ -194,17 +268,24 @@ class SaltMinionSnapshot(models.Model):
                 if not sid:
                     continue
                 keep.add(sid)
-                restore_cmd = 'restic restore %s --target /restore/%s -r %s' % (
-                    sid, row.get('customer', ''), row.get('restore_repo', '?'))
+                plain = '%s%s %s %s' % (cmd_prefix, helper, customer, sid)
+                if srv_target:
+                    ssh_cmd = 'ssh %s "%s"' % (srv_target, plain)
+                else:
+                    ssh_cmd = plain
                 vals = {
                     'minion_id': minion.id,
+                    'server_id': srv.id if srv else False,
+                    'server_label': srv_label,
+                    'server_host': srv_host,
                     'snapshot_id': sid,
                     'short_id': snap.get('short_id') or sid[:12],
                     'time': self._parse_time(snap.get('time')),
                     'hostname': snap.get('hostname', ''),
                     'tags': ', '.join(snap.get('tags') or []),
                     'path': ', '.join(snap.get('paths') or []),
-                    'restore_cmd': restore_cmd,
+                    'restore_cmd': plain,
+                    'restore_cmd_ssh': ssh_cmd,
                     'synced_at': fields.Datetime.now(),
                 }
                 if snap.get('time') == latest_time:
@@ -230,4 +311,9 @@ class SaltMinionSnapshot(models.Model):
 
         _logger.info('Snapshot sync: %d created, %d updated, %d removed',
                      created, updated, removed)
-        return {'created': created, 'updated': updated, 'removed': removed}
+        if unmatched:
+            _logger.warning(
+                'Snapshot sync: %d kund(er) utan minion - ej synkade: %s',
+                len(unmatched), ', '.join(sorted(unmatched)))
+        return {'created': created, 'updated': updated,
+                'removed': removed, 'unmatched': sorted(unmatched)}

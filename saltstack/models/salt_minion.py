@@ -81,6 +81,14 @@ class SaltMinion(models.Model):
         string='Kund (grain)',
         help='Customer name if this is a customer container (grain mirror).',
     )
+    snapshot_customer = fields.Char(
+        string='Backup-kund (bucket)',
+        help='Kundnamn i backup-rapporten (restic-status.json) när det '
+             'skiljer sig från minionens namn — t.ex. bucketen '
+             '"sparv" på minionen "sparv-test". Används av '
+             '"Återskapa data" och S3-mätningen för att hitta '
+             'rätt minion. Lämnas tom när namnet stämmer.',
+    )
     partner_id = fields.Many2one(
         'res.partner',
         string='Kund',
@@ -195,10 +203,31 @@ class SaltMinion(models.Model):
              'från restic-status.json. Används för att återskapa data ur ett '
              'tidigare datum.',
     )
+    restore_target_info = fields.Char(
+        string='Kör restore-kommandon på',
+        compute='_compute_restore_target_info',
+        help='Maskinen där restore-kommandona körs — visas högst upp på '
+             '"Återskapa data"-fliken så att det alltid framgår var man '
+             'klistrar in kommandot.',
+    )
     storage_total_gb = fields.Float(
         string='Totalt diskutnyttjande (GB)',
         compute='_compute_storage_total',
         digits=(12, 2),
+    )
+    storage_measured_gb = fields.Float(
+        string='Uppmätt disk (GB)',
+        compute='_compute_storage_total',
+        digits=(12, 2),
+        help='Summan av de rader som är faktiskt uppmätta (LXD-host, S3, '
+             'S3-backup).',
+    )
+    storage_estimated_gb = fields.Float(
+        string='Estimerad disk (GB)',
+        compute='_compute_storage_total',
+        digits=(12, 2),
+        help='Summan av de rader som är estimat (Dirvish-andelen räknas '
+             'fram ur en kvot — inte uppmätt på disk).',
     )
     lxd_host = fields.Char(
         string='LXD-host (cache)',
@@ -206,11 +235,39 @@ class SaltMinion(models.Model):
              'storage measurement and cached here to avoid re-probing.',
     )
 
-    @api.depends('storage_ids', 'storage_ids.size_gb')
+    @api.depends('storage_ids', 'storage_ids.size_gb',
+                 'storage_ids.is_measured')
     def _compute_storage_total(self):
         for rec in self:
-            rec.storage_total_gb = round(
-                sum(rec.storage_ids.mapped('size_gb')), 2)
+            rows = rec.storage_ids
+            rec.storage_total_gb = round(sum(rows.mapped('size_gb')), 2)
+            measured = rows.filtered('is_measured')
+            rec.storage_measured_gb = round(
+                sum(measured.mapped('size_gb')), 2)
+            rec.storage_estimated_gb = round(
+                sum((rows - measured).mapped('size_gb')), 2)
+
+    @api.depends('snapshot_ids', 'snapshot_ids.server_label')
+    def _compute_restore_target_info(self):
+        """Vilken maskin restore-kommandona körs på.
+
+        Läser backup-servern ur snapshot-raderna (satt vid synken). Saknas
+        rader faller vi tillbaka på backup-server-registret/config-parametern
+        så att texten alltid är korrekt — även för en ny kund innan första
+        synken hunnit köra.
+        """
+        Server = self.env['salt.backup.server']
+        for rec in self:
+            label = ''
+            for snap in rec.snapshot_ids:
+                if snap.server_label:
+                    label = snap.server_label
+                    break
+            if not label:
+                fb_name, fb_host, _h, _b = Server._fallback_server_info()
+                if fb_name:
+                    label = '%s (%s)' % (fb_name, fb_host) if fb_host else fb_name
+            rec.restore_target_info = label or False
     is_demo = fields.Boolean(
         string='Demo / Test',
         default=False,
@@ -954,6 +1011,20 @@ fi
             host = f.split('dirvish_')[1].split('.size')[0]
             self._read_dirvish_size(api, dirvish_hosts[0], host)
 
+    def _backup_customer(self):
+        """Kundnamn i backup-rapporten (restic-status.json).
+
+        Prioritet: explicit ``snapshot_customer`` -> ``customer``-grain ->
+        minionens namn. Det explicita fältet behövs eftersom
+        ``odoo.grains`` tvingar ``customer = <minion-id>`` på
+        Odoo-värdar, och eftersom bucketnamnet kan skilja sig från
+        minionen (t.ex. bucketen "sparv" på minionen "sparv-test").
+        """
+        self.ensure_one()
+        return (
+            self.snapshot_customer or self.customer or self.name or ''
+        ).strip().lower()
+
     def _measure_s3(self, api):
         """Return (src_gb, backup_gb, customer) from the restic status report.
 
@@ -980,7 +1051,7 @@ fi
             data = json.loads(str(raw))
         except (ValueError, TypeError):
             return None, None, None
-        customer = (self.customer or '').strip().lower() or self.name.lower()
+        customer = self._backup_customer()
         for row in data.get('customers') or []:
             if str(row.get('customer', '')).strip().lower() == customer:
                 src = row.get('size') or 0
@@ -989,8 +1060,13 @@ fi
                         row.get('customer'))
         return None, None, None
 
-    def _upsert_storage(self, storage_type, size_gb, provider, method):
-        """Create or update one storage row for this minion."""
+    def _upsert_storage(self, storage_type, size_gb, provider, method,
+                        is_measured=True):
+        """Create or update one storage row for this minion.
+
+        ``is_measured=False`` marks the row as an estimate (never measured
+        on disk) — e.g. the Dirvish share, which is derived from a ratio.
+        """
         self.ensure_one()
         if size_gb is None:
             return
@@ -1002,6 +1078,7 @@ fi
             'size_gb': round(size_gb, 2),
             'provider': provider or '',
             'method': method or '',
+            'is_measured': is_measured,
             'measured_at': fields.Datetime.now(),
         }
         if row:
@@ -1038,7 +1115,8 @@ fi
                 'dirvish',
                 (lxd_bytes * ratio) / 1024.0 ** 3,
                 'dirvish',
-                'minion-LXD × dirvish/LXD-kvot (%.2f)' % ratio)
+                'minion-LXD × dirvish/LXD-kvot (%.2f)' % ratio,
+                is_measured=False)
 
         # 3 + 4. S3 source + S3 backup from the restic status report.
         src_gb, backup_gb, customer = self._measure_s3(api)

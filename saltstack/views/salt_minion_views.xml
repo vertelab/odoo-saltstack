@@ -20,6 +20,9 @@
                     <field name="is_demo"/>
                     <field name="is_container"/>
                     <field name="host_machine"/>
+                    <field name="lxd_host"/>
+                    <field name="storage_measured_gb"/>
+                    <field name="storage_estimated_gb"/>
                     <t t-name="card">
                         <div t-attf-class="oe_kanban_global_click position-relative">
                             <!-- DC ribbon -->
@@ -62,6 +65,19 @@
                                     Odoo <field name="odoo_version"/>
                                     <span t-if="record.odoo_has_demo_data.raw_value"
                                           class="badge text-bg-warning ms-1">demo</span>
+                                </div>
+                                <div class="text-muted" t-if="record.lxd_host.raw_value">
+                                    <i class="fa fa-cube" title="LXD-host"/> <field name="lxd_host"/>
+                                </div>
+                                <div class="text-muted"
+                                     t-if="record.storage_measured_gb.raw_value or record.storage_estimated_gb.raw_value">
+                                    <i class="fa fa-hdd-o" title="Diskutnyttjande"/>
+                                    <span t-if="record.storage_measured_gb.raw_value">
+                                        <field name="storage_measured_gb"/> GB uppmätt
+                                    </span>
+                                    <span t-if="record.storage_estimated_gb.raw_value">
+                                        ~<field name="storage_estimated_gb"/> GB backup (estimat)
+                                    </span>
                                 </div>
                             </div>
                             <div class="o_kanban_record_bottom">
@@ -115,6 +131,7 @@
                     <field name="os"/>
                     <field name="roles"/>
                     <field name="customer"/>
+                    <field name="snapshot_customer"/>
                     <field name="partner_id"/>
                     <field name="odoo_version"/>
                     <field name="odoo_has_demo_data" widget="boolean"/>
@@ -199,11 +216,15 @@
                                 <group>
                                     <field name="storage_total_gb"
                                            string="Totalt diskutnyttjande (GB)"/>
+                                    <field name="storage_measured_gb"/>
+                                    <field name="storage_estimated_gb"/>
+                                    <field name="lxd_host" readonly="1"/>
                                     <field name="storage_ids" nolabel="1" colspan="2">
                                         <list editable="bottom">
                                             <field name="storage_type"/>
                                             <field name="provider"/>
                                             <field name="size_gb"/>
+                                            <field name="is_measured"/>
                                             <field name="method"/>
                                             <field name="measured_at"/>
                                         </list>
@@ -212,20 +233,46 @@
                             </page>
                             <page string="Återskapa data"
                                   invisible="not snapshot_ids">
+                                <!-- Tydlig informationsruta: VAR körs kommandot? -->
+                                <div class="alert alert-info" role="alert">
+                                    <h4 class="alert-title">
+                                        <i class="fa fa-server me-1"/>
+                                        Restore-kommandon körs på
+                                        <field name="restore_target_info" class="d-inline fw-bold"/>
+                                    </h4>
+                                    <p class="mb-1">
+                                        Logga in på maskinen ovan (t.ex. <code>ssh ubuntu@&lt;adress&gt;</code>) och
+                                        klistra in kommandot — eller använd <b>SSH-kommandot</b>
+                                        (kopiera-knappen längst till höger), som redan innehåller
+                                        både maskin och <code>sudo</code> och kan klistras in varifrån som helst.
+                                        Data hamnar under <code>/restore/&lt;kund&gt;</code> på den maskinen.
+                                    </p>
+                                    <p class="mb-0">
+                                        <i class="fa fa-info-circle me-1"/>
+                                        Kommandot måste köras därför att kundens credentials
+                                        (<code>/etc/rclone/&lt;kund&gt;.conf</code> och
+                                        <code>/etc/garage-backup/restic-password</code>) bara finns på den maskinen.
+                                    </p>
+                                </div>
                                 <group>
-                                    <p>Senaste restic-snapshots för kundens backup-bucket. Klicka på kopiera-knappen för att få exakt restore-kommando för det datumet. Data återskapas på restic-minionen under /restore/&lt;kund&gt;.</p>
                                     <field name="snapshot_ids" nolabel="1" colspan="2">
                                         <list>
                                             <field name="time"/>
                                             <field name="short_id"/>
+                                            <field name="server_label" string="Körs på"/>
                                             <field name="tags"/>
                                             <field name="size"/>
                                             <field name="file_count"/>
                                             <button name="action_copy_restore_cmd"
                                                     type="object"
+                                                    icon="fa-terminal"
+                                                    class="btn-link"
+                                                    title="Kopiera kommandot (att köra PÅ backup-servern)"/>
+                                            <button name="action_copy_restore_cmd_ssh"
+                                                    type="object"
                                                     icon="fa-copy"
                                                     class="btn-link"
-                                                    title="Kopiera restore-kommando till urklipp"/>
+                                                    title="Kopiera SSH-kommandot (innehåller maskinen — kan köras varifrån som helst)"/>
                                         </list>
                                     </field>
                                 </group>

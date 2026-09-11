@@ -42,6 +42,13 @@ class SaltMinionStorage(models.Model):
         string='Storlek (GB)',
         digits=(12, 2),
     )
+    is_measured = fields.Boolean(
+        string='Uppmätt',
+        default=True,
+        help='True = siffran är faktiskt uppmätt på disken (du/df, restic). '
+             'False = estimat, t.ex. Dirvish-andelen som räknas fram ur en '
+             'kvot och därför är en uppskattning.',
+    )
     method = fields.Char(
         string='Metod',
         help='How the size was measured or estimated.',

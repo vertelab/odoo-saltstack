@@ -2,7 +2,7 @@
 
 {
     'name': 'SaltStack Infrastructure',
-    'version': '18.0.1.30.0',
+    'version': '18.0.1.34.0',
     'category': 'Infrastructure',
     'summary': 'Manage SaltStack minions, pillar anchors and infrastructure',
     'description': """
@@ -18,8 +18,11 @@ Features:
 - Driftlarm webhook (/saltstack/alert) med auto-genererad API-nyckel
 - SaltStack API configuration in Settings
 - Restic-snapshots per minion ("Återskapa data"): senaste 25 snapshots med
-  kopiera-restore-kommando per rad, synkade från restic-status.json
-    """,
+  kopiera-restore-kommando per rad, synkade från restic-status.json.
+  Backup-server-registret (salt.backup.server) gör att varje rad visar
+  VILKEN maskin kommandot körs på — och att fler backup-servrar kan läggas
+  till utan kodändring.
+        """,
     'author': 'Vertel Sverige AB',
     'license': 'AGPL-3',
     'website': 'https://vertel.se',
@@ -34,6 +37,7 @@ Features:
         'data/sync_cron.xml',
         'data/sync_snapshot_cron.xml',
         'data/auto_resolve_cron.xml',
+        'data/backup_server_data.xml',
         'data/sync_actions.xml',
         'data/minion_update_actions.xml',
         'views/saltstack_menu_views.xml',
@@ -41,8 +45,9 @@ Features:
         'views/res_partner_views.xml',
         'views/salt_pillar_views.xml',
         'views/salt_minion_views.xml',
+        'views/salt_backup_server_views.xml',
         'views/salt_alert_views.xml',
-            'views/salt_runlog_views.xml',
+        'views/salt_runlog_views.xml',
     ],
     'assets': {
         'web.assets_backend': [
