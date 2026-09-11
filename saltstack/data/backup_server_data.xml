@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ── Backup-servrar: seed av standard-servern ───────────────────── -->
+    <!-- restic-minionen (192.168.11.112) — maskinen där restore-kommandon
+         körs. registret gör att fler backup-servrar kan läggas till utan
+         kodändring: skapa en post, sätt `customers` om servern bara
+         hanterar vissa kunder, och kör `state.apply storage.backup` på den
+         nya maskinen (deployar /usr/local/bin/restic-restore.sh).
+         noupdate="1" så att manuella ändringar i UI:t inte skrivs över. -->
+    <data noupdate="1">
+        <record id="backup_server_restic" model="salt.backup.server">
+            <field name="name">restic</field>
+            <field name="role">restic</field>
+            <field name="login_host">192.168.11.112</field>
+            <field name="login_user">ubuntu</field>
+            <field name="use_sudo" eval="True"/>
+            <field name="helper_path">/usr/local/bin/restic-restore.sh</field>
+            <field name="credentials_dir">/etc/rclone</field>
+            <field name="restore_base">/restore</field>
+            <field name="sequence">10</field>
+            <field name="active" eval="True"/>
+            <field name="notes">Standard-backup-server. Har alla restic-repon
+(&lt;kund&gt;-backup) mot Garage S3 (192.168.11.1:3900), kundcredentials i
+/etc/rclone/ och /etc/garage-backup/restic-password.
+Tomt `customers`-fält = hanterar alla kunder som inte matchar en annan
+server med högre prioritet.
+
+Inloggning: ssh ubuntu@192.168.11.112 (ubuntu-kontot har NOPASSWD-sudo,
+verifierat 2026-09-10). Root-inloggning är också tillåten
+(PermitRootLogin yes) men ubuntu är standard.</field>
+        </record>
+    </data>
+</odoo>

@@ -17,4 +17,8 @@
             <field name="name">salt.minion.snapshot</field>
             <field name="model">salt.minion.snapshot</field>
         </record>
+        <record id="model_salt_backup_server" model="ir.model">
+            <field name="name">salt.backup.server</field>
+            <field name="model">salt.backup.server</field>
+        </record>
     </odoo>

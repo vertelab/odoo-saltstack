@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ── Backup-server: lista ───────────────────────────────────────── -->
+    <record id="view_salt_backup_server_list" model="ir.ui.view">
+        <field name="name">salt.backup.server.list</field>
+        <field name="model">salt.backup.server</field>
+        <field name="arch" type="xml">
+            <list string="Backup-servrar">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="role"/>
+                <field name="login_host"/>
+                <field name="login_user"/>
+                <field name="minion_id"/>
+                <field name="helper_path"/>
+                <field name="customer_count" string="Kunder"/>
+                <field name="active" invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ── Backup-server: formulär ────────────────────────────────────── -->
+    <record id="view_salt_backup_server_form" model="ir.ui.view">
+        <field name="name">salt.backup.server.form</field>
+        <field name="model">salt.backup.server</field>
+        <field name="arch" type="xml">
+            <form string="Backup-server">
+                <sheet>
+                    <widget name="web_ribbon" title="Inaktiv"
+                            bg_color="text-bg-danger" invisible="active"/>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="role"/>
+                            <field name="minion_id"/>
+                            <field name="login_host"
+                                   placeholder="Tomt → minionens privata IP"/>
+                            <field name="login_user"/>
+                            <field name="use_sudo"/>
+                        </group>
+                        <group>
+                            <field name="helper_path"/>
+                            <field name="credentials_dir"/>
+                            <field name="restore_base"/>
+                            <field name="sequence"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <group string="Kunder">
+                        <field name="customers" nolabel="1"
+                               placeholder="Ett kundnamn per rad. Tomt = hanterar alla kunder som inte matchar en annan server."/>
+                        <field name="customer_count" invisible="1"/>
+                    </group>
+                    <group string="Anteckning">
+                        <field name="notes" nolabel="1"/>
+                    </group>
+                    <div class="alert alert-info" role="alert">
+                        <field name="restore_preview" readonly="1" nolabel="1"/>
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ── Åtgärd + meny ──────────────────────────────────────────────── -->
+    <record id="action_salt_backup_servers" model="ir.actions.act_window">
+        <field name="name">Backup-servrar</field>
+        <field name="res_model">salt.backup.server</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Lägg till en backup-server
+            </p>
+            <p>
+                Servrar som har restic-repon och kan återskapa data. Varje
+                snapshot-rad i "Återskapa data" pekar ut vilken maskin
+                kommandot ska köras på.
+            </p>
+        </field>
+    </record>
+
+    <menuitem id="menu_salt_backup_servers"
+              name="Backup-servrar"
+              parent="menu_saltstack_config"
+              action="action_salt_backup_servers"
+              sequence="40"
+              groups="saltstack.group_saltstack_admin"/>
+</odoo>

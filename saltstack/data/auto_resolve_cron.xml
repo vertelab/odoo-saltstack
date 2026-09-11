@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Auto-resolve cron — resolves stale/inactive drift alerts -->
+    <record id="cron_auto_resolve_alerts" model="ir.cron">
+        <field name="name">Saltstack: auto-resolve driftlarm</field>
+        <field name="model_id" ref="model_saltstack_alert"/>
+        <field name="state">code</field>
+        <field name="code">model.action_cron_auto_resolve()</field>
+        <field name="interval_number">15</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+        <field name="user_id" ref="base.user_root"/>
+    </record>
+</odoo>

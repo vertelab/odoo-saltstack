@@ -21,4 +21,24 @@
         <field name="perm_create" eval="False"/>
         <field name="perm_unlink" eval="False"/>
     </record>
+
+    <!-- ── salt.backup.server (registret: var restore körs) ───────────── -->
+    <record id="access_salt_backup_server_admin" model="ir.model.access">
+        <field name="name">salt.backup.server.admin</field>
+        <field name="model_id" ref="model_salt_backup_server"/>
+        <field name="group_id" ref="saltstack.group_saltstack_admin"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    <record id="access_salt_backup_server_officer" model="ir.model.access">
+        <field name="name">salt.backup.server.officer</field>
+        <field name="model_id" ref="model_salt_backup_server"/>
+        <field name="group_id" ref="saltstack.group_saltstack_officer"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
 </odoo>

@@ -361,3 +361,115 @@ class SaltAlert(models.Model):
         """Mark as aborted (avbruten)."""
         self.write({'state': 'aborted', 'resolved': False})
         return True
+
+    def action_cron_auto_resolve(self):
+        """Auto-resolve stale/inactive alerts (cron, every 15 min).
+
+        Rules:
+          1. Zabbix alerts whose (host, trigger) is no longer active in
+             Zabbix (recovery was never sent to the webhook) -> resolve.
+          2. Informational alerts (severity <= 2) older than 7 days
+             with no recent activity -> resolve.
+          3. Any alert with last_occurrence older than 14 days and
+             occurrences == 1 (dedup missed it) -> resolve.
+        Idempotent. Returns a stats dict.
+        """
+        from datetime import timedelta
+        now = fields.Datetime.now()
+        resolved = 0
+        stats = {"zabbix_recovered": 0, "stale_info": 0, "stale_dupes": 0}
+
+        # 1. Zabbix recovery via problem.get + trigger.get (host-aware).
+        #
+        # IMPORTANT: match on (host, trigger) — NOT trigger alone. A single
+        # active problem on one host must not keep alerts alive on every other
+        # host that shares the same trigger name (e.g. "Load average is too
+        # high" on tahr kept 55 stale load alerts alive fleet-wide).
+        try:
+            config = self.env['zabbix.api']
+            result = config.zabbix_call('problem.get', {
+                'output': ['eventid', 'objectid', 'name'],
+                'recent': True,
+                'severities': [3, 4, 5],
+                'limit': 1000,
+            })
+            import json as _json
+            problems = _json.loads(result) if isinstance(result, str) else result
+            problems = problems or []
+
+            # Resolve triggerid -> host name(s) via trigger.get
+            trigger_ids = sorted({p.get('objectid') for p in problems if p.get('objectid')})
+            trigger_hosts = {}
+            if trigger_ids:
+                tresult = config.zabbix_call('trigger.get', {
+                    'triggerids': trigger_ids,
+                    'output': ['triggerid'],
+                    'selectHosts': ['host'],
+                })
+                tdata = _json.loads(tresult) if isinstance(tresult, str) else tresult
+                for t in (tdata or []):
+                    hosts = [h.get('host', '') for h in (t.get('hosts') or [])]
+                    trigger_hosts[str(t.get('triggerid'))] = [h.strip().lower() for h in hosts if h]
+
+            # Build the set of ACTIVE (host, trigger) pairs
+            active_pairs = set()
+            for p in problems:
+                name = (p.get('name') or '').strip().lower()
+                for h in trigger_hosts.get(str(p.get('objectid')), []):
+                    active_pairs.add((h, name))
+
+            domain = [("resolved", "=", False), ("source", "=", "zabbix")]
+            for alert in self.search(domain):
+                norm = (alert.normalized_trigger or alert.trigger_name or "").strip().lower()
+                host_name = (alert.host.name or "").strip().lower() if alert.host else ""
+                # Safety: only auto-resolve if no recent activity (webhook would
+                # have updated last_occurrence for an ACTIVE problem). This
+                # prevents resolving a live problem whose name differs slightly.
+                recent = alert.last_occurrence and alert.last_occurrence >= now - timedelta(minutes=30)
+                if not norm or recent:
+                    continue
+                # Still active if the SAME host has an active problem whose
+                # name contains our normalized trigger (substring match on the
+                # trigger part, host must match exactly).
+                still_active = any(
+                    h == host_name and norm in name
+                    for h, name in active_pairs
+                )
+                if not still_active:
+                    alert.write({"resolved": True, "state": "resolved"})
+                    resolved += 1
+                    stats["zabbix_recovered"] += 1
+        except Exception as e:
+            _logger.warning("Auto-resolve Zabbix check failed: %s", e)
+
+        # 2. Stale informational alerts (sev <= 2, > 7 days)
+        cutoff = now - timedelta(days=7)
+        domain = [
+            ("resolved", "=", False),
+            ("severity", "<=", 2),
+            ("create_date", "<", cutoff),
+        ]
+        for alert in self.search(domain):
+            if not alert.last_occurrence or alert.last_occurrence < cutoff:
+                alert.write({"resolved": True, "state": "resolved"})
+                resolved += 1
+                stats["stale_info"] += 1
+
+        # 3. Stale single-occurrence dupes (> 14 days, occurrences=1)
+        cutoff14 = now - timedelta(days=14)
+        domain = [
+            ("resolved", "=", False),
+            ("occurrences", "=", 1),
+            ("create_date", "<", cutoff14),
+        ]
+        for alert in self.search(domain):
+            alert.write({"resolved": True, "state": "resolved"})
+            resolved += 1
+            stats["stale_dupes"] += 1
+
+        if resolved:
+            minions = self.mapped("host")
+            if minions:
+                minions._update_open_alert_count()
+            _logger.info("Auto-resolve: %s alerts resolved (%s)", resolved, stats)
+        return {"resolved": resolved, **stats}

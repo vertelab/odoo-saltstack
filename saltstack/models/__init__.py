@@ -4,6 +4,7 @@ from . import salt_pillar
 from . import salt_minion
 from . import salt_minion_storage
 from . import salt_minion_snapshot
+from . import salt_backup_server
 from . import res_partner
 from . import salt_alert
 from . import salt_runlog
