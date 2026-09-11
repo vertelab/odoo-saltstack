@@ -413,19 +413,32 @@ class SaltMinionSnapshot(models.Model):
         return dates
 
     @api.model
-    def _dirvish_server_for_vault(self, vault):
+    def _dirvish_server_for_vault(self, vault, source_minion=None):
         """Hitta backup-servern (salt.backup.server) för en dirvish-vault.
 
-        Matchar serverns `customers`-lista mot vaultens namn (samma mönster
-        som Restic). Faller tillbaka på en dirvish-server utan kundlista.
+        `source_minion` är den dirvish-server vaulten lästes från (ur
+        DIRVISH_SERVERS). Den är auktoritativ: en vault kan heta samma som en
+        server (t.ex. vaulten `strand` ligger på `dirvishtull1`, medan
+        *servern* `strand` hostar vaulten `tull0`). Utan den ledtråden kan
+        namnmatchningen peka fel.
+
+        Faller tillbaka på serverns `customers`-lista, sedan på en
+        dirvish-server utan kundlista.
         """
         BackupServer = self.env['salt.backup.server']
         servers = BackupServer.search([
             ('active', '=', True), ('role', '=', 'dirvish')])
+        # 1. Servern vi läste vaulten från vinner alltid.
+        if source_minion:
+            for srv in servers:
+                if srv.name == source_minion:
+                    return srv
+        # 2. Annars: matcha vault-namnet mot serverns kundlista.
         vault_l = (vault or '').strip().lower()
         for srv in servers:
             if vault_l in srv.customer_list():
                 return srv
+        # 3. Sist: en dirvish-server utan kundlista (standard).
         for srv in servers:
             if not srv.customer_list():
                 return srv
@@ -472,7 +485,7 @@ class SaltMinionSnapshot(models.Model):
                 if not dates:
                     continue
 
-                srv = self._dirvish_server_for_vault(vault)
+                srv = self._dirvish_server_for_vault(vault, minion_name)
                 if srv:
                     srv_host = srv.effective_login_host()
                     helper = srv.helper_path or '/usr/local/bin/dirvish-restore.sh'

@@ -268,20 +268,30 @@ class SaltMinion(models.Model):
         synken hunnit köra.
 
         Har minionen både restic- och dirvish-rader visas båda maskinerna
-        (de kan vara olika).
+        (de kan vara olika), tydligt märkta per typ så att det inte går att
+        blanda ihop dem.
         """
         Server = self.env['salt.backup.server']
         for rec in self:
+            parts = []
             labels = []
-            for snap in (rec.snapshot_ids | rec.dirvish_snapshot_ids):
+            for snap in rec.snapshot_ids:
                 if snap.server_label and snap.server_label not in labels:
                     labels.append(snap.server_label)
-            if not labels:
+            if labels:
+                parts.append('Restic: %s' % ' / '.join(labels))
+            labels = []
+            for snap in rec.dirvish_snapshot_ids:
+                if snap.server_label and snap.server_label not in labels:
+                    labels.append(snap.server_label)
+            if labels:
+                parts.append('Dirvish: %s' % ' / '.join(labels))
+            if not parts:
                 fb_name, fb_host, _h, _b = Server._fallback_server_info()
                 if fb_name:
-                    labels.append(
+                    parts.append(
                         '%s (%s)' % (fb_name, fb_host) if fb_host else fb_name)
-            rec.restore_target_info = ' / '.join(labels) or False
+            rec.restore_target_info = ' — '.join(parts) or False
     is_demo = fields.Boolean(
         string='Demo / Test',
         default=False,
