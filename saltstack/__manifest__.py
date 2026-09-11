@@ -2,7 +2,7 @@
 
 {
     'name': 'SaltStack Infrastructure',
-    'version': '18.0.1.35.1',
+    'version': '18.0.1.35.2',
     'category': 'Infrastructure',
     'summary': 'Manage SaltStack minions, pillar anchors and infrastructure',
     'description': """
@@ -12,6 +12,7 @@ SaltStack Infrastructure Management
 Manage SaltStack infrastructure from Odoo.
 
 Features:
+
 - Minion registry with sync from Salt Master
 - Pillar key/value anchors
 - Fault injection server actions for testing the monitoring chain
