@@ -95,6 +95,8 @@ class ResConfigSettings(models.TransientModel):
             'saltstack.alert.coworker_id', False)
         if coworker_id and 'ai.coworker' in self.env:
             res['alert_coworker_id'] = int(coworker_id)
+        res['sync_interval_number'] = int(self.env['ir.config_parameter'].get_param(
+            'saltstack.sync_interval_number', 24))
         return res
 
     def set_values(self):
@@ -102,18 +104,27 @@ class ResConfigSettings(models.TransientModel):
         if self.alert_coworker_id:
             self.env['ir.config_parameter'].set_param(
                 'saltstack.alert.coworker_id', self.alert_coworker_id.id)
-
-    def get_values(self):
-        res = super().get_values()
-        res['sync_interval_number'] = int(self.env['ir.config_parameter'].get_param(
-            'saltstack.sync_interval_number', 24))
-        return res
-
-    def set_values(self):
-        super().set_values()
         self.env['ir.config_parameter'].set_param(
             'saltstack.sync_interval_number', self.sync_interval_number or 24)
         self._update_sync_cron()
+        self._write_boolean_params()
+
+    def _write_boolean_params(self):
+        """Persist boolean settings as explicit 'True'/'False' strings.
+
+        ir.config_parameter.set_param(key, False) DELETES the row, and
+        get_param() then falls back to the field default — so a boolean
+        setting whose default is True could never be turned off (it bounced
+        back on). Writing the string 'False' keeps an explicit row and makes
+        the off state stick.
+        """
+        params = self.env['ir.config_parameter'].sudo()
+        for field_name, key in (
+            ('alert_webhook_enabled', 'saltstack.alert.webhook_enabled'),
+            ('alert_auto_diagnose', 'saltstack.alert.auto_diagnose'),
+        ):
+            if field_name in self._fields:
+                params.set_param(key, 'True' if self[field_name] else 'False')
 
     def _update_sync_cron(self):
         """Create/update the sync cron with configured interval."""

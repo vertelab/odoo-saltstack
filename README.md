@@ -92,6 +92,23 @@ coworkern en diagnos. Denna ändring (2026-08-12) tillförde:
   källor (Wazuh, Shuffle) påverkas inte. Kräver att den globala
   "Auto diagnosis on alert" också är på.
 
+### Boolean-inställningar: explicit 'True'/'False' (2026-09-12)
+
+**Buggen:** `ir.config_parameter.set_param(key, False)` **raderar** raden,
+varefter `get_param()` faller tillbaka på fältets default. För en
+boolean-inställning med `default=True` innebar det att kryssrutan **inte gick
+att bocka av** — den studsade tillbaka till på. Gällde både
+`zabbix.alert.auto_diagnose`, `saltstack.alert.auto_diagnose` och
+`saltstack.alert.webhook_enabled`.
+
+**Fixen:** `set_values()` skriver ett **explicit** `'True'`/`'False'` som
+sträng, och läsningen (`_auto_diagnose_enabled`, `_auto_diagnose_enabled_for_source`)
+använder `_get_param()` (returnerar `None` när raden saknas) så att
+"aldrig konfigurerad" = fältets default (på).
+
+**Tester:** `saltstack_zabbix/tests/test_auto_diagnose.py`
+(`test_setting_can_be_turned_off_and_sticks`, `test_missing_param_reads_as_on`).
+
 **Tester:** `saltstack/tests/test_salt_alert.py` (chatter, prompt, simulering)
 + `saltstack_ai/tests/test_tool_access.py` (ORM-tools, skills)
 + `saltstack_zabbix/tests/test_auto_diagnose.py` (källspecifik diagnos-gate).

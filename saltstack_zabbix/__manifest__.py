@@ -2,7 +2,7 @@
 
 {
     'name': 'SaltStack Zabbix',
-    'version': '18.0.1.2.0',
+    'version': '18.0.1.3.0',
     'license': 'AGPL-3',
     'category': 'Infrastructure',
     'summary': 'Zabbix connection for SaltStack — API client + settings + correlation',

@@ -46,6 +46,15 @@ class ResConfigSettings(models.TransientModel):
              'The global "Auto diagnosis on alert" setting must also be on.',
     )
 
+    def set_values(self):
+        super().set_values()
+        # Persist as an explicit 'True'/'False' string: set_param(key, False)
+        # deletes the row and get_param() would fall back to the field
+        # default (True), which made the setting impossible to turn off.
+        self.env['ir.config_parameter'].sudo().set_param(
+            'zabbix.alert.auto_diagnose',
+            'True' if self.zabbix_auto_diagnose else 'False')
+
     def action_test_zabbix(self):
         """Test Zabbix API connection. Returns a popup notification."""
         params = self.env['ir.config_parameter']

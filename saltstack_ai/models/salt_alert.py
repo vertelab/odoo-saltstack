@@ -47,8 +47,20 @@ class SaltAlert(models.Model):
 
     @api.model
     def _auto_diagnose_enabled(self):
-        return self.env['ir.config_parameter'].get_param(
-            'saltstack.alert.auto_diagnose', 'True') in ('True', 'true', '1')
+        """Global switch for AI diagnosis on drift alerts.
+
+        Matches the field default (on). set_values() always writes an
+        explicit 'True'/'False' string, so a missing row only happens on a
+        system that never opened Settings — treat that as on.
+
+        NOTE: get_param(key) returns False (not None) when the row is
+        missing, so the absence check must test for both.
+        """
+        value = self.env['ir.config_parameter'].sudo()._get_param(
+            'saltstack.alert.auto_diagnose')
+        if value is None:
+            return True  # never configured → field default
+        return str(value).lower() in ('true', '1')
 
     def _schedule_diagnosis(self):
         """Planera AI-diagnos asynkront.

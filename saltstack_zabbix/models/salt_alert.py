@@ -39,12 +39,19 @@ class SaltAlert(models.Model):
         (config_parameter 'zabbix.alert.auto_diagnose', default True).
         When off, Zabbix alerts are still recorded, deduplicated, correlated
         and notified — only the AI diagnosis step is skipped.
+
+        The setting is stored as an explicit 'True'/'False' string (see
+        set_values) so that turning it off survives the round-trip — a
+        missing row is treated as the field default (on).
         """
         self.ensure_one()
         if self.source != 'zabbix':
             return True
-        return self.env['ir.config_parameter'].get_param(
-            'zabbix.alert.auto_diagnose', 'True') in ('True', 'true', '1')
+        value = self.env['ir.config_parameter'].sudo()._get_param(
+            'zabbix.alert.auto_diagnose')
+        if value is None:
+            return True  # never configured → field default
+        return str(value).lower() in ('true', '1')
 
     def _correlate_zabbix(self):
         """Look for an active Zabbix problem on the same host."""
