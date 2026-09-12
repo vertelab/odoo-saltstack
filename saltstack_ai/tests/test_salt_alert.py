@@ -150,6 +150,14 @@ class TestWebhookRunsDiagnosis(TransactionCase):
         super().setUpClass()
         cls.Alert = cls.env['saltstack.alert']
 
+    def setUp(self):
+        super().setUp()
+        # The live database may have auto diagnosis switched off; these tests
+        # exercise the dispatch path, so force the gate on.
+        self.env['ir.config_parameter'].sudo().set_param(
+            'saltstack.alert.auto_diagnose', 'True')
+        self.env.registry.clear_cache()
+
     def _patch_dispatch(self):
         """Patch both diagnosis entry points (async + sync fallback).
 
@@ -223,3 +231,45 @@ class TestWebhookRunsDiagnosis(TransactionCase):
             })
         self.assertEqual(result['status'], 'ok')
         self.assertEqual(mock_sched.call_count + mock_start.call_count, 1)
+
+    def test_schedule_does_not_queue_when_gate_off(self):
+        """Gate off → _schedule_diagnosis must NOT mark the alert 'pending'.
+
+        Regression: the pending-diagnosis cron picks up every alert with
+        diagnosis_state='pending' and runs the AI regardless of the gate, so
+        queueing a gated alert made it diagnose anyway.
+        """
+        alert = self.Alert.create({
+            'host': self.env['salt.minion'].create({'name': 'gate-q'}).id,
+            'source': 'zabbix',
+            'category': 'process',
+            'severity': 12,
+            'trigger_name': 'Gate queue check',
+        })
+        AlertModel = self.Alert.__class__
+        with patch.object(AlertModel, '_auto_diagnose_enabled',
+                          return_value=False):
+            queued = alert._schedule_diagnosis()
+        self.assertFalse(queued)
+        self.assertNotEqual(alert.diagnosis_state, 'pending')
+
+    def test_cron_skips_gated_pending_alert(self):
+        """Cron must not run diagnosis on a pending alert when the gate is off.
+
+        Covers alerts queued before the setting was turned off.
+        """
+        alert = self.Alert.create({
+            'host': self.env['salt.minion'].create({'name': 'gate-cron'}).id,
+            'source': 'zabbix',
+            'category': 'process',
+            'severity': 12,
+            'trigger_name': 'Gate cron check',
+            'diagnosis_state': 'pending',
+        })
+        AlertModel = self.Alert.__class__
+        with patch.object(AlertModel, '_auto_diagnose_enabled',
+                          return_value=False), \
+                patch.object(AlertModel, '_start_diagnosis') as mock_start:
+            self.Alert._run_pending_diagnoses(limit=50)
+        mock_start.assert_not_called()
+        self.assertNotEqual(alert.diagnosis_state, 'pending')

@@ -70,8 +70,17 @@ class SaltAlert(models.Model):
         OMEDELBART (coworker.run() kan ta minuter, särskilt vid nere
         minioner). En Odoo-cron (_run_pending_diagnoses) plockar upp
         pending-alerts och exekverar _start_diagnosis i bakgrunden.
+
+        Gaten kontrolleras först: är auto-diagnosen avstängd (globalt eller
+        för källan) sätts ingen 'pending' alls, så cronen aldrig plockar upp
+        alerten.
         """
         self.ensure_one()
+        if not (self._auto_diagnose_enabled()
+                and self._auto_diagnose_enabled_for_source()):
+            self.diagnosis_state = 'unavailable'
+            self.diagnosis_result = ''
+            return False
         self.diagnosis_state = 'pending'
         self.diagnosis_result = ''
         return True
@@ -82,9 +91,13 @@ class SaltAlert(models.Model):
         Kör _start_diagnosis på upp till `limit` pending-alerts. Den hänger
         med en egen cursor (queue_job-from-cron-mönster) så en lång
         coworker.run() inte påverkar andra requests. Idempotent per alert.
+
+        Gaten (global + källspecifik) kontrolleras HÄR OCKSÅ: en alert kan ha
+        satts till 'pending' innan inställningen stängdes av, eller av en
+        webhook som körde mot en äldre konfiguration. Utan denna kontroll
+        plockar cronen upp gated alerts och kör diagnosen ändå.
         """
         from odoo import api as _api, registry as _registry
-        from odoo.service.db import check_db_management_enabled  # noqa
         # Använd den nuvarande registryn med en färsk cursor per alert för
         # att undvika teardown-att-problem under långa LLM-körningar.
         cr = self._cr
@@ -95,6 +108,14 @@ class SaltAlert(models.Model):
             ('diagnosis_state', '=', 'pending')], order='write_date asc',
             limit=limit)
         for rec in recs:
+            # Respektera gaten: global av eller källan avstängd → kör inte.
+            if not (rec._auto_diagnose_enabled()
+                    and rec._auto_diagnose_enabled_for_source()):
+                _logger.info(
+                    'Skipping pending diagnosis for alert %s (source %s) '
+                    '— auto diagnosis is disabled', rec.id, rec.source)
+                rec.diagnosis_state = 'unavailable'
+                continue
             # Ny registry/cursor per körning (long-running)
             try:
                 new_cr = _registry(dbname).cursor()

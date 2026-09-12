@@ -270,6 +270,15 @@ class SaltAlert(models.Model):
             if hasattr(alert, '_correlate_zabbix'):
                 alert._correlate_zabbix()
 
+            # Diagnos-status: fältet defaultar till 'pending', vilket får
+            # pending-cronen att plocka upp alerten. Är auto-diagnosen
+            # avstängd (globalt eller för källan) markerar vi den som
+            # 'unavailable' direkt — annars ligger den och skräpar i kön.
+            if hasattr(alert, '_auto_diagnose_enabled') and not (
+                    alert._auto_diagnose_enabled()
+                    and alert._auto_diagnose_enabled_for_source()):
+                alert.diagnosis_state = 'unavailable'
+
             # Notification for critical alerts (ground)
             if alert.severity >= 12:
                 alert._notify_channel()
