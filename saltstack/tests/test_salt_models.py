@@ -14,6 +14,16 @@ class TestSaltMinion(TransactionCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.SaltMinion = cls.env['salt.minion']
+        cls.Params = cls.env['ir.config_parameter'].sudo()
+
+    def setUp(self):
+        super().setUp()
+        # Isolate from the production auth config: the live database may run
+        # 'sharedsecret' (login round-trip) and carry a real API URL/token.
+        # Each test opts in to what it needs.
+        self.Params.set_param('saltstack.auth_method', 'token')
+        self.Params.set_param('saltstack.api_url', 'http://localhost:8377')
+        self.Params.set_param('saltstack.api_token', 'test-token')
 
     def test_create_minion(self):
         minion = self.SaltMinion.create({
@@ -39,6 +49,8 @@ class TestSaltMinion(TransactionCase):
 
     def test_ping_without_api(self):
         """Ping without API configured should fail gracefully, not crash."""
+        self.Params.set_param('saltstack.api_url', '')
+        self.Params.set_param('saltstack.api_token', '')
         minion = self.SaltMinion.create({'name': 'test-noconfig-1'})
         result = minion.action_ping()
         self.assertIn('success', result)
@@ -164,7 +176,7 @@ class TestMinionOverview(TransactionCase):
         minion._compute_state()
         self.assertEqual(minion.state, 'online')
         alert = self.Alert.create({
-            'host': 'test-faulty-1',
+            'host': minion.id,
             'trigger_name': 'Test trigger',
             'resolved': False,
         })

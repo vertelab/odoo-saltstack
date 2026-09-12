@@ -77,7 +77,14 @@ class TestRunlogWebhook(TransactionCase):
 
     def test_order_newest_first(self):
         """_order = timestamp desc — newest log comes first."""
-        self._publish(timestamp='2026-08-10T06:15:00Z', summary='äldre')
-        self._publish(timestamp='2026-08-12T06:15:00Z', summary='nyare')
-        first = self.Runlog.search([], limit=1)
+        older = self._publish(timestamp='2026-08-10T06:15:00Z', summary='äldre')
+        newer = self._publish(timestamp='2026-08-12T06:15:00Z', summary='nyare')
+        # Scope the search to THIS test's records: the database also holds
+        # real runlog rows (Dirvish/Restic) whose timestamps would otherwise
+        # win the ordering assertion.
+        ids = [older['runlog_id'], newer['runlog_id']]
+        first = self.Runlog.search([('id', 'in', ids)], limit=1)
+        self.assertEqual(first.id, newer['runlog_id'])
         self.assertEqual(first.summary, 'nyare')
+        last = self.Runlog.search([('id', 'in', ids)], order='timestamp asc', limit=1)
+        self.assertEqual(last.id, older['runlog_id'])

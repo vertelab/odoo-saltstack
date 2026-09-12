@@ -19,25 +19,42 @@ class TestAlertWebhookGround(TransactionCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.Alert = cls.env['saltstack.alert']
+        cls.Minion = cls.env['salt.minion']
+
+    def _minion(self, name='sparv'):
+        """Return a salt.minion record for the given name (create once)."""
+        minion = self.Minion.search([('name', '=', name)], limit=1)
+        return minion or self.Minion.create({'name': name})
 
     def test_process_webhook_creates_alert(self):
-        """A minimal payload creates a saltstack.alert record."""
-        result = self.Alert.process_webhook({
-            'host': 'sparv',
-            'source': 'zabbix',
-            'category': 'process',
-            'severity': 12,
-            'trigger_name': 'Odoo HTTP endpoint not responding',
-            'raw_log': 'odoo.service: main process exited',
-        })
+        """A minimal payload creates a saltstack.alert record.
+
+        Bridge hooks (_correlate_zabbix / diagnosis) are patched away so the
+        test asserts ground behaviour regardless of whether the bridge
+        modules are installed in the same run.
+        """
+        minion = self._minion('sparv')
+        AlertModel = self.Alert.__class__
+        with patch.object(AlertModel, '_correlate_zabbix',
+                          lambda self: None), \
+                patch.object(AlertModel, '_schedule_diagnosis',
+                             lambda self: None), \
+                patch.object(AlertModel, '_start_diagnosis',
+                             lambda self: None):
+            result = self.Alert.process_webhook({
+                'host': 'sparv',
+                'source': 'zabbix',
+                'category': 'process',
+                'severity': 12,
+                'trigger_name': 'Odoo HTTP endpoint not responding',
+                'raw_log': 'odoo.service: main process exited',
+            })
         self.assertEqual(result['status'], 'ok')
         alert = self.Alert.browse(result['alert_id'])
-        self.assertEqual(alert.host, 'sparv')
+        self.assertEqual(alert.host, minion)
         self.assertEqual(alert.severity, 12)
-        # Bridge fields absent on base-only → guarded defaults
-        self.assertFalse(result['correlated_zabbix_alert'])
-        self.assertFalse(result['diagnosis_started'])
-        self.assertEqual(result['coworker_session_id'], '')
+        # Ground defaults: no correlation on the base model itself.
+        self.assertFalse(getattr(alert, 'correlated_zabbix_alert', False))
 
     def test_process_webhook_missing_host(self):
         result = self.Alert.process_webhook({'category': 'process'})
@@ -70,10 +87,11 @@ class TestAlertWebhookGround(TransactionCase):
         self.assertIn('Test critical', body)
 
     def test_bridge_hooks_called_when_present(self):
-        """When a bridge defines _correlate_zabbix, the webhook calls it
-        (guarded). _auto_diagnose_enabled only exists when saltstack_ai is
-        installed — in this test (base+zabbix only) it does not, so the
-        diagnosis hook must be skipped gracefully.
+        """The webhook calls _correlate_zabbix when a bridge defines it.
+
+        The base source gate _auto_diagnose_enabled_for_source always exists
+        and is source-agnostic (True) — diagnosis dispatch itself is guarded
+        by the AI-only hook _auto_diagnose_enabled.
         """
         AlertModel = self.Alert.__class__
         called = []
@@ -91,9 +109,9 @@ class TestAlertWebhookGround(TransactionCase):
 
         self.assertIn('correlate', called)
         self.assertEqual(result['status'], 'ok')
-        # saltstack_ai not installed → diagnosis hooks absent → guarded skip
-        self.assertFalse(hasattr(AlertModel, '_auto_diagnose_enabled'))
-        self.assertFalse(result['diagnosis_started'])
+        # The base source gate always exists and is source-agnostic (True).
+        self.assertTrue(AlertModel._auto_diagnose_enabled_for_source(
+            self.Alert.browse(result['alert_id'])))
         self.assertFalse(result['correlated_zabbix_alert'])
 
 

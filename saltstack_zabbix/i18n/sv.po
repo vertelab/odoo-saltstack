@@ -119,3 +119,35 @@ msgid ""
 msgstr ""
 "token = direkt från inställningen. keykeep = läses från keykeep.credential "
 "(purpose=zabbix_api)"
+
+#. module: saltstack_zabbix
+#: model:ir.model.fields,field_description:saltstack_zabbix.field_res_config_settings__zabbix_auto_diagnose
+#: model_terms:ir.ui.view,arch_db:saltstack_zabbix.view_saltstack_zabbix_settings
+msgid "Auto diagnosis on Zabbix alerts"
+msgstr "Auto-diagnos vid Zabbix-larm"
+
+#. module: saltstack_zabbix
+#: model:ir.model.fields,help:saltstack_zabbix.field_res_config_settings__zabbix_auto_diagnose
+msgid ""
+"Start AI diagnosis automatically when a Zabbix alert arrives. When off, "
+"Zabbix alerts are still recorded, deduplicated, correlated and notified — "
+"only the AI diagnosis is skipped. The global \"Auto diagnosis on alert\" "
+"setting must also be on."
+msgstr ""
+"Starta AI-diagnos automatiskt när ett Zabbix-larm kommer in. Av = larmet "
+"registreras, dedupas, korreleras och notifieras som vanligt, men "
+"AI-diagnosen hoppas över. Kräver att den globala \"Auto diagnosis on "
+"alert\" också är på."
+
+#. module: saltstack_zabbix
+#: model_terms:ir.ui.view,arch_db:saltstack_zabbix.view_saltstack_zabbix_settings
+msgid ""
+"Starta AI-diagnos automatiskt när ett Zabbix-larm kommer in. Av = larmet "
+"registreras, dedupas, korreleras och notifieras som vanligt, men "
+"AI-diagnosen hoppas över. Kräver att den globala 'Auto diagnosis on alert' "
+"också är på."
+msgstr ""
+"Starta AI-diagnos automatiskt när ett Zabbix-larm kommer in. Av = larmet "
+"registreras, dedupas, korreleras och notifieras som vanligt, men "
+"AI-diagnosen hoppas över. Kräver att den globala 'Auto diagnosis on alert' "
+"också är på."

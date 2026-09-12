@@ -22,9 +22,14 @@ class TestAlertChatter(TransactionCase):
         cls.Alert = cls.env['saltstack.alert']
         cls.Minion = cls.env['salt.minion']
 
+    def _minion(self, name='sparv'):
+        """Return a salt.minion record for the given name (create once)."""
+        minion = self.Minion.search([('name', '=', name)], limit=1)
+        return minion or self.Minion.create({'name': name})
+
     def _make_alert(self, host='sparv', category='process', severity=12):
         return self.Alert.create({
-            'host': host,
+            'host': self._minion(host).id,
             'source': 'zabbix',
             'category': category,
             'severity': severity,
@@ -99,10 +104,16 @@ class TestDiagnosisPrompt(TransactionCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.Alert = cls.env['saltstack.alert']
+        cls.Minion = cls.env['salt.minion']
+
+    def _minion(self, name='sparv'):
+        """Return a salt.minion record for the given name (create once)."""
+        minion = self.Minion.search([('name', '=', name)], limit=1)
+        return minion or self.Minion.create({'name': name})
 
     def _make_alert(self, category='process'):
         return self.Alert.create({
-            'host': 'sparv',
+            'host': self._minion('sparv').id,
             'source': 'zabbix',
             'category': category,
             'severity': 12,
@@ -139,10 +150,23 @@ class TestWebhookRunsDiagnosis(TransactionCase):
         super().setUpClass()
         cls.Alert = cls.env['saltstack.alert']
 
-    def test_webhook_starts_diagnosis_when_auto_diagnose(self):
-        """auto_diagnose default on → webhook calls _start_diagnosis."""
+    def _patch_dispatch(self):
+        """Patch both diagnosis entry points (async + sync fallback).
+
+        process_webhook prefers _schedule_diagnosis when it exists
+        (saltstack_ai installed) and falls back to _start_diagnosis. Patching
+        both lets the test assert on the diagnosis step regardless of which
+        dispatch path is taken.
+        """
         AlertModel = self.Alert.__class__
-        with patch.object(AlertModel, '_start_diagnosis') as mock_start:
+        sched = patch.object(AlertModel, '_schedule_diagnosis')
+        start = patch.object(AlertModel, '_start_diagnosis')
+        return sched, start
+
+    def test_webhook_starts_diagnosis_when_auto_diagnose(self):
+        """auto_diagnose default on → webhook dispatches the diagnosis."""
+        sched, start = self._patch_dispatch()
+        with sched as mock_sched, start as mock_start:
             result = self.Alert.process_webhook({
                 'host': 'sparv',
                 'category': 'process',
@@ -150,18 +174,52 @@ class TestWebhookRunsDiagnosis(TransactionCase):
                 'trigger_name': 'Test',
             })
         self.assertEqual(result['status'], 'ok')
-        mock_start.assert_called_once()
+        self.assertEqual(mock_sched.call_count + mock_start.call_count, 1)
 
     def test_webhook_skips_diagnosis_when_disabled(self):
-        """auto_diagnose off → webhook does NOT call _start_diagnosis."""
+        """auto_diagnose off → webhook does NOT dispatch the diagnosis."""
         AlertModel = self.Alert.__class__
+        sched, start = self._patch_dispatch()
         with patch.object(AlertModel, '_auto_diagnose_enabled',
-                          return_value=False), \
-                patch.object(AlertModel, '_start_diagnosis') as mock_start:
+                          return_value=False), sched as mock_sched, \
+                start as mock_start:
             result = self.Alert.process_webhook({
                 'host': 'sparv',
                 'category': 'process',
                 'severity': 5,
             })
         self.assertEqual(result['status'], 'ok')
+        mock_sched.assert_not_called()
         mock_start.assert_not_called()
+
+    def test_webhook_skips_diagnosis_when_source_disabled(self):
+        """Source-specific gate off → webhook does NOT dispatch the diagnosis."""
+        AlertModel = self.Alert.__class__
+        sched, start = self._patch_dispatch()
+        with patch.object(AlertModel, '_auto_diagnose_enabled_for_source',
+                          return_value=False), sched as mock_sched, \
+                start as mock_start:
+            result = self.Alert.process_webhook({
+                'host': 'sparv',
+                'source': 'zabbix',
+                'category': 'process',
+                'severity': 12,
+                'trigger_name': 'Kall-gate-test',
+            })
+        self.assertEqual(result['status'], 'ok')
+        mock_sched.assert_not_called()
+        mock_start.assert_not_called()
+
+    def test_webhook_starts_diagnosis_when_source_enabled(self):
+        """Source-specific gate on (default) → diagnosis still dispatched."""
+        sched, start = self._patch_dispatch()
+        with sched as mock_sched, start as mock_start:
+            result = self.Alert.process_webhook({
+                'host': 'sparv',
+                'source': 'zabbix',
+                'category': 'process',
+                'severity': 12,
+                'trigger_name': 'Kall-gate-test-2',
+            })
+        self.assertEqual(result['status'], 'ok')
+        self.assertEqual(mock_sched.call_count + mock_start.call_count, 1)

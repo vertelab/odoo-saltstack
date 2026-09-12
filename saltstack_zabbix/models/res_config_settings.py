@@ -34,6 +34,18 @@ class ResConfigSettings(models.TransientModel):
         """Base selection — keykeep added by saltstack_zabbix_keykeep module."""
         return [('token', 'API Token')]
 
+    # ── AI diagnosis (Zabbix-specific) ───────────────────────────────
+
+    zabbix_auto_diagnose = fields.Boolean(
+        string='Auto diagnosis on Zabbix alerts',
+        config_parameter='zabbix.alert.auto_diagnose',
+        default=True,
+        help='Start AI diagnosis automatically when a Zabbix alert arrives. '
+             'When off, Zabbix alerts are still recorded, deduplicated, '
+             'correlated and notified — only the AI diagnosis is skipped. '
+             'The global "Auto diagnosis on alert" setting must also be on.',
+    )
+
     def action_test_zabbix(self):
         """Test Zabbix API connection. Returns a popup notification."""
         params = self.env['ir.config_parameter']

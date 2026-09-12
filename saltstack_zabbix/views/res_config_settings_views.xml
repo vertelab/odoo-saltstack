@@ -35,6 +35,11 @@
                             Kontrollerar att Zabbix API svarar och att token fungerar.
                         </div>
                     </setting>
+                    <setting id="zabbix_auto_diagnose_setting"
+                             title="Auto diagnosis on Zabbix alerts"
+                             help="Starta AI-diagnos automatiskt när ett Zabbix-larm kommer in. Av = larmet registreras, dedupas, korreleras och notifieras som vanligt, men AI-diagnosen hoppas över. Kräver att den globala 'Auto diagnosis on alert' också är på.">
+                        <field name="zabbix_auto_diagnose"/>
+                    </setting>
                 </block>
             </xpath>
         </field>

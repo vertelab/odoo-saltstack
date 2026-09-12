@@ -278,8 +278,14 @@ class SaltAlert(models.Model):
             # _schedule_diagnosis (queue_job) när tillgängligt — webhook-svaret
             # returnerar direkt i stället för att blockera i coworker.run()
             # (som kan ta minuter). Synkron _start_diagnosis som fallback.
+            #
+            # Källspecifik avstängning: bridge-moduler (t.ex. saltstack_zabbix)
+            # kan stänga av diagnosen för sin egen källa via
+            # _auto_diagnose_enabled_for_source(). Basen känner inte till någon
+            # källa — default är att källan tillåter diagnos.
             if (hasattr(alert, '_auto_diagnose_enabled')
-                    and alert._auto_diagnose_enabled()):
+                    and alert._auto_diagnose_enabled()
+                    and alert._auto_diagnose_enabled_for_source()):
                 if hasattr(alert, '_schedule_diagnosis'):
                     alert._schedule_diagnosis()
                 else:
@@ -302,6 +308,18 @@ class SaltAlert(models.Model):
         except Exception as e:
             _logger.exception('Webhook-processing misslyckades: %s', e)
             return {'status': 'error', 'error': str(e)}
+
+    def _auto_diagnose_enabled_for_source(self):
+        """Source-specific gate for AI diagnosis (default: always allowed).
+
+        Bridge modules override this to disable diagnosis for their own
+        source — e.g. saltstack_zabbix returns False when the
+        'zabbix.alert.auto_diagnose' setting is off, so Zabbix alerts are
+        still recorded/notified but never diagnosed. The base module has no
+        knowledge of any source and therefore always returns True.
+        """
+        self.ensure_one()
+        return True
 
     # ── Notification ─────────────────────────────────────────────────────
 

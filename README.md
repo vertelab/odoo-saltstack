@@ -82,9 +82,19 @@ coworkern en diagnos. Denna ändring (2026-08-12) tillförde:
 - **Helpdesk/nonconformity-verktyg** (`create_helpdesk_ticket` i
   saltstack_helpdesk, `document_nonconformity` i saltstack_managementsystem)
   binds till coworkern när respektive modul installeras.
+- **Källspecifik avstängning av AI-diagnos** (2026-09-12): bas-modulen
+  anropar `_auto_diagnose_enabled_for_source()` i `process_webhook` — en hook
+  som bryggmoduler kan overrida för sin egen källa. `saltstack_zabbix`
+  använder den: inställningen **"Auto diagnosis on Zabbix alerts"**
+  (`zabbix.alert.auto_diagnose`, default på) styr om Zabbix-larm ska
+  AI-diagnostiseras. När den är av registreras, dedupas, korreleras och
+  notifieras larmet som vanligt — bara diagnossteget hoppas över. Andra
+  källor (Wazuh, Shuffle) påverkas inte. Kräver att den globala
+  "Auto diagnosis on alert" också är på.
 
 **Tester:** `saltstack/tests/test_salt_alert.py` (chatter, prompt, simulering)
-+ `saltstack_ai/tests/test_tool_access.py` (ORM-tools, skills).
++ `saltstack_ai/tests/test_tool_access.py` (ORM-tools, skills)
++ `saltstack_zabbix/tests/test_auto_diagnose.py` (källspecifik diagnos-gate).
 
 ```bash
 sudo checkmodule -d ledningssystem -m saltstack,saltstack_ai -t

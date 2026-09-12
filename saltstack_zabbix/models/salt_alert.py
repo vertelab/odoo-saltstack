@@ -32,6 +32,20 @@ class SaltAlert(models.Model):
 
     # ── Zabbix-korrelation ───────────────────────────────────────────────
 
+    def _auto_diagnose_enabled_for_source(self):
+        """Disable AI diagnosis for Zabbix alerts when configured.
+
+        Setting: saltstack_zabbix → 'Auto diagnosis on Zabbix alerts'
+        (config_parameter 'zabbix.alert.auto_diagnose', default True).
+        When off, Zabbix alerts are still recorded, deduplicated, correlated
+        and notified — only the AI diagnosis step is skipped.
+        """
+        self.ensure_one()
+        if self.source != 'zabbix':
+            return True
+        return self.env['ir.config_parameter'].get_param(
+            'zabbix.alert.auto_diagnose', 'True') in ('True', 'true', '1')
+
     def _correlate_zabbix(self):
         """Look for an active Zabbix problem on the same host."""
         self.ensure_one()
@@ -42,7 +56,7 @@ class SaltAlert(models.Model):
             result = config.zabbix_call('problem.get', {
                 'output': ['eventid', 'name', 'hosts'],
                 'recent': True,
-                'search': {'hosts': [self.host]},
+                'search': {'hosts': [self.host.name]},
                 'limit': 10,
             })
             problems = json.loads(result) if isinstance(result, str) else result
