@@ -16,6 +16,8 @@ It contains **zero** infrastructure-specific knowledge — safe to open-source.
 - **6 Skills** — Educational SaltStack and Zabbix knowledge
 - **Access Control** — all tools bound to the `Infrastructure Operator` group (`group_infra_operator`)
 - **Capabilities** — salt/zabbix tool serialization units via `ai.tool.capability`
+- **Alert lifecycle** — bedömt utfall skrivs tillbaka som erfarenhet på matchande
+  skills, och kända bruslarm stängs av en regelbaserad triage utan LLM-anrop
 - **Extensible** — Bridge modules add infrastructure-specific tools
 
 ## Access Control
@@ -95,10 +97,93 @@ coworker.write({'tool_ids': [(6, 0, [
 ])]})
 ```
 
+## Alert lifecycle — erfarenhetsloop och triage
+
+Varje **bedömt** driftlarm blir en etikett på de regler som faktiskt
+användes. Loopen har fyra steg:
+
+```
+ 1  larm in (webhook)                    saltstack.alert
+ 2  utfallet sätts → erfarenhet tillbaka  ← denna modul
+ 3  regelbaserad triage (inget LLM)       ← denna modul
+ 4  förbättringsloop (LLM + HITL)         ai_agent_core
+```
+
+### Steg 2 — erfarenheten skrivs tillbaka
+
+När `outcome` sätts eller ändras — **eller redan vid skapandet** — bokförs
+utfallet på de skills vars `trigger_keywords` matchar larmet:
+
+| Utfall | Bokförs som |
+|---|---|
+| `acted` (åtgärdat) | `success_cases` — regeln ledde rätt |
+| `false_positive` | `failure_cases` — så här ska vi inte larma |
+| `not_acted` / `escalated` | ingenting — inget att lära ännu |
+
+Matchningen använder **samma helordsregel** som skill-aktiveringen i
+`ai_agent_core` (`(?<![a-z0-9])nyckelord(?![a-z0-9])` över trigger,
+beskrivning, kategori och värd), så erfarenheten hamnar på precis de skills
+som faktiskt aktiverades för larmet.
+
+Bokföringen är **idempotent** via `experience_recorded`: att växla utfallet
+fram och tillbaka loggar inte samma erfarenhet två gånger, men ett *nytt*
+utfall är ny kunskap och loggas. `recipe_text` rörs aldrig — erfarenheten
+matar förbättringsloopen, som kräver mänskligt godkännande.
+
+`matched_skill_ids` visar vilka skills som fick erfarenheten.
+
+### Steg 3 — regelbaserad triage före LLM
+
+Kända bruslarm stängs **utan ett enda LLM-anrop**. Regeln är konservativ:
+
+- samma **värd** och samma **trigger**
+- minst `triage_min_history` (default 3) tidigare larm **med satt utfall**
+- **samtliga** bedömda som falska positiva
+
+Finns ett enda `acted` i historiken släpps larmet alltid vidare till AI — det
+har varit ett verkligt problem. Detsamma gäller `not_acted`/`escalated`.
+Endast larm med satt utfall räknas som historik (annars kunde triagen
+bekräfta sina egna gissningar). Ett larm som redan har ett utfall triageras
+aldrig.
+
+Stängningen sätter `triage_reason`, postar förklaringen i chatter och
+stänger larmet. Ändrar en människa utfallet loggas erfarenheten och triagen
+slutar agera på den regeln.
+
+**Inställningar** (`Inställningar → SaltStack AI`):
+
+| Parameter | Default | Beskrivning |
+|---|---|---|
+| `saltstack.alert.triage_enabled` | på | Global växel för regeln |
+| `saltstack.alert.triage_min_history` | 3 | Antal bedömda larm som krävs |
+
+En saknad parameterrad betyder **på** (samma resonemang som
+`auto_diagnose`); värdet läses som sträng, så `'False'` är av.
+
+### Synlighet — inlärning får inte sluta tyst
+
+Ett misslyckande i erfarenhetsloggningen hindrar aldrig att utfallet sparas,
+men det **syns**: räknaren `saltstack.alert.experience_failures` (läs med
+`_experience_failure_count()`) ökar och kan larmas på i Zabbix. Skälet är att
+tyst utebliven inlärning är omöjligt att upptäcka i efterhand — utfallet ser
+sparat ut och allt verkar normalt.
+
+Mät hur många larm som får `matched_skill_ids` satt: är siffran 0 över tid
+fungerar inte anropet, även om inget larmar.
+
+### Ordningskrav mot `ai_agent_core`
+
+Denna modul är **konsument**: erfarenheten skrivs via
+`ai.skill.record_experience()`, som levereras av
+**`ai_agent_core` ≥ 18.0.1.206**. API:t måste vara deployat och verifierat
+anropbart **innan** `saltstack_ai` uppgraderas — annars sväljs
+`AttributeError` av `write()`-hookens `try/except` och loopen lär sig
+ingenting utan att något larmar (se Synlighet ovan).
+
 ## Dependencies
 
 - `saltstack` — Base filesystem bridge
-- `ai_agent_core` — AI agent engine
+- `ai_agent_core` — AI agent engine (**≥ 18.0.1.206** för erfarenhetsloopen)
 - `mail` — Chatter and notifications
 
 ## License

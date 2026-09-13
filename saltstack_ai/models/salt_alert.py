@@ -43,7 +43,269 @@ class SaltAlert(models.Model):
         ('error', 'Error'),
     ], string='Diagnosis status', default='pending')
 
+    # ── Utfall (steg 2: erfarenheten som skrivs tillbaka till skills) ─────
+    # Detta är människans/AI:ns dom över vad larmet var — inte vad diagnosen
+    # SA, utan vad som visade sig gälla. Utfallet matar success_cases /
+    # failure_cases på de skills vars trigger_keywords matchade larmet, och
+    # blir underlaget för den regelbaserade triagen (steg 3) och
+    # förbättringsloopen (steg 4).
+    outcome = fields.Selection([
+        ('acted', 'Åtgärdat'),
+        ('false_positive', 'Falskt positivt'),
+        ('not_acted', 'Ej åtgärdat'),
+        ('escalated', 'Eskalerat'),
+    ], string='Utfall',
+        help='Vad larmet visade sig vara. Åtgärdat + falskt positivt loggas som '
+             'erfarenhet på matchande skills: åtgärdat som success_case, '
+             'falskt positivt som failure_case ("så här ska vi inte larma").')
+    experience_recorded = fields.Boolean(
+        string='Erfarenhet loggad', default=False, readonly=True,
+        help='Sätts när utfallet skrivits tillbaka till matchande skills — '
+             'förhindrar dubbelloggning om fältet ändras fram och tillbaka.')
+    triage_reason = fields.Char(
+        string='Triage', readonly=True,
+        help='Satt när larmet avgjordes av den regelbaserade triagen i stället '
+             'för av en AI-diagnos — dvs. utan LLM-anrop. Tomt = AI tittade på det.')
+    matched_skill_ids = fields.Many2many(
+        'ai.skill', string='Matchade skills', readonly=True,
+        help='De skills vars trigger_keywords matchade detta larm. Fylls i '
+             'när erfarenheten loggas.')
+
     # ── AI diagnosis ─────────────────────────────────────────────────────
+
+    def create(self, vals_list):
+        """Skapa larm — och bokför erfarenhet om utfallet sätts direkt.
+
+        write()-hooken fångar utfall som sätts i efterhand, men ett larm som
+        skapas MED ett utfall (import, API, AI-writeback vid skapandet) skulle
+        annars tyst tappa sin erfarenhet. Samma idempotens gäller —
+        experience_recorded förhindrar dubbelloggning.
+        """
+        records = super().create(vals_list)
+        for rec in records:
+            if rec.outcome:
+                try:
+                    rec._record_experience()
+                except Exception:
+                    _logger.warning(
+                        'Erfarenhetsloggning misslyckades för larm %s',
+                        rec.id, exc_info=True)
+                    rec._bump_experience_failure_count()
+        return records
+
+    def write(self, vals):
+        """Logga erfarenhet när utfallet sätts eller ändras.
+
+        Idempotent via experience_recorded: att växla utfallet fram och
+        tillbaka loggar inte samma erfarenhet två gånger, men ett NYTT utfall
+        (t.ex. false_positive → acted) loggas, eftersom det är ny kunskap.
+
+        Ett misslyckande i loggningen får ALDRIG hindra att utfallet sparas —
+        men det får heller inte försvinna spårlöst (6.2): att loopen slutat
+        lära sig är annars omöjligt att upptäcka i efterhand, eftersom
+        utfallet ändå ser sparat ut.
+        """
+        res = super().write(vals)
+        if 'outcome' in vals and vals.get('outcome'):
+            for alert in self:
+                try:
+                    alert._record_experience()
+                except Exception:
+                    _logger.warning(
+                        'Erfarenhetsloggning misslyckades för larm %s',
+                        alert.id, exc_info=True)
+                    alert._bump_experience_failure_count()
+        return res
+
+    # ── Synlighet: erfarenhetsloggning får inte fela tyst (6.2) ────────
+    #
+    # Ett tyst misslyckande här är särskilt farligt: larmets utfall sparas
+    # ändå, så allt ser normalt ut — men loopen lär sig ingenting. Därför
+    # räknas varje misslyckande i en ir.config_parameter som Zabbix kan
+    # larma på, i stället för att bara hamna i loggen.
+    _EXPERIENCE_FAILURE_KEY = 'saltstack.alert.experience_failures'
+
+    def _bump_experience_failure_count(self):
+        """Öka räknaren för misslyckad erfarenhetsloggning (Zabbix-mätvärde)."""
+        try:
+            params = self.env['ir.config_parameter'].sudo()
+            current = params.get_param(self._EXPERIENCE_FAILURE_KEY, '0')
+            params.set_param(
+                self._EXPERIENCE_FAILURE_KEY, str(int(current or 0) + 1))
+        except Exception:
+            _logger.error(
+                'kunde inte öka erfarenhets-felräknaren', exc_info=True)
+
+    @api.model
+    def _experience_failure_count(self):
+        """Läs räknaren (för Zabbix/monitoring)."""
+        value = self.env['ir.config_parameter'].sudo().get_param(
+            self._EXPERIENCE_FAILURE_KEY, '0')
+        try:
+            return int(value or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    @staticmethod
+    def _alert_text_part(value):
+        """Gör ett faltvarde till text — host är en many2one (recordset)."""
+        if not value:
+            return ''
+        if hasattr(value, 'name'):
+            return str(value.name or '')
+        return str(value)
+
+    def _matching_skills(self):
+        """Skills vars trigger_keywords matchar larmet (helord).
+
+        Samma matchningsregel som skill-aktiveringen i ai_agent_core, så att
+        den erfarenhet vi loggar hamnar på precis de skills som faktiskt
+        aktiverades för larmet.
+        """
+        self.ensure_one()
+        import re
+        Skill = self.env['ai.skill']
+        text = ' '.join([
+            self._alert_text_part(self.trigger_name),
+            self._alert_text_part(self.description),
+            self._alert_text_part(self.category),
+            self._alert_text_part(self.host),
+        ]).lower()
+        if not text.strip():
+            return Skill.browse()
+        matched = Skill.browse()
+        for skill in Skill.search([]):
+            for kw in re.split(r'[,\n]', skill.trigger_keywords or ''):
+                kw = kw.strip().lower()
+                if not kw:
+                    continue
+                if re.search(r'(?<![a-z0-9])' + re.escape(kw)
+                             + r'(?![a-z0-9])', text):
+                    matched |= skill
+                    break
+        return matched
+
+    def _record_experience(self):
+        """Skriv utfallet tillbaka som erfarenhet på matchande skills.
+
+        åtgärdat        → success_case  (regeln ledde rätt)
+        falskt positivt → failure_case  (regeln ska inte larma så här)
+        ej åtgärdat / eskalerat → ingen erfarenhet (inget att lära ännu)
+        """
+        self.ensure_one()
+        if not self.outcome:
+            return False
+        verdicts = {'acted': 'success', 'false_positive': 'failure'}
+        verdict = verdicts.get(self.outcome)
+        skills = self._matching_skills()
+        self.matched_skill_ids = [(6, 0, skills.ids)]
+        if not verdict or not skills:
+            self.experience_recorded = bool(skills) or self.experience_recorded
+            return False
+        note = '%s: %s' % (self._alert_text_part(self.host) or '?',
+                           (self.trigger_name or '')[:160])
+        if self.outcome == 'false_positive':
+            note = 'Falskt positivt — ' + note
+        written = 0
+        for skill in skills:
+            if skill.record_experience(
+                    note, verdict=verdict,
+                    source='saltstack.alert %s' % self.id):
+                written += 1
+        self.experience_recorded = True
+        _logger.info('Larm %s (%s): %d erfarenhet(er) loggade på %d skills',
+                     self.id, self.outcome, written, len(skills))
+        return bool(written)
+
+    # ── Steg 3: regelbaserad triage före LLM ─────────────────────────────
+
+    @api.model
+    def _triage_enabled(self):
+        """Global växel för den regelbaserade triagen (default: på)."""
+        value = self.env['ir.config_parameter'].sudo()._get_param(
+            'saltstack.alert.triage_enabled')
+        if value is None:
+            return True
+        return str(value).lower() in ('true', '1')
+
+    @api.model
+    def _triage_min_history(self):
+        """Hur många tidigare bedömda larm som krävs innan triagen agerar."""
+        value = self.env['ir.config_parameter'].sudo()._get_param(
+            'saltstack.alert.triage_min_history')
+        try:
+            return max(1, int(value))
+        except (TypeError, ValueError):
+            return 3
+
+    def _triage_history(self):
+        """Tidigare larm med samma värd + trigger som har ett satt utfall.
+
+        Bara larm MÄNNISKAN eller AI:n faktiskt bedömt räknas — annars skulle
+        triagen kunna bekräfta sina egna gissningar.
+        """
+        self.ensure_one()
+        return self.search([
+            ('id', '!=', self.id),
+            ('host', '=', self.host.id if self.host else False),
+            ('trigger_name', '=', self.trigger_name),
+            ('outcome', '!=', False),
+        ])
+
+    def _triage(self):
+        """Regelbaserad triage FÖRE LLM.
+
+        Returnerar True när larmet avgjordes utan ett enda LLM-anrop.
+
+        Regeln: samma värd + samma trigger, minst `triage_min_history`
+        tidigare BEDÖMDA larm, och samtliga bedömda som 'false_positive' →
+        larmet är känt brus och stängs som falskt positivt.
+
+        Medvetet konservativ: finns ett enda 'acted' bland historiken (det var
+        alltså ett verkligt problem någon gång) släpps larmet vidare till AI.
+        Likaså om någon bedömt det som 'not_acted' eller 'escalated' — då är
+        det inte entydigt brus.
+        """
+        self.ensure_one()
+        if not self._triage_enabled():
+            return False
+        if self.outcome:
+            return False  # redan bedömd — triagen lägger sig inte i
+        history = self._triage_history()
+        minimum = self._triage_min_history()
+        if len(history) < minimum:
+            return False
+        if set(history.mapped('outcome')) != {'false_positive'}:
+            return False  # verkligt problem har förekommit → låt AI titta
+
+        n = len(history)
+        reason = ('Auto: %d tidigare larm med samma trigger på samma värd '
+                  'var falska positiva.' % n)
+        host_name = self._alert_text_part(self.host) or '?'
+        self.write({
+            'outcome': 'false_positive',
+            'diagnosis_state': 'done',
+            'resolved': True,
+            'triage_reason': reason[:120],
+            'diagnosis_result': (
+                'Regelbaserad triage — inget LLM-anrop.\n\n'
+                'Värd: %s\nTrigger: %s\n\n%s\n\n'
+                'Larmet stängs som falskt positivt. Ändra utfallet om det var '
+                'fel — det loggas då som erfarenhet och triagen slutar agera.'
+                % (host_name, self.trigger_name or '', reason)),
+        })
+        try:
+            self.message_post(
+                body=self._triage_reason_html(reason),
+                message_type='notification')
+        except Exception:
+            _logger.debug('triage chatter-post misslyckades', exc_info=True)
+        _logger.info('Triage: larm %s stängt utan LLM (%s)', self.id, reason)
+        return True
+
+    @staticmethod
+    def _triage_reason_html(reason):
+        return '<p><b>Regelbaserad triage</b> — inget LLM-anrop.</p><p>%s</p>' % reason
 
     @api.model
     def _auto_diagnose_enabled(self):
@@ -74,12 +336,18 @@ class SaltAlert(models.Model):
         Gaten kontrolleras först: är auto-diagnosen avstängd (globalt eller
         för källan) sätts ingen 'pending' alls, så cronen aldrig plockar upp
         alerten.
+
+        Steg 3: innan 'pending' sätts körs den regelbaserade triagen. Är
+        larmet känt brus hanteras det här och blir aldrig en 'pending' —
+        alltså noll LLM-anrop.
         """
         self.ensure_one()
         if not (self._auto_diagnose_enabled()
                 and self._auto_diagnose_enabled_for_source()):
             self.diagnosis_state = 'unavailable'
             self.diagnosis_result = ''
+            return False
+        if self._triage():
             return False
         self.diagnosis_state = 'pending'
         self.diagnosis_result = ''
@@ -116,6 +384,7 @@ class SaltAlert(models.Model):
                     '— auto diagnosis is disabled', rec.id, rec.source)
                 rec.diagnosis_state = 'unavailable'
                 continue
+            # Steg 3: triagen körs i den färska cursorn nedan (rec_env).
             # Ny registry/cursor per körning (long-running)
             try:
                 new_cr = _registry(dbname).cursor()
@@ -123,8 +392,17 @@ class SaltAlert(models.Model):
                     new_cr, self.env.uid, dict(
                         ctx, _ai_force_coworker_groups=True))
                 rec = rec_env['saltstack.alert'].browse(rec.id)
-                rec._start_diagnosis()
-                new_cr.commit()
+                # Steg 3: regelbaserad triage FÖRE LLM. Känd brusmönster
+                # hanteras här — annars hade varje sådant larm kostat en
+                # supervisor-körning med specialistteam.
+                if rec._triage():
+                    new_cr.commit()
+                    _logger.info(
+                        'Triage avgjorde larm %s utan LLM (%s)',
+                        rec.id, rec.triage_reason)
+                else:
+                    rec._start_diagnosis()
+                    new_cr.commit()
             except Exception:
                 _logger.exception('pending diagnosis failed for alert %s',
                                   rec.id)
@@ -267,6 +545,16 @@ class SaltAlert(models.Model):
             f"- Post ALL findings and actions on the alert record (id={self.id})\n"
             f"- Post a summary on the minion record after diagnosis\n"
             f"- If auto-fix fails: create helpdesk ticket\n\n"
+            f"## Utfall (obligatoriskt — det är så systemet lär sig)\n"
+            f"När du är klar: anropa driftlarm_update_assessment med `outcome` satt "
+            f"till vad larmet VISADE sig vara (inte vad du först misstänkte):\n"
+            f"- acted: ett verkligt problem hittades och åtgärdades\n"
+            f"- false_positive: larmet var brus (transient spik, känt underhåll, "
+            f"omstartsvåg). Sätt detta så snart du konstaterat att inget var fel.\n"
+            f"- not_acted: verkligt problem men medvetet inte åtgärdat\n"
+            f"- escalated: kräver människa\n"
+            f"Utan outcome kan inte triagen lära sig vilka larm som är brus, och "
+            f"samma larm kostar en AI-körning igen nästa gång.\n\n"
             f"Analyze the root cause, verify against the system, apply auto-fix "
             f"if safe, and document everything."
         )

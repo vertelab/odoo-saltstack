@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Steg 3: regelbaserad triage före AI. Läggs i alert-blocket bredvid
+         auto-diagnos-inställningen så de två växlarna hänger ihop. -->
+    <record id="view_saltstack_settings_triage" model="ir.ui.view">
+        <field name="name">res.config.settings.saltstack.triage</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="saltstack.view_saltstack_settings"/>
+        <field name="arch" type="xml">
+            <xpath expr="//setting[@id='alert_auto_diagnose_setting']" position="after">
+                <setting id="alert_triage_enabled_setting"
+                         title="Regelbaserad triage före AI"
+                         help="Stäng kända bruslarm utan LLM-anrop.">
+                    <field name="alert_triage_enabled"/>
+                </setting>
+                <setting id="alert_triage_min_history_setting"
+                         title="Triage: minsta historik"
+                         help="Antal tidigare bedömda larm (samma värd + trigger) innan larmet stängs som falskt positivt.">
+                    <field name="alert_triage_min_history" class="w-25"/>
+                </setting>
+            </xpath>
+        </field>
+    </record>
+</odoo>

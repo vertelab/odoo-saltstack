@@ -9,16 +9,23 @@
             Update a Drift Alert record (saltstack.alert) with assessment and status.
             Use to save the AI diagnosis conclusion, set the status, mark as resolved,
             and leave an action plan.
+
+            Set `outcome` to what the alarm TURNED OUT to be - not what you first
+            suspected. That is what teaches the system: 'acted' and 'false_positive'
+            are written back as experience on the skills whose trigger keywords
+            matched the alarm. Use 'false_positive' whenever the alarm was noise
+            (transient spike, known maintenance, restart wave).
         </field>
         <field name="parameters">{"type":"object","properties":{
             "alert_id":{"type":"integer","description":"ID of the saltstack.alert record"},
             "assessment":{"type":"string","description":"Diagnosis assessment / conclusion","default":""},
             "status":{"type":"string","description":"pending, running, done, error","default":""},
             "resolved":{"type":"boolean","description":"Mark as resolved","default":false},
+            "outcome":{"type":"string","description":"What the alarm turned out to be: acted (a real problem was fixed), false_positive (noise, no action needed), not_acted (real but deliberately not acted on), escalated (needs a human)","default":""},
             "action_plan":{"type":"string","description":"Action plan to add to the description","default":""}
         },"required":["alert_id"]}</field>
         <field name="code"><![CDATA[
-async def execute(alert_id, assessment="", status="", resolved=False, action_plan=""):
+async def execute(alert_id, assessment="", status="", resolved=False, outcome="", action_plan=""):
     """Update a Drift Alert record with assessment and status."""
     if "saltstack.alert" not in env:
         return "ERROR: saltstack.alert model not available"
@@ -32,11 +39,20 @@ async def execute(alert_id, assessment="", status="", resolved=False, action_pla
         vals["diagnosis_state"] = status
     if resolved:
         vals["resolved"] = True
+    # Utfallet är det som lär systemet — write() loggar erfarenheten på de
+    # skills vars trigger_keywords matchade larmet.
+    valid_outcomes = ("acted", "false_positive", "not_acted", "escalated")
+    if outcome:
+        if outcome not in valid_outcomes:
+            return (f"ERROR: invalid outcome '{outcome}' - "
+                    f"use one of {', '.join(valid_outcomes)}")
+        vals["outcome"] = outcome
     if action_plan:
         vals["description"] = (alert.description or "") + "\n\n## Action Plan (AI)\n" + action_plan
     if vals:
         alert.write(vals)
-    return f"Drift Alert {alert_id} updated: status={status or alert.diagnosis_state}, resolved={alert.resolved}"
+    return (f"Drift Alert {alert_id} updated: status={status or alert.diagnosis_state}, "
+            f"outcome={alert.outcome or '-'}, resolved={alert.resolved}")
 ]]></field>
     </record>
 

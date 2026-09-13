@@ -8,6 +8,7 @@
         <field name="arch" type="xml">
             <xpath expr="//list/field[@name='severity']" position="after">
                 <field name="diagnosis_state"/>
+                <field name="outcome"/>
             </xpath>
         </field>
     </record>
@@ -25,6 +26,11 @@
             <xpath expr="//page[@name='diagnosis']/group[@name='diagnosis_group']" position="inside">
                 <field name="coworker_session_id"/>
                 <field name="diagnosis_state"/>
+                <field name="outcome"/>
+                <field name="experience_recorded"/>
+                <field name="triage_reason"/>
+                <field name="matched_skill_ids" widget="many2many_tags"
+                       options="{'no_create': True}"/>
                 <separator string="Diagnosis result"/>
                 <field name="diagnosis_result" nolabel="1"/>
             </xpath>
@@ -39,6 +45,8 @@
             <xpath expr="//search/group/filter[@name='group_category']" position="after">
                 <filter name="group_state" string="Diagnosis status"
                         context="{'group_by': 'diagnosis_state'}"/>
+                <filter name="group_outcome" string="Utfall"
+                        context="{'group_by': 'outcome'}"/>
             </xpath>
         </field>
     </record>
