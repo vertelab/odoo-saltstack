@@ -2,6 +2,8 @@
 
 import json
 import logging
+import re
+import time
 
 from odoo import _, api, fields, models
 
@@ -638,7 +640,11 @@ class SaltMinion(models.Model):
             if partner:
                 partner_id = partner.id
 
-        is_container = bool(grains.get('lxc'))
+        # 2026-09-13: LXD-containrar har INTE grainet 'lxc' (alltid tomt).
+        # Ratt kalla ar 'virtual' == 'container' (verifierat: 71 av 95).
+        # Fallback pa 'lxc' for aldre/udda minioner.
+        _virt = str(grains.get('virtual') or '').strip().lower()
+        is_container = _virt == 'container' or bool(grains.get('lxc'))
         if is_container:
             public_ip = ''
 
@@ -894,6 +900,69 @@ fi
         _logger.info('Detected %d real LXD hosts: %s', len(hosts), hosts)
         return hosts
 
+    def _lxd_container_map(self, api, refresh=False):
+        """Return {ip: host} for every container across all real LXD hosts.
+
+        One `lxc list` call per host (not per minion). Keyed on IP because
+        container NAMES collide across hosts (ledningssystem exists on both
+        fors and ring). Cached in ir.config_parameter with a TTL.
+
+        Only hosts that actually HAVE containers are cached — empty hosts
+        (drake, gw0, gw1, heron, hoary, tahr, utv18, xerus, zenbook) are
+        dropped so probing does not waste time.
+        """
+        param = 'saltstorage.lxd_container_map'
+        if not refresh:
+            raw = self.env['ir.config_parameter'].get_param(param, '')
+            if raw:
+                try:
+                    data = json.loads(raw)
+                    age = time.time() - float(data.get('ts', 0))
+                    if age < 86400:  # 24 h TTL
+                        return data.get('map', {}), data.get('hosts', [])
+                except (ValueError, TypeError):
+                    pass
+        hosts = self._lxd_host_candidates()
+        cmap, live_hosts = {}, []
+        for host in hosts:
+            try:
+                res = api.salt_call(
+                    'local', host, 'cmd.run',
+                    "lxc list --format csv -c n4 2>/dev/null",
+                    timeout=20,
+                )
+                out = str(json.loads(res).get('return', [{}])[0].get(host, ''))
+            except Exception as e:
+                _logger.warning('lxc list on %s failed: %s', host, e)
+                continue
+            found = 0
+            for line in out.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                # CSV: "name","ip1 (eth0)\nip2 (eth1)" — strip quotes first.
+                parts = line.split(',', 1)
+                name = parts[0].strip().strip('"')
+                ips = parts[1] if len(parts) > 1 else ''
+                for m in re.finditer(r'(\d+\.\d+\.\d+\.\d+)', ips):
+                    cmap[m.group(1)] = host
+                    found += 1
+                if name and not ips.strip():
+                    # No IP yet (starting container) — skip, not usable as key.
+                    pass
+            if found:
+                live_hosts.append(host)
+        if cmap:
+            self.env['ir.config_parameter'].set_param(param, json.dumps({
+                'ts': time.time(), 'map': cmap, 'hosts': live_hosts,
+            }))
+            # Keep the legacy host cache in sync (used elsewhere).
+            self.env['ir.config_parameter'].set_param(
+                'saltstorage.lxd_hosts', ','.join(live_hosts))
+        _logger.info('LXD container map: %d containers on %d hosts (%s)',
+                     len(cmap), len(live_hosts), ','.join(live_hosts))
+        return cmap, live_hosts
+
     def _measure_lxd(self, api):
         """Return (host, bytes) for this minion's container on an LXD host.
 
@@ -901,22 +970,33 @@ fi
         LXD host for the container (short timeout), measures with du on the
         found host and caches the host on the minion.
         """
+        # 2026-09-13: use the cached container map (one `lxc list` per host,
+        # keyed on IP) instead of probing every host for this minion's name.
+        # Name collisions exist (ledningssystem on both fors and ring).
         hosts = self._lxd_host_candidates()
         if self.lxd_host:
             hosts = [self.lxd_host] + [h for h in hosts if h != self.lxd_host]
+        cmap, _live = self._lxd_container_map(api)
+        mapped = cmap.get((self.private_ip or '').strip())
+        if mapped:
+            hosts = [mapped] + [h for h in hosts if h != mapped]
         for host in hosts:
-            try:
-                res = api.salt_call(
-                    'local', host, 'cmd.run',
-                    'lxc list --format csv -c n 2>/dev/null',
-                    timeout=6,
-                )
-                out = str(json.loads(res).get('return', [{}])[0].get(host, ''))
-            except Exception as e:
-                _logger.warning('LXD host probe %s failed: %s', host, e)
+            if mapped and host != mapped:
                 continue
-            if self.name not in out.splitlines():
-                continue
+            if not mapped:
+                # Fallback: no IP match — probe the host for the name.
+                try:
+                    res = api.salt_call(
+                        'local', host, 'cmd.run',
+                        'lxc list --format csv -c n 2>/dev/null',
+                        timeout=6,
+                    )
+                    out = str(json.loads(res).get('return', [{}])[0].get(host, ''))
+                except Exception as e:
+                    _logger.warning('LXD host probe %s failed: %s', host, e)
+                    continue
+                if self.name not in out.splitlines():
+                    continue
             try:
                 res2 = api.salt_call(
                     'local', host, 'cmd.run',
