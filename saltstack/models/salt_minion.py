@@ -605,11 +605,10 @@ class SaltMinion(models.Model):
             'context': {'search_default_unresolved': 1},
         }
 
-    @api.depends('name')
+    @api.depends('runlog_ids')
     def _compute_runlog_count(self):
         for rec in self:
-            rec.runlog_count = self.env['saltstack.runlog'].search_count(
-                [('minion_id', '=', rec.id)])
+            rec.runlog_count = len(rec.runlog_ids)
 
     def action_view_runlogs(self):
         """Open the Driftslogg filtered to this minion (smart button)."""
