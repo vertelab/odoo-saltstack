@@ -27,7 +27,7 @@ Features:
   varje vault, synkade från dirvish-status.json + dirvish-restore.sh --list.
   Branches utan tree/ (misslyckade backuper, tomma datumkataloger) tas
   aldrig med.
-        """,
+""",
     'author': 'Vertel Sverige AB',
     'license': 'AGPL-3',
     'website': 'https://vertel.se',
