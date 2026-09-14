@@ -1159,8 +1159,12 @@ fi
         except ValueError:
             max_age = 48
         # -s: only report a non-empty file; -m: mtime in epoch seconds.
-        cmd = ('f=%s; [ -s "$f" ] && echo "$(cat $f)|$(stat -c %%Y "$f")"'
-               % path)
+        # Wrapped in bash -c: a bare ';' makes Salt treat the parts as
+        # separate cmd.run arguments ("run() missing 1 required positional
+        # argument: 'cmd'").
+        inner = ('f=%s; [ -s "$f" ] && echo "$(cat $f)|$(stat -c %%Y "$f")"'
+                 % path)
+        cmd = "bash -c '%s'" % inner
         try:
             res = api.salt_call('local', dhost, 'cmd.run', cmd, timeout=20)
             raw = str(json.loads(res).get('return', [{}])[0].get(dhost, '')).strip()
