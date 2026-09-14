@@ -36,6 +36,30 @@ def _is_rfc1918(ip):
     return False
 
 
+# Internal networks, most authoritative first. The first address found in the
+# earliest matching prefix becomes ``private_ip``.
+#
+# 2026-09-14 (T/11478): this used to be a hardcoded ``192.168.11.`` prefix
+# check. Every host outside that single /24 — the GleSYS fleet on
+# 185.39.146.0/28, the Hetzner gateways, and WireGuard nodes on 172.16.11.x —
+# therefore got an EMPTY private_ip and showed up as "Ej anslutna / IP
+# saknas" in the "Kopiera hosts-lista" button, despite being online with a
+# perfectly good address. The list below makes the lookup explicit and
+# ordered, and is the single place to extend when a new internal network is
+# added.
+_PRIVATE_NET_PREFIXES = (
+    '192.168.11.',   # DJDATA management LAN (colocation) — most authoritative
+    '192.168.12.',   # dc-sto DHCP LAN (kind)
+    '172.16.10.',    # WireGuard gw0 side
+    '172.16.11.',    # WireGuard gw1 side
+    '10.0.0.',       # Hetzner private network (gw0/gw1/drake/ring)
+    '10.0.1.',       # Hetzner private network (drake)
+    '10.128.10.',    # zenbook local container LAN
+    '10.23.23.',     # zenbook local container LAN
+    '192.168.1.',    # misc home/office LANs
+)
+
+
 class SaltMinion(models.Model):
     _name = 'salt.minion'
     _description = 'Salt Minion Registry'
@@ -430,9 +454,17 @@ class SaltMinion(models.Model):
     def _extract_ips(grains):
         """Return (private_ip, public_ip) from grains.
 
-        private_ip: first address in 192.168.11.0/24 (management network),
-        falling back to the first non-loopback non-bridge address.
+        private_ip: first address matching an internal network in
+        ``_PRIVATE_NET_PREFIXES``, resolved in PREFIX order (192.168.11.x
+        wins over 172.16.10.x even when the WireGuard address comes first in
+        the grain list), falling back to the first other RFC1918 address so
+        that every host with *any* internal address gets one.
         public_ip: first non-RFC1918 address.
+
+        2026-09-14 (T/11478): the fallback to "any other RFC1918 address" is
+        what makes the GleSYS fleet (185.39.146.x + 10.0.1.x / 10.0.0.x) and
+        the WireGuard nodes (172.16.11.x) land in ``private_ip`` instead of
+        being blank. See ``_PRIVATE_NET_PREFIXES`` for the background.
         """
         candidates = []  # (iface, ip)
         ip4_interfaces = grains.get('ip4_interfaces') or {}
@@ -445,18 +477,44 @@ class SaltMinion(models.Model):
             for ip in grains.get(src) or []:
                 candidates.append(('', ip))
 
-        private = None
-        public = None
+        # Keep only valid dotted-quad strings (and drop loopback).
+        ips = []
         for _iface, ip in candidates:
             if not isinstance(ip, str) or '.' not in ip:
                 continue
-            if ip.startswith('192.168.11.'):
-                if private is None:
+            if ip.startswith('127.'):
+                continue
+            if ip not in ips:
+                ips.append(ip)
+
+        # Pass 1 — the ordered internal networks. The OUTER loop is the
+        # prefix, so the earliest prefix always wins regardless of the order
+        # the addresses appear in the grains.
+        private = None
+        for prefix in _PRIVATE_NET_PREFIXES:
+            for ip in ips:
+                if ip.startswith(prefix):
                     private = ip
-            elif not _is_rfc1918(ip):
-                if public is None:
-                    public = ip
-        return (private or ''), (public or '')
+                    break
+            if private:
+                break
+
+        # Pass 2 — any other RFC1918 address (e.g. an unusual container LAN).
+        fallback_private = None
+        if not private:
+            for ip in ips:
+                if _is_rfc1918(ip):
+                    fallback_private = ip
+                    break
+
+        # Pass 3 — first public address.
+        public = None
+        for ip in ips:
+            if not _is_rfc1918(ip):
+                public = ip
+                break
+
+        return (private or fallback_private or ''), (public or '')
 
     # ── Demo data detection ──────────────────────────────────────────────
 
@@ -530,12 +588,17 @@ class SaltMinion(models.Model):
             return {'success': False, 'minion': self.name, 'error': str(e)}
 
     def action_copy_private_ip(self):
-        """Copy the minion private IP to the clipboard (list-view button)."""
+        """Copy the minion IP to the clipboard (list-view button).
+
+        Falls back to public_ip so hosts that only have a public address
+        (GleSYS/Hetzner) still copy something useful instead of an empty
+        string. See T/11478.
+        """
         self.ensure_one()
         return {
             'type': 'ir.actions.client',
             'tag': 'saltstack_copy_value',
-            'params': {'value': self.private_ip or ''},
+            'params': {'value': self.private_ip or self.public_ip or ''},
         }
 
     def action_copy_hosts_list(self):
@@ -544,25 +607,41 @@ class SaltMinion(models.Model):
         Collective list-view header action: builds one hosts list from the
         private_ip of every active salt.minion record (no live Salt call),
         ready to paste into /etc/hosts.
+
+        2026-09-14 (T/11478): hosts whose only address is public (the GleSYS
+        fleet on 185.39.146.0/28, the Hetzner gateways) used to be dumped in
+        the "Ej anslutna / IP saknas" section even though they are online.
+        They now get their own section, and the trailing section only lists
+        hosts with genuinely no address at all.
         """
+        records = self.search([('active', '=', True)])
         lines = []
         lines.append('# Hosts Update — genererad av SaltStack (salt.minion)')
         lines.append('# Klistra in i din /etc/hosts (ersätt hela filen — listan är komplett).')
         lines.append('#')
-        lines.append('# ── Maskiner med IP ───────────────────────────────────')
+        lines.append('# ── Maskiner med privat IP ────────────────────────────')
         entries = []
-        for rec in self.search([('active', '=', True)]):
+        for rec in records:
             if rec.private_ip:
                 entries.append((rec.private_ip, rec.name))
         for ip, name in sorted(entries):
             lines.append('%-18s%s' % (ip, name))
+        public_entries = [
+            (rec.public_ip, rec.name) for rec in records
+            if not rec.private_ip and rec.public_ip
+        ]
+        if public_entries:
+            lines.append('#')
+            lines.append('# ── Maskiner med endast publik IP (nås ej på LAN) ─────')
+            for ip, name in sorted(public_entries):
+                lines.append('%-18s%s' % (ip, name))
         no_ip = [
-            rec.name for rec in self.search([('active', '=', True)])
-            if not rec.private_ip
+            rec.name for rec in records
+            if not rec.private_ip and not rec.public_ip
         ]
         if no_ip:
             lines.append('#')
-            lines.append('# ── Ej anslutna / IP saknas ───────────────────────')
+            lines.append('# ── IP saknas (ej synkad / offline) ───────────────────')
             for name in sorted(no_ip):
                 lines.append('# %s' % name)
         return {
