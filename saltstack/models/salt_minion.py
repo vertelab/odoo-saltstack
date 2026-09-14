@@ -1128,114 +1128,98 @@ fi
                          len(vaults), hosts)
         return vaults
 
+    def _dirvish_vault_size(self, api, dhost, vault):
+        """Read a vault's size from the nightly ``dirvish-du`` report.
+
+        ``dirvish-du`` (cron 23:04 on every backup server) writes the vault
+        size to ``/srv/backup/<vault>/dirvish/du``, e.g. ``517G\t.``. That
+        file is the cheapest source available — reading it costs nothing,
+        whereas running our own ``du`` over a multi-hundred-GB vault tree
+        takes minutes and hammers the backup disk.
+
+        Returns the size in bytes as an int, or None when unavailable.
+        """
+        path = '/srv/backup/%s/dirvish/du' % vault
+        try:
+            res = api.salt_call(
+                'local', dhost, 'cmd.run',
+                'cat %s 2>/dev/null' % path, timeout=20)
+            raw = str(json.loads(res).get('return', [{}])[0].get(dhost, '')).strip()
+        except Exception as e:
+            _logger.warning('Dirvish du read failed for %s on %s: %s', vault, dhost, e)
+            return None
+        # Format: "517G\t." (du -sh) — may also be "1.5T" or plain bytes.
+        m = re.match(r'^([0-9.]+)\s*([KMGTP]?)', raw.split('\t')[0].strip())
+        if not m:
+            return None
+        try:
+            value = float(m.group(1))
+        except ValueError:
+            return None
+        unit = (m.group(2) or '').upper()
+        factor = {'': 1, 'K': 1024, 'M': 1024 ** 2, 'G': 1024 ** 3, 'T': 1024 ** 4,
+                  'P': 1024 ** 5}.get(unit, 1)
+        return int(value * factor)
+
     def _dirvish_ratio(self, api, lxd_host):
         """Dirvish/LXD ratio for a host.
 
         Dirvish backs up whole hosts (e.g. fors, strand) — there is no
         per-container backup tree. The per-minion Dirvish share is estimated
         as minion_LXD_usage × ratio, where
-        ratio = dirvish_tree(host) / lxd_total(host).
+        ratio = dirvish_vault_size(host) / lxd_total(host).
 
-        The vault is looked up in the vault map (name != host in general);
-        the du runs on the host that actually owns the vault.
+        The vault is looked up in the vault map (name != host in general)
+        and its size is read from the nightly ``dirvish-du`` report — no
+        ``du`` is ever started from here.
 
         Returns the cached ratio when available, otherwise the configurable
         default (`saltstorage.dirvish_ratio_default`, default 2.0) so the
-        Dirvish row appears immediately. A background du on the dirvish host
-        refines the ratio later (cached in ir.config_parameter).
+        Dirvish row appears immediately.
         """
         if not lxd_host:
             return None
         param = 'saltstorage.dirvish_ratio.%s' % lxd_host
-        cached = self.env['ir.config_parameter'].get_param(param, '')
+        icp = self.env['ir.config_parameter']
+        cached = icp.get_param(param, '')
         if cached:
             try:
                 return float(cached)
             except ValueError:
                 pass
-        default = float(self.env['ir.config_parameter'].get_param(
-            'saltstorage.dirvish_ratio_default', '2.0'))
-        # Kick off the slow du once (background) to refine the ratio later.
+        default = float(icp.get_param('saltstorage.dirvish_ratio_default', '2.0'))
+
         vaults = self._dirvish_vault_map(api)
         dhost = vaults.get(lxd_host)
-        if dhost:
-            size_file = '/tmp/saltstorage_dirvish_%s.size' % lxd_host
-            try:
-                res = api.salt_call(
-                    'local', dhost, 'cmd.run',
-                    'test -s %s && echo DONE || echo PENDING' % size_file,
-                    timeout=15,
-                )
-                status = str(json.loads(res).get('return', [{}])[0].get(dhost, '')).strip()
-            except Exception:
-                status = 'PENDING'
-            if status == 'PENDING':
-                if self._read_dirvish_size(api, dhost, lxd_host):
-                    return self._dirvish_ratio(api, lxd_host)
-                cmd = ('nohup sh -c "du -sb /srv/backup/%s > %s 2>/dev/null" '
-                       '>/dev/null 2>&1 & echo started' % (lxd_host, size_file))
-                try:
-                    api.salt_call('local', dhost, 'cmd.run', cmd, timeout=15)
-                except Exception as e:
-                    _logger.warning('Dirvish du kick-off failed for %s on %s: %s',
-                                    lxd_host, dhost, e)
-        else:
+        if not dhost:
             _logger.info('No dirvish vault found for %s (vault map: %d entries)',
                          lxd_host, len(vaults))
-        return default
+            return default
 
-    def _read_dirvish_size(self, api, dhost, lxd_host):
-        """Read a finished du size file; cache the ratio. Returns True when cached."""
-        param = 'saltstorage.dirvish_ratio.%s' % lxd_host
-        if self.env['ir.config_parameter'].get_param(param):
-            return True
-        size_file = '/tmp/saltstorage_dirvish_%s.size' % lxd_host
-        try:
-            res = api.salt_call(
-                'local', dhost, 'cmd.run', 'cat %s 2>/dev/null' % size_file, timeout=15)
-            raw = str(json.loads(res).get('return', [{}])[0].get(dhost, '')).strip()
-        except Exception:
-            return False
-        if not raw.isdigit():
-            return False
-        # lxd total for that host
+        dirvish_bytes = self._dirvish_vault_size(api, dhost, lxd_host)
+        if not dirvish_bytes:
+            _logger.info('No dirvish du value for %s on %s', lxd_host, dhost)
+            return default
+
+        lxd_bytes = self._lxd_host_total(api, lxd_host)
+        if not lxd_bytes:
+            return default
+        ratio = dirvish_bytes / float(lxd_bytes)
+        icp.set_param(param, '%.4f' % ratio)
+        _logger.info('Dirvish ratio cached for %s: %.4f (dirvish=%s, lxd=%s)',
+                     lxd_host, ratio, dirvish_bytes, lxd_bytes)
+        return ratio
+
+    def _lxd_host_total(self, api, lxd_host):
+        """Total LXD usage on a host (bytes), or None."""
         try:
             res = api.salt_call(
                 'local', lxd_host, 'cmd.run',
                 self._STORAGE_LXD_HOST_TOTAL_SCRIPT, timeout=300)
-            lxd_total = str(json.loads(res).get('return', [{}])[0].get(lxd_host, '')).strip()
+            raw = str(json.loads(res).get('return', [{}])[0].get(lxd_host, '')).strip()
         except Exception:
-            lxd_total = ''
-        if not lxd_total.isdigit() or int(lxd_total) <= 0:
-            return False
-        ratio = int(raw) / float(lxd_total)
-        self.env['ir.config_parameter'].set_param(param, '%.4f' % ratio)
-        _logger.info('Dirvish ratio cached for %s: %.4f (dirvish=%s, lxd=%s)',
-                     lxd_host, ratio, raw, lxd_total)
-        return True
-
-    def _refresh_dirvish_ratios(self):
-        """Pick up any finished background dirvish du jobs (cache ratios)."""
-        api = self.env['saltstack.api']
-        vaults = self._dirvish_vault_map(api)
-        if not vaults:
-            return
-        # A du job runs on the host that owns the vault, so look for size
-        # files on every backup host rather than only the first one.
-        for dhost in sorted(set(vaults.values())):
-            try:
-                res = api.salt_call(
-                    'local', dhost, 'cmd.run',
-                    'ls /tmp/saltstorage_dirvish_*.size 2>/dev/null', timeout=15)
-                files = str(json.loads(res).get('return', [{}])[0].get(dhost, '')).split()
-            except Exception:
-                continue
-            for f in files:
-                try:
-                    host = f.split('dirvish_')[1].split('.size')[0]
-                except IndexError:
-                    continue
-                self._read_dirvish_size(api, dhost, host)
+            return None
+        return int(raw) if raw.isdigit() and int(raw) > 0 else None
 
     def _backup_customer(self):
         """Kundnamn i backup-rapporten (restic-status.json).
@@ -1320,9 +1304,6 @@ fi
         """Measure/estimate the four storage rows for this minion."""
         self.ensure_one()
         api = self.env['saltstack.api']
-
-        # 0. Pick up any finished dirvish du jobs (cache the ratios).
-        self._refresh_dirvish_ratios()
 
         # 1. LXD host usage (du on the host filesystem, per container).
         lxd_host, lxd_bytes = self._measure_lxd(api)
