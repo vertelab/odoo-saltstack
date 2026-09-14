@@ -1355,11 +1355,6 @@ msgstr "<span class=\"o_stat_text\">Driftslogg</span>"
 
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_form
-msgid "Run log — what has been done on this machine?"
-msgstr "Driftslogg — vad har gjorts på den här maskinen?"
-
-#. module: saltstack
-#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_form
 msgid "New note"
 msgstr "Ny anteckning"
 
@@ -1382,3 +1377,55 @@ msgstr "Manuell åtgärd"
 #: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__run_type__change
 msgid "Change"
 msgstr "Ändring"
+
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_form
+msgid ""
+"<i class=\"fa fa-book me-1\"/>\n"
+"                                        Run log — what has been done on this machine?"
+msgstr ""
+"<i class=\"fa fa-book me-1\"/>\n"
+"                                        Driftslogg — vad har gjorts på den här maskinen?"
+
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_form
+msgid ""
+"This collects both <b>automatic runs</b>\n"
+"                                        (backup, highstate, sync) and\n"
+"                                        <b>manual changes</b>. Write a note when you\n"
+"                                        change something — then the trail remains."
+msgstr ""
+"Här samlas både <b>automatiska körningar</b>\n"
+"                                        (backup, highstate, synk) och\n"
+"                                        <b>manuella ändringar</b>. Skriv en anteckning när du\n"
+"                                        ändrat något — då finns spåret kvar i efterhand."
+
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_form
+msgid ""
+"<i class=\"fa fa-magic me-1\"/>\n"
+"                                        <b>Automatic entries</b> are created by the sender via\n"
+"                                        the webhook <code>/saltstack/log</code> (restic, dirvish,\n"
+"                                        odoosa, github-backup) and linked here via\n"
+"                                        the <code>host</code> field."
+msgstr ""
+"<i class=\"fa fa-magic me-1\"/>\n"
+"                                        <b>Automatiska poster</b> skapas av avsändaren via\n"
+"                                        webhooken <code>/saltstack/log</code> (restic, dirvish,\n"
+"                                        odoosa, github-backup) och kopplas hit via\n"
+"                                        <code>host</code>-fältet."
+
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_form
+msgid ""
+"<i class=\"fa fa-pencil me-1\"/>\n"
+"                                        <b>Manual entries</b> are added with the\n"
+"                                        <b>New note</b> button above — or by Pi after a\n"
+"                                        completed change. They are marked with the source\n"
+"                                        <i>Manual action</i> and the type <i>Change</i>."
+msgstr ""
+"<i class=\"fa fa-pencil me-1\"/>\n"
+"                                        <b>Manuella poster</b> läggs till med knappen\n"
+"                                        <b>Ny anteckning</b> ovan — eller av Pi efter en\n"
+"                                        utförd ändring. De märks med källan\n"
+"                                        <i>Manuell åtgärd</i> och typen <i>Ändring</i>."
