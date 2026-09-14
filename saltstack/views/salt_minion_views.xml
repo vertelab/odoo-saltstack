@@ -347,9 +347,9 @@
                             </page>
                             <page string="Run log">
                                 <!-- Förklarande ruta: hur funktionen används -->
-                                <div class="alert alert-info" role="alert">
+                                <div class="alert alert-info" role="status">
                                     <h4 class="alert-title">
-                                        <i class="fa fa-book me-1"/>
+                                        <i class="fa fa-book me-1" title="Driftslogg"/>
                                         Run log — what has been done on this machine?
                                     </h4>
                                     <p class="mb-1">
@@ -359,14 +359,14 @@
                                         change something — then the trail remains.
                                     </p>
                                     <p class="mb-1">
-                                        <i class="fa fa-magic me-1"/>
+                                        <i class="fa fa-magic me-1" title="Automatic"/>
                                         <b>Automatic entries</b> are created by the sender via
                                         the webhook <code>/saltstack/log</code> (restic, dirvish,
                                         odoosa, github-backup) and linked here via
                                         the <code>host</code> field.
                                     </p>
                                     <p class="mb-0">
-                                        <i class="fa fa-pencil me-1"/>
+                                        <i class="fa fa-pencil me-1" title="Manual"/>
                                         <b>Manual entries</b> are added with the
                                         <b>New note</b> button above — or by Pi after a
                                         completed change. They are marked with the source
