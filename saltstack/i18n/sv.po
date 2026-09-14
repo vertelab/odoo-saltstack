@@ -1126,6 +1126,10 @@ msgstr ""
 msgid "String"
 msgstr ""
 #. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__run_type__security
+msgid "Security"
+msgstr "Säkerhet"
+#. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__run_type__sync
 msgid "Sync"
 msgstr "Sync"

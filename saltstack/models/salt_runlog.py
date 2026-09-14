@@ -47,6 +47,7 @@ class SaltRunlog(models.Model):
         ('highstate', 'Highstate'),
         ('sync', 'Sync'),
         ('translation', 'Odoo SA'),
+        ('security', 'Security'),
         ('test', 'Test'),
         ('change', 'Change'),
         ('other', 'Other'),
