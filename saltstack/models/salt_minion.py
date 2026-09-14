@@ -889,8 +889,16 @@ base=$(mount | awk '$3 ~ /lxd/ && $1 !~ /snap|tmpfs|nsfs/ {print $3; exit}')
 if [ -z "$base" ] && [ -d /var/snap/lxd/common/lxd/storage-pools ]; then
   base=/var/snap/lxd/common/lxd/storage-pools
 fi
-if [ -n "$base" ] && [ -d "$base/containers" ]; then
-  du -sb "$base/containers" | awk '{print $1}'
+# The pool name is an extra level on some hosts (strand: storage-pools/default/
+# containers), so try both the bare and the globbed path.
+found=""
+if [ -n "$base" ]; then
+  for d in "$base/containers" "$base"/*/containers; do
+    if [ -d "$d" ]; then found="$d"; break; fi
+  done
+fi
+if [ -n "$found" ]; then
+  du -sb "$found" | awk '{print $1}'
 else
   echo "NONE"
 fi
