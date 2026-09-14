@@ -147,7 +147,7 @@ class SaltMinion(models.Model):
     runlog_ids = fields.One2many(
         'saltstack.runlog',
         'minion_id',
-        string='Driftslogg',
+        string='Run log entries',
         help='Run reports and manual change notes for this minion.',
     )
     image = fields.Image(
