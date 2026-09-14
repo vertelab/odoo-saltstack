@@ -10,6 +10,7 @@
                   decoration-success="status == 'ok'">
                 <field name="timestamp"/>
                 <field name="host"/>
+                <field name="minion_id" optional="show"/>
                 <field name="source"/>
                 <field name="run_type"/>
                 <field name="status"/>
@@ -36,18 +37,20 @@
                     <group>
                         <group string="Run">
                             <field name="host"/>
+                            <field name="minion_id"/>
                             <field name="source"/>
                             <field name="run_type"/>
                             <field name="timestamp"/>
                         </group>
                         <group string="Result">
-                            <field name="summary"/>
+                            <field name="summary" readonly="source != 'manual'"/>
                             <field name="status"/>
                         </group>
                     </group>
                     <group string="Logg">
                         <field name="raw_log" nolabel="1"
-                               class="font-monospace" colspan="2"/>
+                               class="font-monospace" colspan="2"
+                               readonly="source != 'manual'"/>
                     </group>
                     <group string="JSON (maskinläsbar)" invisible="not json_payload">
                         <field name="json_payload" nolabel="1"
@@ -65,6 +68,7 @@
         <field name="arch" type="xml">
             <search>
                 <field name="host"/>
+                <field name="minion_id"/>
                 <field name="summary"/>
                 <field name="source"/>
                 <field name="run_type"/>
@@ -77,11 +81,18 @@
                 <filter name="ok" string="OK"
                         domain="[('status', '=', 'ok')]"/>
                 <separator/>
+                <filter name="manual" string="Manual actions"
+                        domain="[('source', '=', 'manual')]"/>
+                <filter name="changes" string="Changes"
+                        domain="[('run_type', '=', 'change')]"/>
+                <separator/>
                 <filter name="odoosa" string="Translations"
                         domain="[('source', '=', 'odoosa')]"/>
                 <group expand="0" string="Group By">
                     <filter name="group_host" string="Host"
                             context="{'group_by': 'host'}"/>
+                    <filter name="group_minion" string="Minion"
+                            context="{'group_by': 'minion_id'}"/>
                     <filter name="group_source" string="Source"
                             context="{'group_by': 'source'}"/>
                     <filter name="group_type" string="Run type"

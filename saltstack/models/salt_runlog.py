@@ -36,18 +36,31 @@ class SaltRunlog(models.Model):
         ('salt', 'Salt'),
         ('zabbix', 'Zabbix'),
         ('wazuh', 'Wazuh'),
+        ('manual', 'Manual action'),
         ('other', 'Other'),
     ], string='Source', default='other',
-        help='Source system that published the run.')
+        help='Source system that published the run. "Manuell åtgärd" is '
+             'used for notes written by hand about a change made on a '
+             'minion.')
     run_type = fields.Selection([
         ('backup', 'Backup'),
         ('highstate', 'Highstate'),
         ('sync', 'Sync'),
         ('translation', 'Odoo SA'),
         ('test', 'Test'),
+        ('change', 'Change'),
         ('other', 'Other'),
     ], string='Run type', default='other')
     host = fields.Char(string='Host')
+    minion_id = fields.Many2one(
+        'salt.minion',
+        string='Minion',
+        ondelete='set null',
+        index=True,
+        help='Minion this run/change belongs to. Set automatically from '
+             '"host" when a report is published; can also be set manually '
+             'on hand-written notes.',
+    )
 
     # ── Result ──────────────────────────────────────────────────────────
     status = fields.Selection([
@@ -115,6 +128,43 @@ class SaltRunlog(models.Model):
                 return fields.Datetime.now()
 
     @api.model
+    def _find_minion(self, host):
+        """Best-effort lookup of the salt.minion a run belongs to.
+
+        Returns an empty recordset when host is empty or does not match
+        exactly one minion. Never raises — a failed lookup must not break
+        the webhook.
+        """
+        if not host:
+            return self.env['salt.minion']
+        try:
+            minion = self.env['salt.minion'].sudo().search(
+                [('name', '=', host)], limit=1)
+            return minion
+        except Exception as e:
+            _logger.warning('Driftslogg: minion-uppslag misslyckades för '
+                            'host=%s: %s', host, e)
+            return self.env['salt.minion']
+
+    @api.model
+    def _backfill_minion_id(self):
+        """Fill minion_id on existing records from their host (idempotent).
+
+        Safe to re-run: only records with an empty minion_id are touched.
+        """
+        records = self.sudo().search([('minion_id', '=', False),
+                                     ('host', '!=', False)])
+        filled = 0
+        for rec in records:
+            minion = self._find_minion(rec.host)
+            if minion:
+                rec.minion_id = minion.id
+                filled += 1
+        _logger.info('Driftslogg: backfill satte minion_id på %s/%s poster',
+                     filled, len(records))
+        return filled
+
+    @api.model
     def process_webhook(self, payload):
         """Process an incoming run-log payload. Returns result dict."""
         try:
@@ -141,6 +191,7 @@ class SaltRunlog(models.Model):
                 'source': source,
                 'run_type': run_type,
                 'host': host,
+                'minion_id': self._find_minion(host).id or False,
                 'status': status,
                 'summary': str(payload.get('summary', ''))[:500],
                 'raw_log': raw_log[:200000],

@@ -138,6 +138,18 @@ class SaltMinion(models.Model):
         help='Number of unresolved saltstack.alert records for this host. '
              'Maintained by the alert model and the minion sync.',
     )
+    runlog_count = fields.Integer(
+        string='Driftslogg',
+        compute='_compute_runlog_count',
+        help='Number of saltstack.runlog records linked to this minion '
+             '(automatic runs and manual change notes).',
+    )
+    runlog_ids = fields.One2many(
+        'saltstack.runlog',
+        'minion_id',
+        string='Driftslogg',
+        help='Run reports and manual change notes for this minion.',
+    )
     image = fields.Image(
         string='Logo',
         max_width=256,
@@ -591,6 +603,44 @@ class SaltMinion(models.Model):
             'view_mode': 'list,form',
             'domain': [('host', '=', self.name)],
             'context': {'search_default_unresolved': 1},
+        }
+
+    @api.depends('name')
+    def _compute_runlog_count(self):
+        for rec in self:
+            rec.runlog_count = self.env['saltstack.runlog'].search_count(
+                [('minion_id', '=', rec.id)])
+
+    def action_view_runlogs(self):
+        """Open the Driftslogg filtered to this minion (smart button)."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Driftslogg — %s' % self.name,
+            'res_model': 'saltstack.runlog',
+            'view_mode': 'list,form',
+            'domain': [('minion_id', '=', self.id)],
+            'context': {'default_host': self.name,
+                        'default_minion_id': self.id},
+        }
+
+    def action_add_runlog(self):
+        """Open a prefilled Driftslogg form for a manual change note."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Ny driftslogg — %s' % self.name,
+            'res_model': 'saltstack.runlog',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_host': self.name,
+                'default_minion_id': self.id,
+                'default_source': 'manual',
+                'default_run_type': 'change',
+                'default_status': 'ok',
+                'default_timestamp': fields.Datetime.now(),
+            },
         }
 
     def _search_partner_by_name(self, name):

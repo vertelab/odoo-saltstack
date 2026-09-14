@@ -188,6 +188,13 @@
                                     <field name="open_alert_count" class="o_stat_value" widget="statinfo"/>
                                 </div>
                             </button>
+                            <button name="action_view_runlogs" type="object"
+                                    class="oe_stat_button" icon="fa-book">
+                                <div class="o_stat_info">
+                                    <span class="o_stat_text">Run log</span>
+                                    <field name="runlog_count" class="o_stat_value" widget="statinfo"/>
+                                </div>
+                            </button>
                         </div>
                         <group>
                             <group string="Identity">
@@ -337,6 +344,54 @@
                                     <field name="last_seen"/>
                                     <field name="last_sync"/>
                                 </group>
+                            </page>
+                            <page string="Run log">
+                                <!-- Förklarande ruta: hur funktionen används -->
+                                <div class="alert alert-info" role="alert">
+                                    <h4 class="alert-title">
+                                        <i class="fa fa-book me-1"/>
+                                        Run log — what has been done on this machine?
+                                    </h4>
+                                    <p class="mb-1">
+                                        This collects both <b>automatic runs</b>
+                                        (backup, highstate, sync) and
+                                        <b>manual changes</b>. Write a note when you
+                                        change something — then the trail remains.
+                                    </p>
+                                    <p class="mb-1">
+                                        <i class="fa fa-magic me-1"/>
+                                        <b>Automatic entries</b> are created by the sender via
+                                        the webhook <code>/saltstack/log</code> (restic, dirvish,
+                                        odoosa, github-backup) and linked here via
+                                        the <code>host</code> field.
+                                    </p>
+                                    <p class="mb-0">
+                                        <i class="fa fa-pencil me-1"/>
+                                        <b>Manual entries</b> are added with the
+                                        <b>New note</b> button above — or by Pi after a
+                                        completed change. They are marked with the source
+                                        <i>Manual action</i> and the type <i>Change</i>.
+                                    </p>
+                                </div>
+                                <div class="d-flex justify-content-end mb-2">
+                                    <button name="action_add_runlog"
+                                            string="New note"
+                                            type="object"
+                                            class="btn-primary"
+                                            icon="fa-plus"/>
+                                </div>
+                                <field name="runlog_ids" nolabel="1" colspan="2">
+                                    <list default_order="timestamp desc"
+                                          decoration-danger="status == 'error'"
+                                          decoration-warning="status == 'warning'"
+                                          decoration-success="status == 'ok'">
+                                        <field name="timestamp"/>
+                                        <field name="source"/>
+                                        <field name="run_type"/>
+                                        <field name="status"/>
+                                        <field name="summary"/>
+                                    </list>
+                                </field>
                             </page>
                             <page string="Notes">
                                 <group>

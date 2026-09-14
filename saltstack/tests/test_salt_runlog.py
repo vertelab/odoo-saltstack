@@ -88,3 +88,79 @@ class TestRunlogWebhook(TransactionCase):
         self.assertEqual(first.summary, 'nyare')
         last = self.Runlog.search([('id', 'in', ids)], order='timestamp asc', limit=1)
         self.assertEqual(last.id, older['runlog_id'])
+
+    # ── Minion-koppling ────────────────────────────────────────────────
+
+    def test_minion_linked_from_host(self):
+        """A published run is linked to the minion matching its host."""
+        minion = self.env['salt.minion'].create({'name': 'asterisk'})
+        res = self._publish(host='asterisk')
+        rec = self.Runlog.browse(res['runlog_id'])
+        self.assertEqual(rec.minion_id, minion)
+
+    def test_minion_unknown_host_leaves_link_empty(self):
+        """An unknown host does not break the webhook — minion_id stays empty."""
+        res = self._publish(host='no-such-minion-xyz')
+        self.assertEqual(res['status'], 'ok')
+        rec = self.Runlog.browse(res['runlog_id'])
+        self.assertFalse(rec.minion_id)
+        self.assertEqual(rec.host, 'no-such-minion-xyz')
+
+    def test_backfill_minion_id(self):
+        """Backfill sets minion_id on existing records from their host."""
+        minion = self.env['salt.minion'].create({'name': 'asterisk-backfill'})
+        rec = self.Runlog.create({
+            'host': 'asterisk-backfill',
+            'source': 'other',
+            'run_type': 'other',
+            'status': 'ok',
+        })
+        self.assertFalse(rec.minion_id)
+        self.Runlog._backfill_minion_id()
+        self.assertEqual(rec.minion_id, minion)
+
+    def test_backfill_is_idempotent(self):
+        """A second backfill run changes nothing."""
+        minion = self.env['salt.minion'].create({'name': 'asterisk-idem'})
+        rec = self.Runlog.create({
+            'host': 'asterisk-idem',
+            'source': 'other',
+            'run_type': 'other',
+            'status': 'ok',
+        })
+        self.Runlog._backfill_minion_id()
+        self.assertEqual(rec.minion_id, minion)
+        # Second run: no records left with an empty minion_id for this host
+        self.Runlog._backfill_minion_id()
+        self.assertEqual(rec.minion_id, minion)
+
+    # ── Manuella poster ────────────────────────────────────────────────
+
+    def test_manual_source_and_change_type_accepted(self):
+        """The manual/change selection values are valid."""
+        res = self._publish(source='manual', run_type='change',
+                            summary='pbx.logrotate — maxsize 500M')
+        rec = self.Runlog.browse(res['runlog_id'])
+        self.assertEqual(rec.source, 'manual')
+        self.assertEqual(rec.run_type, 'change')
+
+    def test_minion_runlog_count_and_actions(self):
+        """A minion counts its runlogs and can open/add them."""
+        minion = self.env['salt.minion'].create({'name': 'asterisk-ui'})
+        self.assertEqual(minion.runlog_count, 0)
+        self.Runlog.create({
+            'host': 'asterisk-ui',
+            'minion_id': minion.id,
+            'source': 'manual',
+            'run_type': 'change',
+            'status': 'ok',
+            'summary': 'test',
+        })
+        self.assertEqual(minion.runlog_count, 1)
+        action = minion.action_view_runlogs()
+        self.assertEqual(action['res_model'], 'saltstack.runlog')
+        self.assertIn(('minion_id', '=', minion.id), action['domain'])
+        add = minion.action_add_runlog()
+        self.assertEqual(add['context']['default_source'], 'manual')
+        self.assertEqual(add['context']['default_run_type'], 'change')
+        self.assertEqual(add['context']['default_minion_id'], minion.id)

@@ -1335,3 +1335,40 @@ msgstr ""
 #: model:ir.actions.server,name:saltstack.action_fault_cleanup
 msgid "🧹 Rensa felinjektioner"
 msgstr ""
+
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__minion_id
+#: model:ir.model.fields,field_description:saltstack.field_salt_minion__runlog_ids
+#: model:ir.model.fields,field_description:saltstack.field_salt_minion__runlog_count
+msgid "Run log"
+msgstr "Driftslogg"
+
+#. module: saltstack
+#: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__minion_id
+msgid "Minion"
+msgstr "Minion"
+
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_form
+msgid "<span class=\"o_stat_text\">Run log</span>"
+msgstr "<span class=\"o_stat_text\">Driftslogg</span>"
+
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_form
+msgid "Run log — what has been done on this machine?"
+msgstr "Driftslogg — vad har gjorts på den här maskinen?"
+
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_form
+msgid "New note"
+msgstr "Ny anteckning"
+
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_search
+msgid "Manual actions"
+msgstr "Manuella åtgärder"
+
+#. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_search
+msgid "Changes"
+msgstr "Ändringar"
