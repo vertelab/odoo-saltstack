@@ -1372,3 +1372,13 @@ msgstr "Manuella åtgärder"
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_search
 msgid "Changes"
 msgstr "Ändringar"
+
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__source__manual
+msgid "Manual action"
+msgstr "Manuell åtgärd"
+
+#. module: saltstack
+#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__run_type__change
+msgid "Change"
+msgstr "Ändring"
