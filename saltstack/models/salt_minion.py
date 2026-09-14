@@ -1145,19 +1145,40 @@ fi
         whereas running our own ``du`` over a multi-hundred-GB vault tree
         takes minutes and hammers the backup disk.
 
+        The file is only trusted when it is non-empty and younger than
+        ``saltstorage.dirvish_du_max_age`` hours (default 48). ``dirvish-du``
+        can hang for days on the large vaults, and a stale size must not be
+        presented as current.
+
         Returns the size in bytes as an int, or None when unavailable.
         """
         path = '/srv/backup/%s/dirvish/du' % vault
         try:
-            res = api.salt_call(
-                'local', dhost, 'cmd.run',
-                'cat %s 2>/dev/null' % path, timeout=20)
+            max_age = int(self.env['ir.config_parameter'].get_param(
+                'saltstorage.dirvish_du_max_age', '48'))
+        except ValueError:
+            max_age = 48
+        # -s: only report a non-empty file; -m: mtime in epoch seconds.
+        cmd = ('f=%s; [ -s "$f" ] && echo "$(cat $f)|$(stat -c %%Y "$f")"'
+               % path)
+        try:
+            res = api.salt_call('local', dhost, 'cmd.run', cmd, timeout=20)
             raw = str(json.loads(res).get('return', [{}])[0].get(dhost, '')).strip()
         except Exception as e:
             _logger.warning('Dirvish du read failed for %s on %s: %s', vault, dhost, e)
             return None
+        if not raw:
+            _logger.info('Dirvish du file empty or missing for %s on %s', vault, dhost)
+            return None
+        size_part, _, mtime_part = raw.partition('|')
+        if mtime_part.isdigit():
+            age_h = (time.time() - int(mtime_part)) / 3600.0
+            if age_h > max_age:
+                _logger.info('Dirvish du for %s on %s is stale (%.1f h > %d h)',
+                             vault, dhost, age_h, max_age)
+                return None
         # Format: "517G\t." (du -sh) — may also be "1.5T" or plain bytes.
-        m = re.match(r'^([0-9.]+)\s*([KMGTP]?)', raw.split('\t')[0].strip())
+        m = re.match(r'^([0-9.]+)\s*([KMGTP]?)', size_part.split('\t')[0].strip())
         if not m:
             return None
         try:
