@@ -54,7 +54,10 @@ _PRIVATE_NET_PREFIXES = (
     '172.16.11.',    # WireGuard gw1 side
     '10.0.0.',       # Hetzner private network (gw0/gw1/drake/ring)
     '10.0.1.',       # Hetzner private network (drake)
+    '10.20.20.',     # gate local LAN
     '10.128.10.',    # zenbook local container LAN
+    '10.145.182.',   # luke container LAN (luke18/luke18a)
+    '10.204.124.',   # jakob18.lxd container LAN
     '10.23.23.',     # zenbook local container LAN
     '192.168.1.',    # misc home/office LANs
 )
