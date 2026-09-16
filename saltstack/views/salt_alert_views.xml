@@ -13,6 +13,7 @@
                 <field name="name"/>
                 <field name="state" widget="badge" decoration-danger="state in ('error','aborted')" decoration-success="state in ('reported','deployed')" decoration-muted="state=='resolved'"/>
                 <field name="host"/>
+                <field name="private_ip" optional="show"/>
                 <field name="dc"/>
                 <field name="source"/>
                 <field name="category"/>
@@ -72,6 +73,37 @@
                                     <field name="timestamp"/>
                                 </group>
                             </group>
+                            <!-- Host access (T/11504): så att man kan NÅ
+                                 maskinen direkt från larmet — kopiera IP:t
+                                 till en terminal, eller öppna domänen i
+                                 webbläsaren. Speglar minionkortets
+                                 Identity-grupp. -->
+                            <group string="Host access">
+                                <group>
+                                    <label for="private_ip" string="Private IP"/>
+                                    <div class="o_row">
+                                        <field name="private_ip"/>
+                                        <button name="action_copy_alert_ip"
+                                                type="object"
+                                                icon="fa-copy"
+                                                class="btn-link"
+                                                title="Kopiera IP till urklipp"/>
+                                    </div>
+                                    <field name="public_ip"/>
+                                </group>
+                                <group>
+                                    <label for="external_domain" string="Extern domän"/>
+                                    <div class="o_row">
+                                        <field name="external_domain"/>
+                                        <button name="action_open_host_domain"
+                                                type="object"
+                                                icon="fa-globe"
+                                                class="btn-link"
+                                                title="Öppna extern domän i ny flik"/>
+                                    </div>
+                                    <field name="host_machine"/>
+                                </group>
+                            </group>
                         </page>
                         <page string="Detaljer" name="details">
                             <group string="Description" class="description-group">
@@ -98,6 +130,8 @@
         <field name="arch" type="xml">
             <search>
                 <field name="host"/>
+                <field name="private_ip"/>
+                <field name="public_ip"/>
                 <field name="trigger_name"/>
                 <field name="category"/>
                 <field name="source"/>

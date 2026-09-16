@@ -88,10 +88,18 @@
                                        decoration-success="state == 'online'"
                                        decoration-warning="state == 'faulty'"
                                        decoration-muted="state == 'offline'"/>
-                                <span t-if="record.open_alert_count.raw_value &gt; 0"
-                                      class="badge text-bg-danger ms-2">
+                                <!-- Larmantalet (T/11504): kortet visade bara
+                                     en faulty-prick, så 1 och 60 larm såg
+                                     likadana ut. Badgen är en knapp som
+                                     öppnar larmen, och visas bara när det
+                                     finns något att åtgärda. -->
+                                <button t-if="record.open_alert_count.raw_value &gt; 0"
+                                        name="action_show_alerts" type="object"
+                                        class="badge text-bg-danger ms-2 border-0"
+                                        title="Öppna driftlarm för denna minion"
+                                        aria-label="Öppna driftlarm">
                                     <i class="fa fa-exclamation-triangle"/> <field name="open_alert_count"/>
-                                </span>
+                                </button>
                             </div>
                         </div>
                     </t>
@@ -142,7 +150,8 @@
                     <field name="state" decoration-danger="state == 'faulty'"
                            decoration-success="state == 'online'"
                            decoration-muted="state == 'offline'"/>
-                    <field name="open_alert_count"/>
+                    <field name="open_alert_count" string="Larm"
+                           decoration-danger="open_alert_count &gt; 0"/>
                     <field name="is_container" widget="boolean"/>
                     <field name="is_demo" widget="boolean"/>
                     <field name="last_seen"/>
@@ -439,6 +448,8 @@
                             domain="[('state', '=', 'offline')]"/>
                     <filter name="faulty" string="Har larm (faulty)"
                             domain="[('state', '=', 'faulty')]"/>
+                    <filter name="has_alerts" string="Har larm"
+                            domain="[('open_alert_count', '&gt;', 0)]"/>
                     <filter name="containers" string="Containers"
                             domain="[('is_container', '=', True)]"/>
                     <separator/>

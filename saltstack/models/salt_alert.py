@@ -34,6 +34,28 @@ class SaltAlert(models.Model):
         selection=[], store=True,
         related='host.dc', string='Datacenter',
         help='Datacenter för hosten (från salt.minion).')
+    # ── Host access (T/11504) ────────────────────────────────────────────
+    # Adresserna ärvs från minionen — de lagras INTE på larmet. Adressen är
+    # en egenskap hos maskinen, inte hos larmet: en lagrad kopia blir fel
+    # så snart minionen byter adress (se svenskfast 2026-08-25).
+    # Syftet är att operatören ska kunna NÅ maskinen direkt från larmet —
+    # kopiera IP:t till en terminal (ssh) eller öppna den externa domänen i
+    # webbläsaren — utan att först öppna minion-posten.
+    private_ip = fields.Char(
+        related='host.private_ip', string='Private IP',
+        help='Hostens privata adress (från salt.minion). Använd kopiera-'
+             'knappen för att klistra in den i en terminal.')
+    public_ip = fields.Char(
+        related='host.public_ip', string='Public IP',
+        help='Hostens publika adress (från salt.minion). Tom för containrar '
+             'som bara nås via sin gateway.')
+    external_domain = fields.Char(
+        related='host.external_domain', string='Extern domän',
+        help='Hostens publika domän (från salt.minion) — öppnas i webbläsaren '
+             'med knappen bredvid.')
+    host_machine = fields.Char(
+        related='host.host_machine', string='Fysisk värd',
+        help='Maskinen/containervärden som hosten kör på (från salt.minion).')
     source = fields.Selection(
         selection=[],
         string='Source',
@@ -367,6 +389,51 @@ class SaltAlert(models.Model):
             )
         except Exception as e:
             _logger.warning('Could not notify Driftlarm channel: %s', e)
+
+    # ── Host access (T/11504) ────────────────────────────────────────────
+
+    def action_copy_alert_ip(self):
+        """Copy the host IP to the clipboard (T/11504).
+
+        Same behaviour as salt.minion.action_copy_private_ip: falls back to
+        the public address so hosts that only have a public address
+        (GleSYS/Hetzner) still copy something useful. The point is to get the
+        address into a terminal without leaving the alert.
+        """
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'saltstack_copy_value',
+            'params': {'value': self.private_ip or self.public_ip or ''},
+        }
+
+    def action_open_host_domain(self):
+        """Open the host's external domain in a new tab (T/11504).
+
+        Mirrors salt.minion.action_open_external_domain so the operator can
+        reach the machine in the browser straight from the alert. Warns
+        instead of opening an empty tab when the domain is missing.
+        """
+        self.ensure_one()
+        if not self.external_domain:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Extern domän saknas'),
+                    'message': _('No external domain set for %s.') % (
+                        self.host.name if self.host else self.host),
+                    'type': 'warning',
+                },
+            }
+        url = self.external_domain
+        if '://' not in url:
+            url = 'https://' + url
+        return {
+            'type': 'ir.actions.act_url',
+            'url': url,
+            'target': 'new',
+        }
 
     # ── Actions ──────────────────────────────────────────────────────────
 
