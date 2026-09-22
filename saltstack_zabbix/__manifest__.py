@@ -1,6 +1,7 @@
 # Copyright (C) 2026 Vertel Sverige AB (<https://vertel.se>).
 
 {
+    'website': 'https://vertel.se/apps/odoo-saltstack/saltstack_zabbix',
     'name': 'SaltStack Zabbix',
     'version': '18.0.1.3.0',
     'license': 'AGPL-3',

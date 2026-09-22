@@ -22,7 +22,7 @@ Contains zero infrastructure-specific knowledge — safe to open-source.
     """,
     'author': 'Vertel Sverige AB',
     'license': 'AGPL-3',
-    'website': 'https://vertel.se',
+    'website': 'https://vertel.se/apps/odoo-saltstack/saltstack_ai',
     'depends': ['saltstack', 'ai_agent_core', 'mail'],
     'data': [
         'security/ir.model.access.csv',

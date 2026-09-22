@@ -1,6 +1,7 @@
 # Copyright (C) 2026 Vertel Sverige AB (<https://vertel.se>).
 
 {
+    'website': 'https://vertel.se/apps/odoo-saltstack/saltstack_helpdesk',
     'name': 'SaltStack Helpdesk Bridge',
     'version': '18.0.1.0.2',
     'license': 'AGPL-3',

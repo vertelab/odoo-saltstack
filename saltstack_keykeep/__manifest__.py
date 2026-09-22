@@ -17,7 +17,7 @@ Bridge between Salt pillar secrets and Keykeep credentials.
     """,
     'author': 'Vertel Sverige AB',
     'license': 'AGPL-3',
-    'website': 'https://vertel.se',
+    'website': 'https://vertel.se/apps/odoo-saltstack/saltstack_keykeep',
     'depends': ['saltstack', 'keykeep'],
     'data': [
         'security/ir.model.access.csv',

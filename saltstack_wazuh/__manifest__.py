@@ -7,7 +7,7 @@
     'summary': 'Wazuh source for Drift Alerts — selection_add + settings',
     'author': 'Vertel Sverige AB',
     'license': 'AGPL-3',
-    'website': 'https://vertel.se',
+    'website': 'https://vertel.se/apps/odoo-saltstack/saltstack_wazuh',
     'depends': ['saltstack', 'mail'],
     'data': [
         'security/ir.model.access.csv',

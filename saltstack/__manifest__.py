@@ -30,7 +30,7 @@ Features:
 """,
     'author': 'Vertel Sverige AB',
     'license': 'AGPL-3',
-    'website': 'https://vertel.se',
+    'website': 'https://vertel.se/apps/odoo-saltstack/saltstack',
     'depends': ['base', 'mail'],
     'data': [
         'security/saltstack_groups.xml',
