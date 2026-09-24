@@ -5,6 +5,8 @@ import logging
 import re
 import time
 
+import psycopg2.errors
+
 from odoo import _, api, fields, models
 
 _logger = logging.getLogger(__name__)
@@ -382,16 +384,50 @@ class SaltMinion(models.Model):
     def _update_open_alert_count(self):
         """Recompute the stored open alert count from alert records.
 
-        Called by the alert model on create/resolve and at sync end (backfill).
-        Writing the stored field triggers the stored state recomputation.
+        Called by the alert model on create/resolve and by the dedicated
+        backfill cron. Writing the stored field triggers the stored state
+        recomputation.
+
+        Batched (2026-09-24, T/11607): previously this issued one search_count
+        per minion (179 queries) inside the minion-sync transaction. That forced
+        a flush of the pending last_seen writes mid-transaction and collided
+        with concurrent writers (driftlarm webhook, auto-resolve cron), aborting
+        the whole sync with:
+
+            psycopg2.errors.SerializationFailure: could not serialize access
+            due to concurrent update
+
+        Now: one read_group for all hosts, and each write is wrapped in a
+        savepoint so a concurrent update on a single minion cannot roll back
+        the entire run.
         """
+        if not self:
+            return True
+
+        # host is a Many2one to salt.minion, so group on the id and map back.
+        groups = self.env['saltstack.alert'].read_group(
+            [('resolved', '=', False), ('host', 'in', self.ids)],
+            ['host'],
+            ['host'],
+        )
+        counts = {
+            group['host'][0]: group['host_count']
+            for group in groups
+            if group.get('host')
+        }
+
         for rec in self:
-            count = self.env['saltstack.alert'].search_count([
-                ('host', '=', rec.name),
-                ('resolved', '=', False),
-            ])
-            if rec.open_alert_count != count:
-                rec.open_alert_count = count
+            count = counts.get(rec.id, 0)
+            if rec.open_alert_count == count:
+                continue
+            try:
+                with self.env.cr.savepoint():
+                    rec.open_alert_count = count
+            except psycopg2.errors.SerializationFailure:
+                _logger.warning(
+                    'open_alert_count: concurrent update on %s, skipped this '
+                    'round (will be corrected by the backfill cron)', rec.name)
+                continue
         return True
 
     # ── Logo handling ────────────────────────────────────────────────────
@@ -1539,9 +1575,15 @@ fi
                 rec.active = False
                 deactivated += 1
 
-        # Backfill open alert counts (first run after upgrade + alert drift).
-        for rec in known:
-            rec._update_open_alert_count()
+        # NOTE (2026-09-24, T/11607): the open_alert_count backfill used to run
+        # here. It issued one search_count per minion, which forced a flush of
+        # the pending last_seen writes mid-transaction and collided with
+        # concurrent writers -> SerializationFailure -> the ENTIRE sync was
+        # rolled back, freezing last_seen for every minion.
+        #
+        # It now runs in its own cron (action_cron_backfill_alert_counts,
+        # data/alert_count_cron.xml) so this transaction only touches
+        # salt_minion and stays short.
 
         return {
             'created': created,
@@ -1549,6 +1591,18 @@ fi
             'deactivated': deactivated,
             'total': len(all_minions),
         }
+
+    def action_cron_backfill_alert_counts(self):
+        """Scheduled backfill of open_alert_count for all minions.
+
+        Split out of the minion sync (T/11607) so the sync transaction stays
+        short. The field is normally maintained by saltstack.alert on
+        create/resolve; this job corrects drift and covers the first run after
+        an upgrade.
+        """
+        minions = self.search([('active', '=', True)])
+        minions._update_open_alert_count()
+        return {'minions': len(minions)}
 
     def action_cron_sync_all(self):
         """Scheduled sync: refresh minions and pillars from Salt Master.

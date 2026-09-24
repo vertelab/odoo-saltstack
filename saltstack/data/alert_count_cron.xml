@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Backfill of salt.minion.open_alert_count.
+
+        Split out of the minion sync cron (2026-09-24, T/11607). Previously the
+        backfill ran inside action_sync_all_minions(), where it issued one
+        search_count per minion. That forced a flush of the pending last_seen
+        writes mid-transaction and collided with concurrent writers (driftlarm
+        webhook, auto-resolve cron), aborting the whole sync with:
+
+            psycopg2.errors.SerializationFailure: could not serialize access
+            due to concurrent update
+
+        The result was that last_seen froze for every minion (86 of them stuck
+        on one timestamp) and the registry reported healthy machines as
+        offline/faulty.
+
+        The field is normally maintained by saltstack.alert on create/resolve;
+        this job only corrects drift, so 15 minutes is plenty.
+    -->
+    <record id="cron_backfill_alert_counts" model="ir.cron">
+        <field name="name">Saltstack: backfill open alert counts</field>
+        <field name="model_id" ref="saltstack.model_salt_minion"/>
+        <field name="state">code</field>
+        <field name="code">model.action_cron_backfill_alert_counts()</field>
+        <field name="interval_number">15</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+        <field name="user_id" ref="base.user_root"/>
+    </record>
+</odoo>

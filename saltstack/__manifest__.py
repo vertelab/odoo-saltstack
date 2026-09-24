@@ -2,7 +2,7 @@
 
 {
     'name': 'SaltStack Infrastructure',
-    'version': '18.0.1.50.0',
+    'version': '18.0.1.51.0',
     'category': 'Infrastructure',
     'summary': 'Manage SaltStack minions, pillar anchors and infrastructure',
     'description': """
@@ -40,6 +40,7 @@ Features:
         'data/config_data.xml',
         'data/fault_actions.xml',
         'data/sync_cron.xml',
+        'data/alert_count_cron.xml',
         'data/sync_snapshot_cron.xml',
         'data/sync_dirvish_snapshot_cron.xml',
         'data/auto_resolve_cron.xml',
