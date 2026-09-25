@@ -4,17 +4,18 @@
     'name': 'SaltStack Keykeep Bridge',
     'version': '18.0.1.0.4',
     'category': 'Infrastructure',
-    'summary': 'Sync Salt pillar secrets to Keykeep credentials',
-    'description': """
+    'summary': 'Sync Salt pillar secrets to Keykeep credentials.',
+    'description': '''
 SaltStack Keykeep Bridge
 ========================
 
-Bridge between Salt pillar secrets and Keykeep credentials.
+    Sync Salt pillar secrets to Keykeep credentials.
 
-- Sync pillar values (data_type='secret') to keykeep.credential records
-- Support for Bifrost provider key syncing
-- API auth via keykeep (SaltAPI and ZabbixAPI read tokens from keykeep)
-    """,
+    Features:
+
+        - UI Integration: Extends 2 view(s) in the Odoo interface.
+        - Extends Odoo: Builds on keykeep.credential, salt.minion, salt.pillar.
+    ''',
     'author': 'Vertel Sverige AB',
     'license': 'AGPL-3',
     'website': 'https://vertel.se/apps/odoo-saltstack/saltstack_keykeep',

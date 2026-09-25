@@ -6,7 +6,18 @@
     'version': '18.0.1.3.0',
     'license': 'AGPL-3',
     'category': 'Infrastructure',
-    'summary': 'Zabbix connection for SaltStack — API client + settings + correlation',
+    'summary': 'Zabbix connection for SaltStack — API client + settings + correlation.',
+    'description': '''
+SaltStack Zabbix
+================
+
+    Zabbix connection for SaltStack — API client + settings + correlation.
+
+    Features:
+
+        - UI Integration: Extends 2 view(s) in the Odoo interface.
+        - Extends Odoo: Builds on saltstack.alert, zabbix.api.
+    ''',
     'depends': ['saltstack'],
     'data': [
         'security/ir.model.access.csv',

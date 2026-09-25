@@ -6,7 +6,17 @@
     'version': '18.0.1.0.2',
     'license': 'AGPL-3',
     'category': 'Infrastructure',
-    'summary': 'Create helpdesk tickets from infrastructure incidents',
+    'summary': 'Create helpdesk tickets from infrastructure incidents.',
+    'description': '''
+SaltStack Helpdesk Bridge
+=========================
+
+    Create helpdesk tickets from infrastructure incidents.
+
+    Features:
+
+        - Demo Data: Ships pre-configured demo data for the industry.
+    ''',
     'depends': ['saltstack_ai', 'helpdesk_mgmt'],
     'data': [
         'security/ir.model.access.csv',

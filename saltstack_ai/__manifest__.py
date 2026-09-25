@@ -4,22 +4,21 @@
     'name': 'SaltStack AI Bridge',
     'version': '18.0.1.16.0',
     'category': 'Infrastructure',
-    'summary': 'AI-powered SaltStack, Zabbix och Wazuh integration',
-    'description': """
+    'summary': 'AI-powered SaltStack, Zabbix och Wazuh integration.',
+    'description': '''
 SaltStack AI Bridge
 ===================
 
-Generic AI-powered SaltStack, Zabbix och Wazuh integration. Provides:
+    Generic AI-powered SaltStack, Zabbix och Wazuh integration. Provides:
 
-- SaltAPI and ZabbixAPI client classes for REST/JSON-RPC communication
-- Configurable settings for API URLs, tokens, and authentication method
-- 26 generic ai.tool records (18 SaltStack + 8 Zabbix)
-- 6 educational ai.skill records covering SaltStack and Zabbix concepts
-- Infrastructure Operator ai.coworker (SaltStack + Zabbix + Wazuh)
-- Extensible framework for infrastructure-specific bridge modules
+    Contains zero infrastructure-specific knowledge — safe to open-source.
 
-Contains zero infrastructure-specific knowledge — safe to open-source.
-    """,
+    Features:
+
+        - Automation: Scheduled jobs: Saltstack AI: Process pending diagnoses.
+        - UI Integration: Extends 2 view(s) in the Odoo interface.
+        - Extends Odoo: Builds on saltstack.alert.
+    ''',
     'author': 'Vertel Sverige AB',
     'license': 'AGPL-3',
     'website': 'https://vertel.se/apps/odoo-saltstack/saltstack_ai',
