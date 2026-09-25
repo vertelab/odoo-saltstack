@@ -821,7 +821,12 @@ class SaltMinion(models.Model):
 
         role_list = [r.strip().lower() for r in roles.split(',') if r.strip()]
         has_gateway = 'gateway' in role_list or bool(grains.get('gw'))
-        external_domain = grains.get('external_domain') or ''
+        # `domain`-grainet sätts av onboard.grains (onboard.grains pillar
+        # domain=...) och är den källa som finns på alla containrar.
+        # `external_domain` finns bara på en del — läs den först, fall tillbaka
+        # på `domain` så att t.ex. e-postmappningen (domän -> minion) fungerar.
+        external_domain = (grains.get('external_domain')
+                           or grains.get('domain') or '')
 
         self.write({
             'private_ip': private_ip,
