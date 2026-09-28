@@ -65,4 +65,34 @@ guardrail: zabbix_acknowledge requires human approval (write — changes alert s
             ref('tool_zabbix_acknowledge'),
         ])]"/>
     </record>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- BACKUP (10 tools) > 8 → in enum mode it is automatically split  -->
+    <!-- into units of ≤8 operations (backup_1, backup_2).               -->
+    <!-- Two systems: Borg → disk (LXD hosts), Restic → S3 (Garage).     -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <record id="cap_backup_ops" model="ai.tool.capability">
+        <field name="name">backup</field>
+        <field name="description">
+purpose: Backup operations — Borg to disk (LXD hosts → tull1, per artifact) and Restic to S3 (customer Garage buckets → &lt;customer&gt;-backup)
+when: backup drift, missed nightly runs, retention/prune/pin, restore of one artifact or one customer bucket, "is the backup fresh?"
+when not: for general host health (use the salt capability); for monitoring symptoms (use zabbix)
+example: {"operation": "borg_status", "minion": "fors"} then {"operation": "borg_restore", "minion": "fors", "artifact": "containers/sparv", "target": "/tmp/restore-sparv"}
+output: per operation — see the respective operation description
+guardrail: read operations run without approval; borg_backup_run, borg_prune (dry_run=false), borg_pin and borg_restore (dry_run=false) require human approval
+        </field>
+        <field name="member_ids" eval="[(6, 0, [
+            ref('tool_borg_status'),
+            ref('tool_borg_artifacts'),
+            ref('tool_borg_list'),
+            ref('tool_restic_status'),
+            ref('tool_restic_restore_list'),
+            ref('tool_borg_backup_run'),
+            ref('tool_borg_prune'),
+            ref('tool_borg_pin'),
+            ref('tool_borg_restore'),
+            ref('tool_restic_restore'),
+        ])]"/>
+    </record>
 </odoo>

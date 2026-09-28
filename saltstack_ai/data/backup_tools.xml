@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- BACKUP TOOLS — Borg (disk) + Restic (S3/Garage)                 -->
+    <!--                                                                 -->
+    <!-- Two systems, two targets (decided 2026-09-28):                  -->
+    <!--   Borg   → DISK  (tull1:/srv/borgbackup)  — LXD hosts           -->
+    <!--   Restic → S3    (Garage <kund>-backup)   — customer buckets    -->
+    <!--                                                                 -->
+    <!-- Dirvish is RETIRED (dirvish/retire.sls, 2026-09-25). It remains -->
+    <!-- only as the old vaults on dirvishtull0/1 + migration source.    -->
+    <!--                                                                 -->
+    <!-- Every tool has BOTH group_ids (→ group_infra_operator) and      -->
+    <!-- agent_ids (→ agent_backup_specialist). INLINE, same pattern as  -->
+    <!-- domain_tools.xml.                                               -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <!-- ── BORG: status per LXD artifact ───────────────────────────── -->
+
+    <record id="tool_borg_status" model="ai.tool">
+        <field name="name">borg_status</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+        <field name="agent_ids" eval="[(4, ref('agent_backup_specialist'))]"/>
+        <field name="description"><![CDATA[
+purpose: read the Borg status report per LXD artifact on a host
+when: first step for any Borg/backup question — is the newest archive fresh, or stale?
+when not: to run a backup (use borg_backup_run); to inspect the repo (use borg_list)
+example: {"minion": "fors"}
+output: status JSON per host — {host, repo, status (ok|warning|error), artifacts, stale,
+  items[]} where each item = {kind, name, last, age_hours, archive, size_bytes,
+  original_size_bytes, files}
+guardrail: read-only operation, safe
+]]></field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"LXD host minion ID (fors, tull0, strand)"},"format":{"type":"string","description":"json (default) or txt — txt is the human-readable report","default":"json"}},"required":["minion"]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion, format="json"):
+    """Read the Borg status report (per artifact) from an LXD host."""
+    api = env['saltstack.api']
+    ext = "json" if format == "json" else "txt"
+    return api.salt_call(
+        "local", minion, "cmd.run",
+        f"cat /var/log/lxd-backup/lxd-backup-status.{ext}")
+]]></field>
+    </record>
+
+    <!-- ── BORG: list archives in a repo ───────────────────────────── -->
+
+    <record id="tool_borg_list" model="ai.tool">
+        <field name="name">borg_list</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+        <field name="agent_ids" eval="[(4, ref('agent_backup_specialist'))]"/>
+        <field name="description"><![CDATA[
+purpose: list the archives in a Borg repo, optionally filtered by prefix
+when: to answer "which restore points exist for this container/host?" before a restore
+when not: for the per-artifact health summary (use borg_status); to restore (use borg_restore)
+example: {"minion": "fors", "prefix": "fors-containers-sparv"}
+output: archive names with timestamps (newest last)
+guardrail: read-only operation, safe
+]]></field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"Host that owns the repo (fors, tull0, strand)"},"prefix":{"type":"string","description":"Archive prefix, e.g. &lt;host&gt;-&lt;kind&gt;-&lt;name&gt;. Empty = all archives","default":""},"limit":{"type":"integer","description":"Max number of archives to return (newest last)","default":20}},"required":["minion"]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion, prefix="", limit=20):
+    """List Borg archives in the LXD-backup repo on a host."""
+    api = env['saltstack.api']
+    glob = f"--glob-archives '{prefix}-*'" if prefix else ""
+    cmd = (
+        "set -a; . /etc/lxd-backup/lxd-backup.conf; set +a; "
+        f"borg list --format '{{archive}}{{TAB}}{{time}}{{NEWLINE}}' {glob} "
+        f"\"$LXD_BACKUP_REPO\" 2>&1 | tail -n {int(limit)}"
+    )
+    return api.salt_call("local", minion, "cmd.run", cmd)
+]]></field>
+    </record>
+
+    <!-- ── BORG: what artifacts would be discovered ────────────────── -->
+
+    <record id="tool_borg_artifacts" model="ai.tool">
+        <field name="name">borg_artifacts</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+        <field name="agent_ids" eval="[(4, ref('agent_backup_specialist'))]"/>
+        <field name="description"><![CDATA[
+purpose: show which LXD artifacts the backup WOULD discover on a host (no backup is run)
+when: to verify discovery after adding a container, or when the status report misses an artifact
+when not: for the actual backup health (use borg_status)
+example: {"minion": "fors"}
+output: KIND / NAME / PATH per discovered artifact (containers, VMs, snapshots,
+  custom volumes, buckets, lxd-db)
+guardrail: read-only operation, safe
+]]></field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"LXD host minion ID"}},"required":["minion"]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion):
+    """List the LXD artifacts that lxd-backup.sh discovers (dry discovery)."""
+    api = env['saltstack.api']
+    return api.salt_call("local", minion, "cmd.run",
+                         "/usr/local/bin/lxd-backup.sh --list")
+]]></field>
+    </record>
+
+    <!-- ── BORG: run a backup (destructive) ───────────────────────── -->
+
+    <record id="tool_borg_backup_run" model="ai.tool">
+        <field name="name">borg_backup_run</field>
+        <field name="risk_level">destructive</field>
+        <field name="executor">local</field>
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+        <field name="agent_ids" eval="[(4, ref('agent_backup_specialist'))]"/>
+        <field name="description"><![CDATA[
+purpose: run a Borg backup NOW on an LXD host (per artifact, or one kind)
+when: after a missed nightly run, or to verify a newly onboarded container backs up
+when not: as a routine action (nightly cron 01:00 handles it); without checking borg_status first
+example: {"minion": "fors"} or {"minion": "fors", "kind": "containers"}
+output: backup log per artifact (created archives, dedup stats)
+guardrail: requires human approval (destructive — writes to the repo, can take hours)
+]]></field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"LXD host minion ID"},"kind":{"type":"string","description":"Limit to one kind: containers, vms, snapshots, custom, buckets, lxd-db. Empty = all","default":""}},"required":["minion"]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion, kind=""):
+    """Run the LXD Borg backup on a host (state.apply lxd_backup.backup)."""
+    api = env['saltstack.api']
+    kwargs = {}
+    if kind:
+        kwargs["pillar"] = {"kind": kind}
+    return api.salt_call("local", minion, "state.apply", "lxd_backup.backup", **kwargs)
+]]></field>
+    </record>
+
+    <!-- ── BORG: prune (retention) ────────────────────────────────── -->
+
+    <record id="tool_borg_prune" model="ai.tool">
+        <field name="name">borg_prune</field>
+        <field name="risk_level">destructive</field>
+        <field name="executor">local</field>
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+        <field name="agent_ids" eval="[(4, ref('agent_backup_specialist'))]"/>
+        <field name="description"><![CDATA[
+purpose: run Borg retention (prune) on a host — Dirvish-compatible semantics
+when: to verify retention, or after pinning/unpinning an archive
+when not: routinely (cron runs dry-run Sunday 02:00 and real prune 03:00)
+example: {"minion": "fors", "dry_run": true}
+output: what was pruned (or WOULD be pruned with dry_run=true)
+guardrail: dry_run=true is safe; dry_run=false requires human approval (deletes archives)
+note: pinned archives (EXPIRES=Never in /etc/lxd-backup/hist/<prefix>.hist) are
+  excluded from the prune glob and verified to still exist afterwards (exit 3 if gone)
+]]></field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"LXD host minion ID"},"dry_run":{"type":"boolean","description":"true = only show what would be pruned (safe)","default":true}},"required":["minion"]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion, dry_run=True):
+    """Run lxd-backup-prune.sh (dry-run by default)."""
+    api = env['saltstack.api']
+    flag = " --dry-run" if dry_run else ""
+    return api.salt_call("local", minion, "cmd.run",
+                         f"/usr/local/bin/lxd-backup-prune.sh{flag}")
+]]></field>
+    </record>
+
+    <!-- ── BORG: pin / unpin an archive ───────────────────────────── -->
+
+    <record id="tool_borg_pin" model="ai.tool">
+        <field name="name">borg_pin</field>
+        <field name="risk_level">destructive</field>
+        <field name="executor">local</field>
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+        <field name="agent_ids" eval="[(4, ref('agent_backup_specialist'))]"/>
+        <field name="description"><![CDATA[
+purpose: pin (EXPIRES=Never) or unpin an archive so retention never deletes it
+when: for year archives / evidentiary value, or to protect an archive during an investigation
+when not: routinely — pinning accumulates storage
+example: {"minion": "fors", "archive": "fors-containers-sparv-2026-09-24T18:14:53", "unpin": false}
+output: confirmation that EXPIRES was set to Never (or restored to default)
+guardrail: requires human approval (changes retention — a pinned archive is kept forever)
+]]></field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"LXD host minion ID"},"archive":{"type":"string","description":"Full archive name to pin/unpin"},"unpin":{"type":"boolean","description":"true = restore default EXPIRES instead of pinning","default":false}},"required":["minion","archive"]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion, archive, unpin=False):
+    """Pin or unpin a Borg archive (Dirvish Never semantics)."""
+    api = env['saltstack.api']
+    flag = "--unpin" if unpin else "--pin"
+    return api.salt_call("local", minion, "cmd.run",
+                         f"/usr/local/bin/lxd-backup-prune.sh {flag} '{archive}'")
+]]></field>
+    </record>
+
+    <!-- ── BORG: restore one artifact ─────────────────────────────── -->
+
+    <record id="tool_borg_restore" model="ai.tool">
+        <field name="name">borg_restore</field>
+        <field name="risk_level">destructive</field>
+        <field name="executor">local</field>
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+        <field name="agent_ids" eval="[(4, ref('agent_backup_specialist'))]"/>
+        <field name="description"><![CDATA[
+purpose: extract ONE LXD artifact from Borg to a target directory
+when: to recover a container/volume — the whole point of per-artifact backup
+when not: to restore the whole host (extract per artifact instead)
+example: {"minion": "fors", "artifact": "containers/sparv", "target": "/tmp/restore-sparv"}
+output: extracted files in <target>
+guardrail: requires human approval (writes to disk)
+IMPORTANT: this extracts to a DIRECTORY — it does NOT replace the container in LXD.
+  To actually restore: 1) run this, 2) stop/delete the container in LXD,
+  3) move rootfs back to the pool path, 4) lxc start <name>. Steps 2-4 are manual
+  on purpose — an automatic overwrite of a live container is too dangerous.
+]]></field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"LXD host minion ID"},"artifact":{"type":"string","description":"&lt;kind&gt;/&lt;name&gt;, e.g. containers/sparv or custom/my-volume"},"target":{"type":"string","description":"Target directory (should be empty)"},"archive":{"type":"string","description":"Specific archive name. Empty = newest for that prefix","default":""}},"required":["minion","artifact","target"]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion, artifact, target, archive=""):
+    """Extract one LXD artifact from Borg (state.apply lxd_backup.restore)."""
+    api = env['saltstack.api']
+    pillar = {"artifact": artifact, "target": target}
+    if archive:
+        pillar["archive"] = archive
+    return api.salt_call("local", minion, "state.apply", "lxd_backup.restore",
+                         pillar=pillar)
+]]></field>
+    </record>
+
+    <!-- ── RESTIC: per-customer bucket status ─────────────────────── -->
+
+    <record id="tool_restic_status" model="ai.tool">
+        <field name="name">restic_status</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+        <field name="agent_ids" eval="[(4, ref('agent_backup_specialist'))]"/>
+        <field name="description"><![CDATA[
+purpose: read the Restic status report (per customer Garage bucket)
+when: first step for any S3/Garage backup question — which customers backed up, which failed?
+when not: for Borg/LXD host backups (use borg_status)
+example: {"minion": "restic"}
+output: per customer — source bucket + <customer>-backup bucket with size, plus a
+  "Bucket-täckning" section (backed up / has data but no backup / other mechanism / empty)
+guardrail: read-only operation, safe
+note: restic backs up Garage S3 buckets to <customer>-backup. The Garage cluster is
+  strand (192.168.11.1) + tull1 (192.168.11.30) + tull0 (192.168.11.31), rf=2.
+]]></field>
+        <field name="parameters">{"type":"object","properties":{"minion":{"type":"string","description":"The restic minion (default: restic)","default":"restic"},"format":{"type":"string","description":"txt (human readable, default) or json","default":"txt"}},"required":[]}</field>
+        <field name="code"><![CDATA[
+async def execute(minion="restic", format="txt"):
+    """Read the Restic per-customer backup status report."""
+    api = env['saltstack.api']
+    ext = "json" if format == "json" else "txt"
+    return api.salt_call("local", minion, "cmd.run",
+                         f"cat /var/log/garage-backup/restic-status.{ext}")
+]]></field>
+    </record>
+
+    <!-- ── RESTIC: restore-command catalogue ──────────────────────── -->
+
+    <record id="tool_restic_restore_list" model="ai.tool">
+        <field name="name">restic_restore_list</field>
+        <field name="risk_level">read_only</field>
+        <field name="executor">local</field>
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+        <field name="agent_ids" eval="[(4, ref('agent_backup_specialist'))]"/>
+        <field name="description"><![CDATA[
+purpose: list the restore points (snapshots) available for a customer's restic repo
+when: before a restore — which dates can be restored for this customer?
+when not: to actually restore (use restic_restore); for S3 bucket sizes (use restic_status)
+example: {"customer": "dina"}
+output: restore points with snapshot id, date and tags
+guardrail: read-only operation, safe
+note: runs restic-restore.sh --list ON the restic minion (192.168.11.112), where
+  /etc/rclone/<customer>.conf and the restic password live. The command only works
+  THERE — never locally.
+]]></field>
+        <field name="parameters">{"type":"object","properties":{"customer":{"type":"string","description":"Customer name (= minion name / Garage bucket prefix)"},"minion":{"type":"string","description":"Backup server to run on (default: restic)","default":"restic"}},"required":["customer"]}</field>
+        <field name="code"><![CDATA[
+async def execute(customer, minion="restic"):
+    """List restore points for a customer (restic-restore.sh --list)."""
+    api = env['saltstack.api']
+    return api.salt_call("local", minion, "cmd.run",
+                         f"/usr/local/bin/restic-restore.sh {customer} --list")
+]]></field>
+    </record>
+
+    <!-- ── RESTIC: restore (destructive) ──────────────────────────── -->
+
+    <record id="tool_restic_restore" model="ai.tool">
+        <field name="name">restic_restore</field>
+        <field name="risk_level">destructive</field>
+        <field name="executor">local</field>
+        <field name="group_ids" eval="[(4, ref('group_infra_operator'))]"/>
+        <field name="agent_ids" eval="[(4, ref('agent_backup_specialist'))]"/>
+        <field name="description"><![CDATA[
+purpose: restore a customer's Garage bucket from a restic snapshot
+when: after data loss confirmed — recover from the newest (or a specific) snapshot
+when not: for a dry look at the contents (set dry_run=true); without confirming the target
+example: {"customer": "dina", "snapshot": "latest", "dry_run": true}
+output: restored files (or, with dry_run=true, the snapshot contents — nothing is written)
+guardrail: dry_run=true is safe; dry_run=false requires human approval (overwrites the target)
+note: the helper refuses to overwrite a non-empty target without confirmation; default
+  target is /restore/<customer>. Runs ON the restic minion — /etc/rclone/<customer>.conf
+  and the restic password exist only there.
+]]></field>
+        <field name="parameters">{"type":"object","properties":{"customer":{"type":"string","description":"Customer name"},"snapshot":{"type":"string","description":"Snapshot id or 'latest'","default":"latest"},"target":{"type":"string","description":"Target directory (default /restore/&lt;customer&gt;)","default":""},"dry_run":{"type":"boolean","description":"true = show contents only, write nothing","default":true},"minion":{"type":"string","description":"Backup server to run on (default: restic)","default":"restic"}},"required":["customer"]}</field>
+        <field name="code"><![CDATA[
+async def execute(customer, snapshot="latest", target="", dry_run=True, minion="restic"):
+    """Restore a customer bucket from restic (dry-run by default)."""
+    api = env['saltstack.api']
+    args = [f"/usr/local/bin/restic-restore.sh", customer, snapshot]
+    if target:
+        args.append(target)
+    if dry_run:
+        args.append("--dry-run")
+    return api.salt_call("local", minion, "cmd.run", " ".join(args))
+]]></field>
+    </record>
+</odoo>

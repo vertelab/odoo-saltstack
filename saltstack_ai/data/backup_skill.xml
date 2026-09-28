@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- BACKUP SKILL — Borg (disk) + Restic (S3/Garage)                 -->
+    <!-- Consumed by the Backup Specialist agent.                        -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <record id="skill_backup_ops" model="ai.skill">
+        <field name="name">backup</field>
+        <field name="category">infrastructure</field>
+        <field name="source_type">odoo</field>
+        <field name="compatibility">any</field>
+        <field name="description">Backup operations — Borg to disk (LXD hosts → tull1) and Restic to S3 (Garage buckets). Per-artifact archives, Dirvish-compatible retention (hist + EXPIRES + Never-pinning), restore, and drift diagnosis.</field>
+        <field name="trigger_keywords">backup, borg, restic, garage, s3, bucket, archive, snapshot, retention, prune, restore, återställ, pin, dirvish, lxd-backup, backup-status, stale</field>
+        <field name="recipe_text"><![CDATA[
+# Backup Operations — Borg (disk) + Restic (S3)
+
+Vertel has **two** backup systems. They do different jobs — never mix them up:
+
+| System | Target | What it backs up |
+|---|---|---|
+| **Borg** | **Disk** — `tull1:/srv/borgbackup` (XFS, prjquota, 6.3 TB) | LXD hosts: per-artifact (containers, VMs, snapshots, custom volumes, buckets, LXD-db) + host-level `/etc`+`/srv` |
+| **Restic** | **S3** — Garage buckets | Customer Garage buckets → `<customer>-backup` |
+
+**Dirvish is RETIRED** (`dirvish/retire.sls`, 2026-09-25). It survives only as the
+old vaults on `dirvishtull0`/`dirvishtull1` and as the migration source. Do not
+propose Dirvish for new backups.
+
+## Borg — architecture
+
+```
+fors   ──lxd-backup.sh──► ssh://root@62.109.49.47/srv/borgbackup/lxd/fors
+tull0  ──lxd-backup.sh──► ssh://root@192.168.11.30/srv/borgbackup/lxd/tull0
+strand ──lxd-backup.sh──► ssh://root@192.168.11.30/srv/borgbackup/lxd/strand
+                              └─ tull1:/srv/borgbackup
+```
+
+The job runs **locally on each LXD host** (discovery reads LXD's local config);
+only the write goes over SSH to tull1. tull1 owns the disk.
+
+**One borg archive per artifact per night** — that is the whole point: you can
+restore ONE container without touching the others. Archive naming:
+`<host>-<kind>-<name>-<YYYY-MM-DDTHH:MM:SS>`.
+
+Cron (all three hosts):
+
+```
+0 1 * * *   lxd-backup.sh              # nightly per-artifact backup
+0 2 * * 0   lxd-backup-prune.sh --dry-run
+0 3 * * 0   lxd-backup-prune.sh        # retention
+0 6 * * *   lxd-backup-status.sh
+30 2 * * *  borg-backup.sh             # host-level (complement)
+```
+
+## Retention — Dirvish semantics preserved
+
+| Dirvish | Borg |
+|---|---|
+| `default.hist` | `/etc/lxd-backup/hist/<prefix>.hist` |
+| `expire-default: +15 days` | `borg prune --keep-within 15d` |
+| `EXPIRES: Never` | archive excluded from the prune glob (pinned) |
+| `dirvish-expire` | `borg prune --glob-archives` |
+| `dirvish-expire --dry-run` | `--dry-run` |
+
+`borg prune` has NO "keep this archive" flag — a pinned archive is protected by
+never being in the glob passed to prune, then verified to still exist (exit 3 if
+it vanished).
+
+## The tools
+
+- **borg_status** — per-artifact health (status ok/warning/error, stale count, age_hours). START HERE.
+- **borg_artifacts** — what discovery WOULD find (no backup run).
+- **borg_list** — archives in a repo, filter by prefix → "which restore points exist?"
+- **borg_backup_run** — run a backup now (destructive).
+- **borg_prune** — retention; `dry_run=true` is safe.
+- **borg_pin** — pin/unpin (EXPIRES=Never).
+- **borg_restore** — extract ONE artifact to a directory (destructive).
+- **restic_status** — per-customer Garage bucket status.
+- **restic_restore_list** — restore points for a customer.
+- **restic_restore** — restore a customer bucket; `dry_run=true` is safe.
+
+## Diagnosis pattern
+
+1. **borg_status** on the host → is the newest archive fresh, or stale?
+2. Stale/missing artifact? → **borg_artifacts** (is it discovered at all?)
+3. Discovery OK but no archive? → check `/var/log/lxd-backup/backup.log`
+4. Repo questions → **borg_list** with the artifact prefix
+5. Restic/S3 questions → **restic_status** on the `restic` minion
+
+## Restore
+
+**Borg** — per artifact (extracts to a *directory*, does NOT replace the container):
+
+```
+borg_restore(minion="fors", artifact="containers/sparv", target="/tmp/restore-sparv")
+```
+Then, to actually restore: stop/delete the container in LXD, move rootfs back to
+the pool path, `lxc start`. Those last steps are manual on purpose.
+
+**Restic** — always run ON the restic minion (192.168.11.112), where
+`/etc/rclone/<customer>.conf` and the restic password live:
+
+```
+restic_restore_list(customer="dina")           # which dates?
+restic_restore(customer="dina", dry_run=True)  # look, write nothing
+```
+
+## Pitfalls (verified in production)
+
+- **`borg repo-list` does not exist in borg 1.2.8** — use `borg list`.
+- **`BORG_PASSCOMMAND` ≠ `LXD_BACKUP_PASSCOMMAND`** — borg only reads `BORG_*`.
+  Without it every cron run fails on an interactive prompt.
+- **`borg list --format` writes NO newlines in 1.2.8** — add `{NEWLINE}` explicitly,
+  otherwise `wc -l` reports 1 and status reports go silently empty.
+- **`lxc storage get <pool> source` returns EMPTY** on fors/tull0 — LXD only exposes
+  `source` with `--target <server_name>` (from `lxc query /1.0`, NOT `hostname`).
+- **`BORG_RELOCATED_REPO_ACCESS_IS_OK=yes`** is required when a repo has moved hosts.
+- **`msgpack` conflict** — a pip msgpack shadows the apt version borg needs.
+- **Never auto-start a restore into a live container.** Extract to a directory first.
+
+## Publishing
+
+`lxd_backup/publish.sls` runs **on the Salt master** (cron 06:40) and POSTs to the
+**shared** `/saltstack/log` webhook with `source=lxd-backup`. The webhook is shared
+with dirvish/restic/odoosa/clicktest/wazuh — the contract (URL, Bearer, field names)
+must never change; only add new sources.
+
+## Open items (2026-09-28)
+
+- Zabbix monitoring of borg repos (age of newest archive per host) — not built.
+- Prune retention is configured but not yet verified in production.
+- Migrating the remaining old Dirvish vaults — separate track.
+]]></field>
+    </record>
+</odoo>

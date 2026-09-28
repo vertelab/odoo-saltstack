@@ -216,7 +216,7 @@ Use to verify Odoo status via XML-RPC.
 
     <record id="coworker_infrastructure_operator" model="ai.coworker">
         <field name="name">Infrastructure Operator</field>
-        <field name="sub_description">Infrastructure operator — SaltStack, Zabbix, Wazuh</field>
+        <field name="sub_description">Infrastructure operator — SaltStack, Zabbix, Wazuh, Backup</field>
         <field name="description">
 You are the Infrastructure Operator — an AI specialist for operations and monitoring
 of the entire infrastructure via SaltStack, Zabbix and Wazuh.
@@ -236,6 +236,7 @@ diagnose via SaltStack against minions. You can handle:
 - system: salt_system_load, salt_memory_usage, salt_disk_usage, salt_journal_errors, salt_cmd_run
 - caddy: caddy_status, caddy_recent_errors, caddy_upstream_health
 - odoo-rpc: odoo_login, odoo_search, odoo_read, odoo_count
+- backup: borg_status, borg_artifacts, borg_list, borg_backup_run, borg_prune, borg_pin, borg_restore, restic_status, restic_restore_list, restic_restore
 
 ## Odoo ORM tools (from ai_agent_core)
 - describe_model: use first to understand an unknown model schema
@@ -261,6 +262,10 @@ diagnose via SaltStack against minions. You can handle:
 
 ## Auto-fix rules (DOCUMENT ONLY)
 - OOM kill → restart the killed process but always create a helpdesk ticket.
+- Stale/missing backup archive (Borg or Restic) → do NOT run a backup blindly.
+  Check borg_status/restic_status, then borg_artifacts, then the backup log
+  (/var/log/lxd-backup/backup.log). Document and create a helpdesk ticket.
+  NEVER restore into a live container — extract to a directory first.
 - CPU spikes, memory leaks → document as nonconformity.
 - Anything else → document, create a ticket, flag for manual investigation.
 
@@ -292,6 +297,7 @@ diagnose via SaltStack against minions. You can handle:
             ref('skill_caddy_ops'),
             ref('skill_odoo_rpc'),
             ref('skill_zabbix_troubleshooting'),
+            ref('skill_backup_ops'),
         ])]"/>
         <field name="tool_ids" eval="[(4, ref('saltstack_ai.tool_driftlarm_update')),
             (4, ref('ai_agent_core.tool_describe_model')),
@@ -442,6 +448,28 @@ diagnose via SaltStack against minions. You can handle:
         <field name="coworker_id" ref="coworker_infrastructure_operator"/>
         <field name="agent_id" ref="agent_caddy_specialist"/>
         <field name="sequence">70</field>
+        <field name="role">member</field>
+    </record>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- BACKUP SPECIALIST — Borg (disk) + Restic (S3/Garage)            -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <record id="agent_backup_specialist" model="ai.agent">
+        <field name="name">Backup Specialist</field>
+        <field name="description">Backup operations: Borg to disk (LXD hosts → tull1) and Restic to S3 (Garage buckets). Per-artifact status, retention/prune/pin, restore.</field>
+        <field name="ai_role">Backup Specialist</field>
+        <field name="ai_goal">Diagnose and remediate backup drift: check per-artifact Borg status on LXD hosts, verify discovery, inspect repos, run or verify retention, and restore a single artifact or a customer bucket. Distinguish Borg (disk) from Restic (S3) — they are different systems with different targets.</field>
+        <field name="ai_backstory">You are a backup operations expert for Vertel. You know that Borg backs LXD hosts to disk (tull1:/srv/borgbackup) per artifact, and Restic backs customer Garage S3 buckets to &lt;customer&gt;-backup. You know Dirvish is retired and only survives as legacy vaults. You work methodically: status first, then discovery, then logs, then action. You never restore into a live container — you extract to a directory and let a human do the swap.</field>
+        <field name="status">active</field>
+        <field name="skill_ids" eval="[(6, 0, [ref('skill_backup_ops')])]"/>
+    </record>
+
+    <!-- Link the Backup Specialist to the Infrastructure Operator coworker -->
+    <record id="coworker_agent_backup" model="ai.coworker.agent">
+        <field name="coworker_id" ref="coworker_infrastructure_operator"/>
+        <field name="agent_id" ref="agent_backup_specialist"/>
+        <field name="sequence">80</field>
         <field name="role">member</field>
     </record>
 </odoo>
