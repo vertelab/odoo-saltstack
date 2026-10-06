@@ -63,6 +63,20 @@ class TestRunlogWebhook(TransactionCase):
         rec = self.Runlog.browse(res['runlog_id'])
         self.assertEqual(rec.source, 'other')
 
+    def test_backup_sources_are_known(self):
+        """Every backup publisher has its own source — not 'other'.
+
+        KVM-backupen (kvm-publish.sh) och LXD-backupen publicerar till samma
+        webhook som dirvish/restic. Utan en egen selection-post tystas de till
+        'other' och går inte att filtrera på i Driftsloggen — det var precis
+        vad som hände KVM-posten (2026-10-06).
+        """
+        for src in ('lxd-backup', 'kvm', 'dirvish', 'restic'):
+            with self.subTest(source=src):
+                res = self._publish(source=src)
+                rec = self.Runlog.browse(res['runlog_id'])
+                self.assertEqual(rec.source, src)
+
     def test_timestamp_parsed(self):
         """ISO timestamp is parsed into a naive Odoo datetime."""
         res = self._publish(timestamp='2026-08-12T06:15:00Z')

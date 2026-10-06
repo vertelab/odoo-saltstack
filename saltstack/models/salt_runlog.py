@@ -33,6 +33,7 @@ class SaltRunlog(models.Model):
         ('odoosa', 'Odoo SA'),
         ('dirvish', 'Dirvish'),
         ('lxd-backup', 'LXD backup'),
+        ('kvm', 'KVM backup'),
         ('github-backup', 'GitHub backup'),
         ('salt', 'Salt'),
         ('zabbix', 'Zabbix'),
