@@ -18,25 +18,70 @@
         },"required":["title","description"]}</field>
         <field name="code"><![CDATA[
 async def execute(title, description, minion="", service="", severity="minor"):
-    """Create a nonconformity in the management system."""
+    """Create a nonconformity in the management system.
+
+    mgmtsystem.nonconformity has five required fields, four of them without
+    a default (partner_id, responsible_user_id, manager_user_id, origin_ids,
+    plus description). All must be set or create() raises NotNullViolation.
+    They are derived here rather than demanded: an infrastructure deviation
+    is real even when no customer, employee or origin is obvious, so the
+    tool must never be blocked by missing data.
+    """
     Nonconformity = env.get("mgmtsystem.nonconformity")
-    if not Nonconformity:
+    # env.get() returns an EMPTY recordset for an installed model, and
+    # bool(empty recordset) is False — so `if not Nonconformity` would fire
+    # even though the model exists. Test the model name instead.
+    if "mgmtsystem.nonconformity" not in env:
         return "ERROR: mgmtsystem.nonconformity model not available"
-    
+
     nc_description = description
     context = []
     if minion:
         context.append(f"Affected machine: {minion}")
     if service:
         context.append(f"Affected service: {service}")
+    if severity:
+        context.append(f"Severity: {severity}")
     if context:
         nc_description += "\n\n--- Infrastructure Context ---\n" + "\n".join(context)
-    
+
+    # partner_id is required. An infrastructure deviation has no customer,
+    # so fall back to the company partner.
+    partner = env.company.partner_id or env.user.partner_id
+
+    # responsible_user_id is required. The person documenting the deviation
+    # (whoever is on duty) is the responsible party.
+    responsible = env.user
+
+    # manager_user_id is required. Derive it from the responsible user's
+    # hr.employee manager when hr is available; otherwise fall back to the
+    # responsible user so the record can still be created.
+    manager = responsible
+    # Same empty-recordset trap as above: test the model name, not truthiness.
+    if "hr.employee" in env:
+        employee = env["hr.employee"].search([("user_id", "=", responsible.id)], limit=1)
+        if employee and employee.parent_id and employee.parent_id.user_id:
+            manager = employee.parent_id.user_id
+
+    # origin_ids is required. Use the reusable infrastructure origin, created
+    # by data/nonconformity_origin_data.xml; create it if missing.
+    Origin = env["mgmtsystem.nonconformity.origin"]
+    origin = Origin.search([("ref_code", "=", "infrastructure_alert")], limit=1)
+    if not origin:
+        origin = Origin.create({
+            "name": "Driftavvikelse",
+            "ref_code": "infrastructure_alert",
+        })
+
     nc = Nonconformity.create({
         "name": title,
         "description": nc_description,
+        "partner_id": partner.id,
+        "responsible_user_id": responsible.id,
+        "manager_user_id": manager.id,
+        "origin_ids": [(6, 0, origin.ids)],
     })
-    
+
     return f"Nonconformity documented: {nc.name} (ID: {nc.id})"
 ]]></field>
     </record>

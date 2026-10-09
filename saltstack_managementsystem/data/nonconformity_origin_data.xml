@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (C) 2026 Vertel Sverige AB (<https://vertel.se>).
+     License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl). -->
+<odoo noupdate="1">
+    <!-- Återanvändbar avvikelseorsak: avvikelsen uppstod i driften och
+         dokumenterades av en Pi-agent. Sätts på varje nonconformity som
+         skapas av verktyget document_nonconformity, så att driftavvikelser
+         kan filtreras och rapporteras som grupp.
+
+         ref_code är den stabila nyckeln koden letar upp posten med —
+         namnet är översättningsbart och får ändras. -->
+    <record id="nc_origin_infrastructure" model="mgmtsystem.nonconformity.origin">
+        <field name="name">Driftavvikelse</field>
+        <field name="ref_code">infrastructure_alert</field>
+        <field name="description">Avvikelse som upptäckts i driften och dokumenterats av en Pi-agent.</field>
+        <field name="sequence">60</field>
+    </record>
+</odoo>

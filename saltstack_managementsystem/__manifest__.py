@@ -3,7 +3,7 @@
 {
     'website': 'https://vertel.se/apps/odoo-saltstack/saltstack_managementsystem',
     'name': 'SaltStack Management System Bridge',
-    'version': '18.0.1.0.2',
+    'version': '18.0.1.0.3',
     'license': 'AGPL-3',
     'category': 'Infrastructure',
     'summary': 'Document infrastructure anomalies as nonconformities.',
@@ -20,6 +20,7 @@ SaltStack Management System Bridge
     'depends': ['saltstack_ai', 'mgmtsystem_nonconformity'],
     'data': [
         'security/ir.model.access.csv',
+        'data/nonconformity_origin_data.xml',
         'data/anomaly_tools.xml',
     ],
     'installable': True,
