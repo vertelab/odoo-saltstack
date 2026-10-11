@@ -34,6 +34,63 @@ sudo checkmodule -d <db> -m saltstack            # basmodul
 sudo checkmodule -d <db> -m saltstack_ai         # AI-brygga
 ```
 
+### Deploy till ledningssystem — `git pull` på minionen (2026-10-11)
+
+`/usr/share/odoo-saltstack` på `ledningssystem` är ett **git-arbetsträd**.
+Koden kommer dit med `git pull` — inte via Salt-state:
+
+```bash
+# 1. Hämta ny kod (minionen når github.com:vertelab/odoo-saltstack)
+cd /usr/share/odoo-saltstack && git pull origin 18.0
+
+# 2. Uppgradera modulerna (checkmodule sköter stop → --update → start)
+sudo checkmodule -d ledningssystem -m saltstack,saltstack_ai,saltstack_managementsystem \
+  -l info > /tmp/checkmodule-saltstack.log 2>&1
+echo "exit=$?" && tail -5 /tmp/checkmodule-saltstack.log
+
+# 3. Verifiera
+systemctl is-active odoo                      # active
+curl -s -o /dev/null -w '%{http_code}\n' https://ledningssystem.vertel.se/web/login   # 200
+```
+
+⚠️ **Versionen MÅSTE bumpas för att `--update` ska ta.** `checkmodule` hoppar
+över en modul vars manifest-version är oförändrad — även om koden skiljer sig.
+Det hände `saltstack` 2026-10-11: `kvm`-källan (T/11817) fanns i repot men
+versionen var kvar på `18.0.1.52.0` = samma som installerad → uppgraderingen
+hade tyst uteblivit. Bumpa alltid `version` i `__manifest__.py` när modulens
+**kod** ändras (assets/manifest-text räcker inte som skäl).
+
+⚠️ **Lokala ändringar på minionen kan kollidera med pullen.** Kontrollera
+`git status` först. 2026-10-11 låg `kvm`-fixen ocommittad på minionen **och** i
+repot (`76bcf9a`) — verifiera med `sha256sum` på båda sidor innan du kastar
+dem (`git checkout -- <fil>`), så du inte slänger arbete som inte finns i repot.
+
+⚠️ **Decoy-DB:** använd alltid fjärr-parametrarna
+(`-h postgres16.vertel.se -U ledningssystem -d ledningssystem`). Den lokala
+postgresen på värden har en föråldrad DB med samma namn.
+
+⚠️ **Maska aldrig `odoo`-tjänsten** — den har `Restart=on-failure`
+(`/etc/systemd/system/odoo.service.d/override.conf`). `systemctl mask` +
+`Restart=` = permanent driftstopp. Använd `checkmodule`, som hanterar
+stop/start själv.
+
+### Verifiera en deploy (exempel: `kvm`-källan, 2026-10-11)
+
+Versionen i `ir_module_module` säger att uppgraderingen *körde* — inte att
+koden *verkar*. Verifiera beteendet:
+
+```bash
+# Kod finns på plats
+grep -n "'kvm'" /usr/share/odoo-saltstack/saltstack/models/salt_runlog.py
+
+# Beteendet syns i data: kvm har egen källa i stället för 'other'
+sudo -u odoo psql -h postgres16.vertel.se -U ledningssystem -d ledningssystem \
+  -c "SELECT source, count(*) FROM saltstack_runlog GROUP BY source ORDER BY 2 DESC;"
+```
+
+Före fixen hamnade KVM-poster i `other` (62 poster låg där 2026-10-11);
+efteråt har `kvm` **16** egna poster.
+
 ## Basmodulen `saltstack`
 
 Se `saltstack/README.md` för full dokumentation.
