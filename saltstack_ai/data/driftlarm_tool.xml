@@ -22,10 +22,12 @@
             "status":{"type":"string","description":"pending, running, done, error","default":""},
             "resolved":{"type":"boolean","description":"Mark as resolved","default":false},
             "outcome":{"type":"string","description":"What the alarm turned out to be: acted (a real problem was fixed), false_positive (noise, no action needed), not_acted (real but deliberately not acted on), escalated (needs a human)","default":""},
+            "nis2_significant":{"type":"string","description":"NIS2 significance: yes (significant incident, reporting deadlines apply), no (not significant), undecided. Independent of outcome. Fields are owned by saltstack_nis2; ignored if that module is not installed.","default":""},
+            "nis2_category":{"type":"string","description":"NIS2 incident category (dns, cloud, datacenter, connectivity, data_breach, availability, integrity, other)","default":""},
             "action_plan":{"type":"string","description":"Action plan to add to the description","default":""}
         },"required":["alert_id"]}</field>
         <field name="code"><![CDATA[
-async def execute(alert_id, assessment="", status="", resolved=False, outcome="", action_plan=""):
+async def execute(alert_id, assessment="", status="", resolved=False, outcome="", nis2_significant="", nis2_category="", action_plan=""):
     """Update a Drift Alert record with assessment and status."""
     if "saltstack.alert" not in env:
         return "ERROR: saltstack.alert model not available"
@@ -47,12 +49,25 @@ async def execute(alert_id, assessment="", status="", resolved=False, outcome=""
             return (f"ERROR: invalid outcome '{outcome}' - "
                     f"use one of {', '.join(valid_outcomes)}")
         vals["outcome"] = outcome
+    # NIS2-signifikans (fälten ägs av saltstack_nis2). Sätts bara om modulen
+    # är installerad — annars ignoreras de tyst (verktyget är generiskt).
+    if nis2_significant:
+        valid_sig = ("yes", "no", "undecided")
+        if nis2_significant not in valid_sig:
+            return (f"ERROR: invalid nis2_significant '{nis2_significant}' - "
+                    f"use one of {', '.join(valid_sig)}")
+        if "nis2_significant" in alert._fields:
+            vals["nis2_significant"] = nis2_significant
+    if nis2_category and "nis2_category" in alert._fields:
+        vals["nis2_category"] = nis2_category
     if action_plan:
         vals["description"] = (alert.description or "") + "\n\n## Action Plan (AI)\n" + action_plan
     if vals:
         alert.write(vals)
     return (f"Drift Alert {alert_id} updated: status={status or alert.diagnosis_state}, "
-            f"outcome={alert.outcome or '-'}, resolved={alert.resolved}")
+            f"outcome={alert.outcome or '-'}, "
+            f"nis2={getattr(alert, 'nis2_significant', '-') or '-'}, "
+            f"resolved={alert.resolved}")
 ]]></field>
     </record>
 
