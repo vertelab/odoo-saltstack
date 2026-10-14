@@ -2,7 +2,7 @@
 
 {
     'name': 'SaltStack Infrastructure',
-    'version': '18.0.1.53.0',
+    'version': '18.0.1.54.0',
     'category': 'Infrastructure',
     'summary': 'Manage SaltStack minions, pillar anchors and infrastructure.',
     'description': '''
