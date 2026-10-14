@@ -30,8 +30,8 @@ addons_path = /usr/share/odoo-saltstack, ...
 Uppdatera sedan modulerna:
 
 ```bash
-sudo checkmodule -d <db> -m saltstack            # basmodul
-sudo checkmodule -d <db> -m saltstack_ai         # AI-brygga
+sudo checkmodule --multi-user -d <db> -m saltstack            # basmodul
+sudo checkmodule --multi-user -d <db> -m saltstack_ai         # AI-brygga
 ```
 
 ### Deploy till ledningssystem — `git pull` på minionen (2026-10-11)
@@ -43,8 +43,9 @@ Koden kommer dit med `git pull` — inte via Salt-state:
 # 1. Hämta ny kod (minionen når github.com:vertelab/odoo-saltstack)
 cd /usr/share/odoo-saltstack && git pull origin 18.0
 
-# 2. Uppgradera modulerna (checkmodule sköter stop → --update → start)
-sudo checkmodule -d ledningssystem -m saltstack,saltstack_ai,saltstack_managementsystem \
+# 2. Uppgradera — --multi-user: parallell Odoo på ledig port (4444-4499),
+    #    INGEN nedtid. Utan flaggan startas tjänsten om och besökare får 502.
+sudo checkmodule --multi-user -d ledningssystem -m saltstack,saltstack_ai,saltstack_managementsystem \
   -l info > /tmp/checkmodule-saltstack.log 2>&1
 echo "exit=$?" && tail -5 /tmp/checkmodule-saltstack.log
 
@@ -171,7 +172,7 @@ använder `_get_param()` (returnerar `None` när raden saknas) så att
 + `saltstack_zabbix/tests/test_auto_diagnose.py` (källspecifik diagnos-gate).
 
 ```bash
-sudo checkmodule -d ledningssystem -m saltstack,saltstack_ai -t
+sudo checkmodule --multi-user -d ledningssystem -m saltstack,saltstack_ai -t
 ```
 
 ## Konventioner
