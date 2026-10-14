@@ -99,16 +99,42 @@ class SaltRunlog(models.Model):
                     .replace(tzinfo=pytz.utc).astimezone(local).strftime('%Y-%m-%d %H:%M')
             except Exception:
                 pass
-            # Lägg till omfattning (kundantal) från summary om möjligt —
-            # t.ex. "24 kunder" ur "24 kunder — 24 ✅ / 0 ⚠️ ...".
-            scope = ''
+
+            # ── Rubriken (T/12110, 2026-10-14) ──────────────────────────
+            #
+            # FÅLLA: rubriken var "%s — %s (%s)%s %s" → host, run_type,
+            # status, scope, tid. Den sa varken VILKEN källa eller VAD som
+            # var fel: "* — Backup (Varning) 2026-10-14 11:36". Man måste
+            # öppna posten för att veta om det gällde KVM, LXD eller restic.
+            #
+            # Nu: källan först (från `source`), sedan sammanfattningen i
+            # stället för run_type. Chefen läser en rad och vet vad det är.
+            #
+            #   KVM-backup — 15 OK / 2 stale  (Varning)  2026-10-14 11:36
+            #   LXD-backup — 6 artefakter, alla färska  (OK)  2026-10-14 06:40
+            #
+            # host utelämnas när den är '*' (samlad hälsa) — den tillför
+            # inget när källan redan står först. En riktig värd visas.
+            source = dict(rec._fields['source'].selection).get(
+                rec.source, rec.source or '')
+            label = source or run_type or 'Run'
+            if rec.host and rec.host != '*':
+                label = '%s (%s)' % (label, rec.host)
+
+            # Omfattning: sammanfattningen är det mest informativa vi har.
+            # Korta ned den så rubriken förblir läsbar.
+            detail = ''
             if rec.summary:
                 import re
-                m = re.match(r'^(\d+)\s+kunder', rec.summary)
-                if m:
-                    scope = f" {m.group(1)} kunder"
-            rec.name = '%s — %s (%s)%s %s' % (
-                rec.host or '?', run_type or 'Run', status, scope, when)
+                s = rec.summary.strip()
+                # Plocka bort en ledande käll-prefix. Två varianter finns:
+                #   "KVM-backup: 17 maskiner ..."   (kolon)
+                #   "LXD-backup hälsa: 6 artefakter ..."  (mellanslag + hälsa)
+                # Båda ska bort — källan står redan först i rubriken.
+                s = re.sub(r'^[A-Za-zÅÄÖåäö0-9_-]+(?:\s+hälsa)?:\s*', '', s)
+                detail = s[:60]
+
+            rec.name = '%s — %s (%s)  %s' % (label, detail, status, when)
 
     # ── Webhook-processing ──────────────────────────────────────────────
 
