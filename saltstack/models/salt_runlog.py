@@ -38,6 +38,7 @@ class SaltRunlog(models.Model):
         ('salt', 'Salt'),
         ('zabbix', 'Zabbix'),
         ('wazuh', 'Wazuh'),
+        ('daily', 'Dagens drift'),
         ('manual', 'Manual action'),
         ('other', 'Other'),
     ], string='Source', default='other',
