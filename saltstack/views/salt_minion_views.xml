@@ -185,8 +185,13 @@
                     </header>
                     <sheet>
                         <div class="oe_title d-flex align-items-center gap-3">
-                            <field name="image" widget="image" class="oe_avatar"
-                                   style="float: none;"/>
+                            <div>
+                                <field name="image" widget="image" class="oe_avatar"
+                                       style="float: none;"/>
+                                <field name="image_manual" widget="boolean_toggle"
+                                       class="small text-muted"
+                                       title="När detta är på rör inte sync bilden. Sätts automatiskt när du laddar upp en egen logotyp."/>
+                            </div>
                             <h1 class="mb-0"><field name="name" placeholder="Minion ID"/></h1>
                         </div>
                         <div class="oe_button_box" name="button_box">

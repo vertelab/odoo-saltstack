@@ -183,8 +183,18 @@ class SaltMinion(models.Model):
         string='Logo',
         max_width=256,
         max_height=256,
-        help='Logo for the minion. Filled automatically based on role at '
-             'sync, but can be updated manually in the form.',
+        help='Logo for the minion. Filled automatically at sync — the '
+             'customer logo when a partner is linked, otherwise a '
+             'technology logo from the roles. Can be replaced manually in '
+             'the form; a manual image is never overwritten by sync.',
+    )
+    image_manual = fields.Boolean(
+        string='Manuellt satt logotyp',
+        default=False,
+        help='Set when someone uploads a logo by hand. Sync then leaves the '
+             'image alone — without this flag an automatically assigned '
+             'logo would look manual and freeze forever, so a container '
+             'that gains a role would never get a new logo.',
     )
 
     # ── Topology / extern (uppdateras vid sync + server action) ──────────
@@ -451,17 +461,52 @@ class SaltMinion(models.Model):
     ]
     _LOGO_FALLBACK = 'server.png'
 
+    def write(self, vals):
+        """Flag a hand-uploaded logo as manual.
+
+        Sync writes the image through _write_auto_image(), which passes the
+        'saltstack_auto_image' context key. Any other write that carries an
+        image is a human in the form, and must be protected from the next
+        sync.
+        """
+        if ('image' in vals
+                and not self.env.context.get('saltstack_auto_image')
+                and 'image_manual' not in vals):
+            vals = dict(vals, image_manual=bool(vals.get('image')))
+        return super().write(vals)
+
     def _set_default_image(self):
-        """Set a technology logo per primary role if image is empty."""
+        """Assign a logo using the precedence order below.
+
+            1. A manually uploaded image — never touched.
+            2. The linked customer's logo (partner_id.image_128).
+            3. A technology logo taken from the roles.
+            4. server.png as a last resort.
+
+        The customer logo wins over the technology logo: on a kanban grouped
+        by datacenter you are looking for the customer, not the stack, and
+        ten Odoo containers with the same icon are impossible to tell apart.
+        The roles are printed on the card anyway.
+        """
         for rec in self:
-            if rec.image:
-                continue  # keep manually set image
+            if rec.image_manual:
+                continue  # a human chose this — leave it alone
+            partner_logo = rec.partner_id.image_128
+            if partner_logo:
+                rec._write_auto_image(partner_logo)
+                continue
             roles = [r.strip().lower() for r in (rec.roles or '').split(',') if r.strip()]
             asset = next(
                 (logo for role, logo in self._ROLE_LOGO_PRIORITY if role in roles),
                 self._LOGO_FALLBACK,
             )
-            rec.image = self._logo_from_asset(asset)
+            rec._write_auto_image(self._logo_from_asset(asset))
+
+    def _write_auto_image(self, image):
+        """Write an automatically chosen logo without marking it manual."""
+        self.ensure_one()
+        self.with_context(saltstack_auto_image=True).write(
+            {'image': image, 'image_manual': False})
 
     def _logo_from_asset(self, filename):
         """Return base64 PNG of a bundled logo asset from this module."""
