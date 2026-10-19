@@ -98,7 +98,12 @@ class SaltMinion(models.Model):
     # ── Topology ─────────────────────────────────────────────────────────
 
     dc = fields.Selection(
-        selection=[('ska', 'SKA'), ('sto', 'STO')],
+        # 'lab' = maskiner utanför datacenter (laptops, arbetsstationer,
+        # testburkar) — t.ex. jakob18 på jangofett (192.168.1.x/WireGuard).
+        # Utan den kraschade hela minion-synken på ett okänt dc-grain
+        # (2026-10-19). Nya värden ska läggas här OCH valideras i
+        # _sanitize_dc() — annars rullas hela synktransaktionen tillbaka.
+        selection=[('ska', 'SKA'), ('sto', 'STO'), ('lab', 'Lab')],
         string='Datacenter',
     )
     roles = fields.Char(
@@ -825,6 +830,29 @@ class SaltMinion(models.Model):
             return contains
         return self.env['res.partner']
 
+    def _sanitize_dc(self, dc):
+        """Return ``dc`` only when it is a valid selection value, else False.
+
+        The ``dc`` grain is free-form text (any host can set ``dc: lab`` in
+        /etc/salt/grains), while ``salt.minion.dc`` is a Selection of 'ska' /
+        'sto'. Writing an unknown value raised
+        ``ValueError: Wrong value for salt.minion.dc`` INSIDE the sync
+        transaction, which rolled back the whole minion sync — no new minions
+        were ever created (elevata/elevata-test, 2026-10-19; the culprit was
+        jakob18 with ``dc: lab``).
+
+        Unknown values are logged and dropped instead of aborting the sync.
+        """
+        if not dc:
+            return False
+        valid = self._fields['dc']._description_selection(self.env)
+        if dc in dict(valid):
+            return dc
+        _logger.warning(
+            'Ignoring unknown dc grain %r (valid: %s)',
+            dc, ', '.join(v for v, _l in valid))
+        return False
+
     def _apply_grains(self, grains):
         """Write grains data onto this record (no API call)."""
         self.ensure_one()
@@ -861,6 +889,7 @@ class SaltMinion(models.Model):
             public_ip = ''
 
         dc = grains.get('dc') or self._infer_dc(grains.get('host'), private_ip)
+        dc = self._sanitize_dc(dc)
         if not dc:
             dc = False
 
@@ -904,6 +933,62 @@ class SaltMinion(models.Model):
             return False
         grains = result.get('return', [{}])[0].get(self.name, {})
         return self._apply_grains(grains)
+
+    def register_minion(self, name):
+        """Create/refresh ONE minion record from its own grains.
+
+        Called by ``/saltstack/minion`` right after ``container_create_core.sh``
+        has accepted the Salt key, so a new container shows up in the kanban
+        immediately instead of waiting for the 24-hour sync cron.
+
+        Idempotent: an existing record is reactivated and refreshed. Returns a
+        small dict so the caller can log the outcome.
+        """
+        name = (name or '').strip()
+        if not name:
+            return {'status': 'error', 'error': 'Missing minion id'}
+
+        # Fetch grains for this single minion (cheap — one minion, not all).
+        try:
+            result = self._call_salt_api('local', name, 'grains.items', timeout=60)
+            grains = result.get('return', [{}])[0].get(name) or {}
+        except Exception as e:
+            _logger.warning('register_minion: grains fetch failed for %s: %s',
+                            name, e)
+            grains = {}
+
+        if not grains:
+            # Salt key accepted but the minion has not answered yet. Create the
+            # bare record so it is visible; the sync cron fills the grains in.
+            _logger.warning(
+                'register_minion: no grains for %s yet — creating bare record',
+                name)
+
+        existing = self.search([('name', '=', name)], limit=1)
+        created = False
+        if existing:
+            if not existing.active:
+                existing.active = True
+            rec = existing
+        else:
+            rec = self.create({'name': name})
+            created = True
+
+        if grains:
+            rec._apply_grains(grains)
+            rec.last_seen = fields.Datetime.now()
+
+        rec.message_post(body=(
+            'Minion registrerad via onboarding-hook (%s).'
+            % ('ny post' if created else 'befintlig post uppdaterad')))
+
+        return {
+            'status': 'ok',
+            'minion': rec.name,
+            'id': rec.id,
+            'created': created,
+            'grains': bool(grains),
+        }
 
     # ── Odoo statistics ────────────────────────────────────────────────
 
@@ -1590,7 +1675,11 @@ fi
         # Bulk-grains: ett anrop mot alla minioner → {minion_id: grains}
         bulk_grains = {}
         try:
-            bulk_result = self._call_salt_api('local', '*', 'grains.items', timeout=45)
+            # Timeout 120 s: a bulk grains.items against ~115 minions takes
+            # ~55 s in production (measured 2026-10-19). At the old 45 s the
+            # call timed out silently, bulk_grains stayed {} and every new
+            # minion was created with ONLY a name (no IP, no customer).
+            bulk_result = self._call_salt_api('local', '*', 'grains.items', timeout=120)
             bulk_grains = bulk_result.get('return', [{}])[0] or {}
         except Exception as e:
             _logger.warning('Bulk grains fetch failed: %s', e)
