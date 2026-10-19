@@ -498,6 +498,6 @@
                   parent="menu_saltstack_root"
                   action="action_salt_minion"
                   groups="saltstack.group_saltstack_officer"
-                  sequence="30"/>
+                  sequence="10"/>
     
     </odoo>
