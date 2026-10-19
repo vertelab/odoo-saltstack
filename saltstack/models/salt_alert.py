@@ -153,6 +153,38 @@ class SaltAlert(models.Model):
             except Exception:
                 return fields.Datetime.now()
 
+    @api.model
+    def _read_group(self, domain, groupby=(), aggregates=(),
+                    having=(), offset=0, limit=None, order=None):
+        """Order date groups newest first.
+
+        Odoo falls back to an ascending sort on the group term when no
+        ``order`` is given (``models._read_group_orderby``), so grouping
+        alerts by day puts the oldest day on top while the records inside
+        each group read newest first. The search view cannot express the
+        direction: its ``group_by`` context carries no ordering, and the
+        web client only sends ``__count`` from the Asc/Desc toggle.
+
+        Setting the order here fixes it for every consumer (list, kanban,
+        ``web_read_group``, exports) and survives view edits. An explicit
+        ``order`` from the user still wins.
+        """
+        if order is None:
+            date_terms = [
+                term for term in groupby
+                if ':' in term and term.split(':')[0] == 'timestamp'
+            ]
+            if date_terms:
+                # ``nulls last`` keeps the uncategorised group (records
+                # without a timestamp) below the dated ones. PostgreSQL
+                # sorts NULLs first under DESC, which would otherwise put
+                # that group above the newest day.
+                order = ', '.join(
+                    '%s desc nulls last' % term for term in date_terms)
+        return super()._read_group(
+            domain, groupby=groupby, aggregates=aggregates,
+            having=having, offset=offset, limit=limit, order=order)
+
     @api.depends('host', 'source', 'category', 'trigger_name')
     @staticmethod
     def _parse_severity(value):

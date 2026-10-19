@@ -94,6 +94,31 @@ sudo checkmodule -d <db> -m saltstack
    - Växande logg → disk full → AI-agenten rensar
    - Wazuh brute-force → SIEM-kedja → AI-agenten svarar
 
+## Datumgruppering — varför ordningen sitter i modellen
+
+`saltstack.alert` och `saltstack.runlog` har båda en `_read_group`-override
+som sätter `order = '<term> desc nulls last'` för `timestamp`-granulariteter
+när ingen explicit `order` angetts.
+
+**Ta inte bort den som "överflödig" — den behövs.** Odoo faller tillbaka på
+**stigande** ordning på grupptermen när `order` är tom
+(`_read_group_orderby`), så dagsgrupperna hamnar äldst först medan posterna
+inuti varje grupp är yngst först. Sökvyn kan inte uttrycka riktningen:
+`context="{'group_by': ...}"` bär ingen ordning, och webbklienten skickar
+bara `__count` från Asc/Desc-knappen. Det finns ingen XML-nyckel för det.
+
+Att lägga ordningen i modellen (i stället för i vyn) ger tre saker:
+den gäller list-, kanban-, `web_read_group`- och exportvägar; den kan inte
+glida tillbaka vid en framtida vyredigering; och den kräver ingen sparad
+favorit per användare.
+
+`nulls last` är avsiktligt: PostgreSQL sorterar `NULL` **först** under
+`DESC`, så utan det hamnar gruppen för poster utan `timestamp` ovanför den
+senaste dagen.
+
+En explicit `order` från användaren vinner alltid — villkoret är
+`order is None`. Regressionstester: `tests/test_read_group_order.py`.
+
 ## Version
 
 18.0.1.0.0 — Odoo 18

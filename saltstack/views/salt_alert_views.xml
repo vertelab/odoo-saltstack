@@ -10,6 +10,7 @@
             <list decoration-danger="state in ('error', 'aborted')"
                   decoration-success="state in ('reported', 'deployed')"
                   decoration-muted="state == 'resolved'">
+                <field name="timestamp"/>
                 <field name="name"/>
                 <field name="state" widget="badge" decoration-danger="state in ('error','aborted')" decoration-success="state in ('reported','deployed')" decoration-muted="state=='resolved'"/>
                 <field name="host"/>
@@ -147,6 +148,8 @@
                             context="{'group_by': 'source'}"/>
                     <filter name="group_category" string="Category"
                             context="{'group_by': 'category'}"/>
+                    <filter name="group_day" string="Dag"
+                            context="{'group_by': 'timestamp:day'}"/>
                 </group>
             </search>
         </field>
