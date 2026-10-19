@@ -1,0 +1,151 @@
+// ── Minion kanban card ──────────────────────────────────────────────────
+//
+// Tre informationsnivåer (se openspec-ändringen omdesigna-minion-kanban):
+//   .o_minion_card__identity  — namn, kund             (tier 1, störst)
+//   .o_minion_card__attention — semafor, larm, roller   (tier 2)
+//   .o_minion_card__meta      — DC, logotyp, demo, lagring (tier 3)
+//
+// Kortets tillstånd sitter i en färgad vänsterkant (--o-minion-card-accent)
+// så att ett rött kort hittas utan att läsas. Färgerna är Odoo:s
+// semantic-variabler, kontrasttestade i både ljust och mörkt läge.
+
+$o-minion-card-aside: 76px; // 64px ruta + luft
+
+.o_kanban_record:has(.o_minion_card__body) {
+    padding: 0 !important;
+}
+
+.o_minion_card__body {
+    display: flex;
+    align-items: stretch;
+    gap: 0.5rem;
+    padding: 0.5rem 0.5rem 0.5rem 0;
+    border-left: 4px solid var(--o-minion-card-accent, #adb5bd);
+    border-radius: 0.25rem;
+    min-height: 88px;
+    overflow: hidden;
+}
+
+// Tillstånd. offline är medvetet omarkerad (grå) — frånvaro är inte ett
+// larm, och en färgad kant på varje nersläckt maskin dränker faulty.
+.o_minion_card__body--faulty {
+    --o-minion-card-accent: var(--danger, #dc3545);
+}
+
+.o_minion_card__body--online {
+    --o-minion-card-accent: var(--success, #28a745);
+}
+
+.o_minion_card__body--offline {
+    --o-minion-card-accent: var(--o-gray-400, #adb5bd);
+}
+
+// ── Vänster: bilden ─────────────────────────────────────────────────────
+
+.o_minion_card__aside {
+    position: relative;
+    flex: 0 0 $o-minion-card-aside;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-self: stretch;
+    background: var(--o-gray-100, #f8f9fa);
+    border-radius: 0 0.25rem 0.25rem 0;
+}
+
+.o_minion_card__logo {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+
+    &.o_minion_card__logo--fallback {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: var(--o-gray-500, #6c757d);
+    }
+}
+
+// Container-markör i bildrutans hörn — teknik, inte tillstånd.
+.o_minion_card__badge-corner {
+    position: absolute;
+    top: 2px;
+    left: 4px;
+    font-size: 0.7rem;
+    color: var(--o-gray-600, #495057);
+    opacity: 0.65;
+}
+
+// ── Höger: innehållet ───────────────────────────────────────────────────
+
+.o_minion_card__details {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.15rem;
+    min-width: 0; // låter roller trunkeras i stället för att spilla
+    flex: 1 1 auto;
+}
+
+// Tier 1
+.o_minion_card__identity {
+    min-width: 0;
+
+    .o_minion_card__title {
+        display: inline-block;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        vertical-align: bottom;
+    }
+
+    .o_minion_card__demo {
+        font-size: 0.65rem;
+        vertical-align: middle;
+    }
+
+    .o_minion_card__customer {
+        font-size: 0.8rem;
+        color: var(--o-gray-600, #495057);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+// Tier 2
+.o_minion_card__attention {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+    font-size: 0.75rem;
+
+    .o_minion_card__state {
+        flex: 0 0 auto;
+    }
+
+    .o_minion_card__alerts {
+        flex: 0 0 auto;
+    }
+
+    .o_minion_card__roles {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+// Tier 3 — DC ligger som ribbon; hit hakar saltstack_storage in summan.
+.o_minion_card__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    color: var(--o-gray-600, #495057);
+    min-height: 0;
+}

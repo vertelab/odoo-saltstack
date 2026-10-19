@@ -2,7 +2,7 @@
 
 {
     'name': 'SaltStack Infrastructure',
-    'version': '18.0.1.57.0',
+    'version': '18.0.1.58.0',
     'category': 'Infrastructure',
     'summary': 'Manage SaltStack minions, pillar anchors and infrastructure.',
     'description': '''
@@ -48,6 +48,7 @@ Features:
     'assets': {
         'web.assets_backend': [
             'saltstack/static/src/js/saltstack.js',
+            'saltstack/static/src/scss/salt_minion_kanban.scss',
         ],
     },
     'post_init_hook': '_ensure_webhook_config',

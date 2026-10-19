@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ── Minion form: storage smart button + Odoo tab ─────────────── -->
+    <!--
+         The Odoo tab is invisible unless the minion has the odoo role.
+         It shows the database server that was ACTUALLY measured — a machine
+         can run a local PostgreSQL with stale data while Odoo talks to a
+         remote server, and that difference must never be hidden.
+    -->
+
+    <record id="view_salt_minion_form_storage" model="ir.ui.view">
+        <field name="name">salt.minion.form.storage</field>
+        <field name="model">salt.minion</field>
+        <field name="inherit_id" ref="saltstack.view_salt_minion_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Smart button: total storage, opens the filtered list -->
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_show_storage_measurements"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-hdd-o">
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Lagring</span>
+                        <field name="storage_total_gb"
+                               class="o_stat_value"
+                               widget="statinfo"/>
+                    </div>
+                </button>
+            </xpath>
+
+            <!-- Odoo tab -->
+            <xpath expr="//notebook" position="inside">
+                <page string="Odoo" name="odoo_storage"
+                      invisible="not is_odoo_minion">
+                    <div class="alert alert-warning" role="alert"
+                         invisible="storage_db_host in (False, 'localhost', '127.0.0.1')">
+                        Odoo-instansen använder en <strong>fjärrdatabas</strong>.
+                        Siffrorna nedan avser servern
+                        <field name="storage_db_host" class="d-inline fw-bold"/>,
+                        inte en lokal PostgreSQL på den här maskinen.
+                    </div>
+                    <group>
+                        <group string="Databas">
+                            <field name="storage_db_name"/>
+                            <field name="storage_db_bytes"
+                                   widget="float"
+                                   options="{'human_readable': True}"/>
+                            <field name="storage_db_host"/>
+                            <field name="odoo_has_demo_data"/>
+                        </group>
+                        <group string="Filestore">
+                            <field name="storage_filestore_bytes"
+                                   widget="float"
+                                   options="{'human_readable': True}"/>
+                            <field name="storage_bucket_bytes"
+                                   widget="float"
+                                   options="{'human_readable': True}"/>
+                            <field name="storage_odoo_measured_at"/>
+                        </group>
+                    </group>
+                    <group string="Lagringssumma">
+                        <group>
+                            <field name="storage_primary_gb"/>
+                            <field name="storage_backup_gb"/>
+                        </group>
+                        <group>
+                            <field name="storage_total_gb"/>
+                            <field name="storage_missing_count"/>
+                            <field name="storage_measured_at"/>
+                        </group>
+                    </group>
+                    <div class="text-muted">
+                        Primärdata är kundens levande data (container, databas,
+                        filestore). Backup är en <em>kopia</em> av samma data
+                        och räknas aldrig in i primärsumman.
+                    </div>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ── Minion kanban: lagringssumma ──────────────────────────────── -->
+    <!--
+         Kortet ägs av saltstack (view_salt_minion_kanban) och har en tom
+         behållare .o_minion_card__meta. Vi fyller den här i stället för att
+         röra saltstacks ark — storage är ett tillägg till kortet, inte en
+         del av det.
+
+         Vi visar PRIMÄRDATA (container + databas + filestore), inte
+         storage_total_gb: backup är en kopia av samma data och får aldrig
+         presenteras som kundens storlek (se help-texten på fältet).
+
+         Två sanningar får aldrig döljas:
+           - saknade artefakter  → siffran markeras med * och varning
+           - aldrig mätt         → ingen siffra alls (0 GB vore en lögn)
+    -->
+    <record id="view_salt_minion_kanban_storage" model="ir.ui.view">
+        <field name="name">salt.minion.kanban.storage</field>
+        <field name="model">salt.minion</field>
+        <field name="inherit_id" ref="saltstack.view_salt_minion_kanban"/>
+        <field name="arch" type="xml">
+            <!-- Fält som bara används i t-if/t-attf-* måste ändå deklareras,
+                 annars saknas de i record-datan och kortet kraschar. -->
+            <xpath expr="//kanban" position="inside">
+                <field name="storage_primary_gb"/>
+                <field name="storage_measured_at"/>
+                <field name="storage_missing_count"/>
+            </xpath>
+            <xpath expr="//div[hasclass('o_minion_card__meta')]" position="inside">
+                <span t-if="record.storage_measured_at.raw_value"
+                      t-attf-class="o_minion_storage #{record.storage_missing_count.raw_value &gt; 0 ? 'o_minion_storage--incomplete text-warning' : ''}"
+                      t-attf-title="#{record.storage_missing_count.raw_value &gt; 0 ? 'Saknar mätning för ' + record.storage_missing_count.value + ' artefakt(er) — summan är ofullständig' : 'Primärdata: container + databas + filestore'}">
+                    <i class="fa fa-hdd-o" aria-hidden="true"/>
+                    <field name="storage_primary_gb"/> GB
+                    <t t-if="record.storage_missing_count.raw_value &gt; 0">*</t>
+                </span>
+            </xpath>
+        </field>
+    </record>
+</odoo>

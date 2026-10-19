@@ -1,105 +1,105 @@
 <?xml version="1.0" encoding="utf-8"?>
     <odoo>
         <!-- ── Kanban View ───────────────────────────────────────────── -->
+        <!--
+             Kortet är byggt i tre lager (se openspec-ändringen
+             omdesigna-minion-kanban) och ärvs av saltstack_storage, som
+             hakar in lagringssumman i .o_minion_card__meta. Ändra därför
+             inte klassnamnen utan att kontrollera den ärvda vyn:
+
+               .o_minion_card__identity  — namn, kund (tier 1)
+               .o_minion_card__attention — semafor, larmantal (tier 2)
+               .o_minion_card__meta      — DC, logotyp, demo, lagring (tier 3)
+        -->
         <record id="view_salt_minion_kanban" model="ir.ui.view">
             <field name="name">salt.minion.kanban</field>
             <field name="model">salt.minion</field>
             <field name="arch" type="xml">
-                <kanban class="o_kanban_mobile">
+                <kanban class="o_kanban_mobile o_minion_card"
+                        default_group_by="dc" quick_create="false">
+                    <!-- Alla fält som används i <templates> måste deklareras
+                         här. Fält som bara visas i formulär/listvy
+                         (private_ip, public_ip, odoo_version, lxd_host,
+                         storage_*) deklareras medvetet inte. -->
                     <field name="name"/>
-                    <field name="private_ip"/>
-                    <field name="public_ip"/>
-                    <field name="dc"/>
-                    <field name="roles"/>
                     <field name="customer"/>
-                    <field name="odoo_version"/>
-                    <field name="odoo_has_demo_data"/>
+                    <field name="partner_id"/>
+                    <field name="dc"/>
                     <field name="state"/>
                     <field name="open_alert_count"/>
+                    <field name="roles"/>
                     <field name="image"/>
                     <field name="is_demo"/>
                     <field name="is_container"/>
-                    <field name="host_machine"/>
-                    <field name="lxd_host"/>
-                    <field name="storage_measured_gb"/>
-                    <field name="storage_estimated_gb"/>
                     <t t-name="card">
-                        <div t-attf-class="oe_kanban_global_click position-relative">
-                            <!-- DC ribbon -->
+                        <div t-attf-class="oe_kanban_global_click position-relative o_minion_card__body o_minion_card__body--#{record.state.raw_value}">
+
+                            <!-- Tier 3: DC-ribbon (platshållare man lär sig läsa) -->
                             <div t-if="record.dc.raw_value" class="ribbon ribbon-top-right">
                                 <span t-att-class="record.dc.raw_value == 'ska' ? 'text-bg-primary' : 'text-bg-dark'">
                                     <field name="dc"/>
                                 </span>
                             </div>
-                            <!-- Demo ribbon -->
-                            <div t-if="record.is_demo.raw_value" class="ribbon ribbon-top-right"
-                                 style="top: 34px;">
-                                <span class="text-bg-warning">Demo</span>
-                            </div>
-                            <aside class="o_kanban_aside_full">
+
+                            <!-- Vänster: bilden. Fast ruta, aldrig state-färgad —
+                                 den bär teknik, inte tillstånd. -->
+                            <aside class="o_minion_card__aside">
                                 <t t-if="record.image.raw_value">
-                                    <field name="image" widget="background_image"
-                                           options="{'preview_image': 'image'}"
-                                           class="d-block position-relative"/>
+                                    <field name="image" widget="image"
+                                           class="o_minion_card__logo"
+                                           options="{'size': [64, 64]}"/>
                                 </t>
-                                <t t-else="">
-                                    <div class="d-flex align-items-center justify-content-center bg-100 bg-gradient"
-                                         style="min-height: 100px;">
-                                        <i class="fa fa-server fa-3x text-secondary opacity-50"/>
-                                    </div>
-                                </t>
+                                <span t-else="" class="o_minion_card__logo o_minion_card__logo--fallback">
+                                    <i class="fa fa-server"/>
+                                </span>
+                                <i t-if="record.is_container.raw_value"
+                                   class="fa fa-cube o_minion_card__badge-corner"
+                                   title="LXD-container" aria-label="LXD-container"/>
                             </aside>
-                            <div class="o_kanban_details">
-                                <strong class="o_kanban_record_title">
-                                    <field name="name"/>
-                                </strong>
-                                <div class="text-muted">
-                                    <field name="private_ip"/>
-                                    <span t-if="record.public_ip.raw_value"> · <field name="public_ip"/></span>
-                                    <span t-if="record.roles.raw_value"> · <field name="roles"/></span>
+
+                            <!-- Höger: innehållet -->
+                            <div class="o_minion_card__details">
+
+                                <!-- Tier 1: identitet -->
+                                <div class="o_minion_card__identity">
+                                    <strong class="o_kanban_record_title o_minion_card__title">
+                                        <field name="name"/>
+                                    </strong>
+                                    <span t-if="record.is_demo.raw_value"
+                                          class="badge text-bg-warning o_minion_card__demo">Demo</span>
+                                    <div class="o_minion_card__customer">
+                                        <t t-if="record.partner_id.raw_value">
+                                            <i class="fa fa-user"/> <field name="partner_id"/>
+                                        </t>
+                                        <t t-elif="record.customer.raw_value">
+                                            <i class="fa fa-user"/> <field name="customer"/>
+                                        </t>
+                                    </div>
                                 </div>
-                                <div class="text-muted" t-if="record.customer.raw_value">
-                                    <i class="fa fa-user"/> <field name="customer"/>
-                                </div>
-                                <div class="text-muted" t-if="record.odoo_version.raw_value">
-                                    Odoo <field name="odoo_version"/>
-                                    <span t-if="record.odoo_has_demo_data.raw_value"
-                                          class="badge text-bg-warning ms-1">demo</span>
-                                </div>
-                                <div class="text-muted" t-if="record.lxd_host.raw_value">
-                                    <i class="fa fa-cube" title="LXD-host"/> <field name="lxd_host"/>
-                                </div>
-                                <div class="text-muted"
-                                     t-if="record.storage_measured_gb.raw_value or record.storage_estimated_gb.raw_value">
-                                    <i class="fa fa-hdd-o" title="Diskutnyttjande"/>
-                                    <span t-if="record.storage_measured_gb.raw_value">
-                                        <field name="storage_measured_gb"/> GB uppmätt
+
+                                <!-- Tier 2: åtgärdsbehov -->
+                                <div class="o_minion_card__attention">
+                                    <field name="state" widget="badge"
+                                           class="o_minion_card__state"
+                                           decoration-success="state == 'online'"
+                                           decoration-danger="state == 'faulty'"
+                                           decoration-muted="state == 'offline'"/>
+                                    <button t-if="record.open_alert_count.raw_value &gt; 0"
+                                            name="action_show_alerts" type="object"
+                                            class="badge text-bg-danger o_minion_card__alerts border-0"
+                                            title="Öppna driftlarm för denna minion"
+                                            aria-label="Öppna driftlarm">
+                                        <i class="fa fa-exclamation-triangle"/> <field name="open_alert_count"/>
+                                    </button>
+                                    <span t-if="record.roles.raw_value"
+                                          class="o_minion_card__roles text-muted">
+                                        <field name="roles"/>
                                     </span>
-                                    <span t-if="record.storage_estimated_gb.raw_value">
-                                        ~<field name="storage_estimated_gb"/> GB backup (estimat)
-                                    </span>
                                 </div>
-                            </div>
-                            <div class="o_kanban_record_bottom">
-                                <span class="d-inline-flex align-items-center me-2"
-                                      style="width:12px;height:12px;border-radius:50%;"
-                                      t-att-class="record.state.raw_value == 'online' ? 'bg-success' : record.state.raw_value == 'faulty' ? 'bg-danger' : 'bg-secondary'"/>
-                                <field name="state" widget="badge"
-                                       decoration-success="state == 'online'"
-                                       decoration-warning="state == 'faulty'"
-                                       decoration-muted="state == 'offline'"/>
-                                <!-- Larmantalet (T/11504): kortet visade bara
-                                     en faulty-prick, så 1 och 60 larm såg
-                                     likadana ut. Badgen är en knapp som
-                                     öppnar larmen, och visas bara när det
-                                     finns något att åtgärda. -->
-                                <button t-if="record.open_alert_count.raw_value &gt; 0"
-                                        name="action_show_alerts" type="object"
-                                        class="badge text-bg-danger ms-2 border-0"
-                                        title="Öppna driftlarm för denna minion"
-                                        aria-label="Öppna driftlarm">
-                                    <i class="fa fa-exclamation-triangle"/> <field name="open_alert_count"/>
-                                </button>
+
+                                <!-- Tier 3: sekundär detalj. saltstack_storage
+                                     hakar in lagringssumman här. -->
+                                <div class="o_minion_card__meta"/>
                             </div>
                         </div>
                     </t>
