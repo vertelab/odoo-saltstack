@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ── Meny: Lagring under Saltstack ─────────────────────────────── -->
+
+    <menuitem id="menu_storage_root"
+              name="Lagring"
+              parent="saltstack.menu_saltstack_root"
+              sequence="45"
+              groups="saltstack.group_saltstack_officer"/>
+
+    <menuitem id="menu_storage_measurements"
+              name="Mätningar"
+              parent="menu_storage_root"
+              action="action_storage_measurement_all"
+              sequence="10"/>
+
+    <menuitem id="menu_storage_customer"
+              name="Per kund"
+              parent="menu_storage_root"
+              action="action_storage_measurement_customer"
+              sequence="20"/>
+
+    <menuitem id="menu_storage_tasks"
+              name="Schemalagda jobb"
+              parent="menu_storage_root"
+              action="cron_tick.action_cron_task"
+              sequence="90"/>
+</odoo>

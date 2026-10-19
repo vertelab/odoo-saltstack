@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ── Storage settings ──────────────────────────────────────────── -->
+
+    <record id="res_config_settings_view_form_storage" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.storage</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="saltstack.view_saltstack_settings"/>
+        <field name="arch" type="xml">
+            <xpath expr="//app[@name='saltstack']" position="inside">
+                <block title="Lagringsmätning" name="storage_settings">
+                    <setting id="storage_collect_enabled"
+                             help="Samla in lagringsmätningar när minionsynken körs. Ett mätfel påverkar aldrig synken.">
+                        <field name="storage_collect_enabled"/>
+                    </setting>
+                    <setting id="storage_borg_host"
+                             help="Minion som håller Borg-repositorierna.">
+                        <field name="storage_borg_host"
+                               placeholder="tull1"/>
+                    </setting>
+                    <setting id="storage_retention_days"
+                             help="Hur länge mäthistoriken behålls. 0 = behåll allt.">
+                        <field name="storage_retention_days"/>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo>

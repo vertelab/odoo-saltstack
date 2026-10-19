@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ── Storage collection — scheduled by the cron_tick engine ────── -->
+    <!--
+         NO ir.cron. The engine in `cron_tick` owns scheduling; this record
+         only declares WHAT to run and WHICH cadence it belongs to.
+
+         cadence='week': Borg and Restic measurements read repository
+         metadata and are expensive. The cheap artefacts (LXD, PostgreSQL,
+         filestore) are refreshed at every minion sync anyway.
+
+         Three triggers, one run path:
+           - cron_week (the weekly tick)
+           - POST /cron/trigger/storage_collect (after a Salt deploy)
+           - the "Run now" button on the task
+    -->
+    <data noupdate="1">
+        <record id="cron_task_storage_collect" model="cron.task">
+            <field name="name">Storage: samla in lagringsmätningar</field>
+            <field name="technical_name">storage_collect</field>
+            <field name="module">saltstack_storage</field>
+            <field name="model_name">saltstack.storage.measurement</field>
+            <field name="method_name">_cron_collect_all</field>
+            <field name="cadence">week</field>
+            <field name="sequence">30</field>
+            <field name="timeout_seconds">1800</field>
+            <field name="active" eval="True"/>
+        </record>
+    </data>
+</odoo>

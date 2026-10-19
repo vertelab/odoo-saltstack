@@ -106,11 +106,12 @@
                 <field name="storage_primary_gb"/>
                 <field name="storage_measured_at"/>
                 <field name="storage_missing_count"/>
+                <field name="storage_summary_title"/>
             </xpath>
             <xpath expr="//div[hasclass('o_minion_card__meta')]" position="inside">
                 <span t-if="record.storage_measured_at.raw_value"
                       t-attf-class="o_minion_storage #{record.storage_missing_count.raw_value &gt; 0 ? 'o_minion_storage--incomplete text-warning' : ''}"
-                      t-attf-title="#{record.storage_missing_count.raw_value &gt; 0 ? 'Saknar mätning för ' + record.storage_missing_count.value + ' artefakt(er) — summan är ofullständig' : 'Primärdata: container + databas + filestore'}">
+                      t-att-title="record.storage_summary_title.raw_value">
                     <i class="fa fa-hdd-o" aria-hidden="true"/>
                     <field name="storage_primary_gb"/> GB
                     <t t-if="record.storage_missing_count.raw_value &gt; 0">*</t>
