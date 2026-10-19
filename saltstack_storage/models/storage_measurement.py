@@ -118,24 +118,32 @@ class StorageMeasurement(models.Model):
              'as a deviation, never summed.',
     )
 
+    # Lagrade (store=True): pivot- och graph-vyer aggregerar i PostgreSQL,
+    # och ett icke-lagrat compute-fält har ingen kolumn att summera. Samma
+    # gäller sum="..." i listvyn. Beroendena är alla lagrade fält, så
+    # värdet kan inte hamna i ofas.
     used_gb = fields.Float(
         string='Använt (GB)',
         compute='_compute_gb',
+        store=True,
         digits=(16, 2),
     )
     allocated_gb = fields.Float(
         string='Allokerat (GB)',
         compute='_compute_gb',
+        store=True,
         digits=(16, 2),
     )
     secondary_gb = fields.Float(
         string='Jämförelse (GB)',
         compute='_compute_gb',
+        store=True,
         digits=(16, 2),
     )
     deviation_gb = fields.Float(
         string='Avvikelse (GB)',
         compute='_compute_gb',
+        store=True,
         digits=(16, 2),
         help='bytes_used − bytes_secondary, only for artefacts where the '
              'second value is a deviation (filestore_s3).',
@@ -244,8 +252,11 @@ class StorageMeasurement(models.Model):
     def _compute_display_name(self):
         labels = dict(self._fields['artifact'].selection)
         for rec in self:
+            # artifact kan vara False på en ny, ännu oifylld post (t.ex. i en
+            # onchange-snapshot från formuläret). Utan fallback hamnar False i
+            # join() och ger "expected str instance, bool found".
             parts = [rec.minion_id.name or _('(ingen minion)'),
-                     labels.get(rec.artifact, rec.artifact)]
+                     labels.get(rec.artifact) or rec.artifact or _('(ingen artefakt)')]
             if rec.subject:
                 parts.append(rec.subject)
             rec.display_name = ' — '.join(parts)
