@@ -221,8 +221,6 @@ class TestStorageMeasurement(TransactionCase):
         patches a model class.
         """
         self.Minion.create({'name': 'storage-test-bad', 'roles': 'odoo'})
-        Measurement = self.Measurement
-
         def boom(minion):
             raise RuntimeError('unreachable')
 

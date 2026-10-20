@@ -392,7 +392,6 @@ class StorageMeasurement(models.Model):
         reads a warm cache. Measures a bounded number of NEW archives per
         run — in steady state that is a handful per week.
         """
-        Minion = self.env['salt.minion']
         borg_host = self.env['ir.config_parameter'].sudo().get_param(
             'saltstack_storage.borg_host', '') or 'tull1'
         api = self.env['saltstack.api']
