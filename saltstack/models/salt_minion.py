@@ -278,24 +278,26 @@ class SaltMinion(models.Model):
              '"Återskapa data"-fliken så att det alltid framgår var man '
              'klistrar in kommandot.',
     )
+    storage_primary_gb = fields.Float(
+        string='Primärdata (GB)',
+        compute='_compute_storage_total',
+        digits=(12, 2),
+        help='Container + disk + Postgres + filestore — the customer\'s '
+             'live data.',
+    )
+    storage_backup_gb = fields.Float(
+        string='Backup (GB)',
+        compute='_compute_storage_total',
+        digits=(12, 2),
+        help='Borg + restic. A COPY of the primary data — never added to it '
+             'when the customer\'s own size is reported.',
+    )
     storage_total_gb = fields.Float(
-        string='Totalt diskutnyttjande (GB)',
+        string='Totalt (GB)',
         compute='_compute_storage_total',
         digits=(12, 2),
-    )
-    storage_measured_gb = fields.Float(
-        string='Uppmätt disk (GB)',
-        compute='_compute_storage_total',
-        digits=(12, 2),
-        help='Summan av de rader som är faktiskt uppmätta (LXD-host, S3, '
-             'S3-backup).',
-    )
-    storage_estimated_gb = fields.Float(
-        string='Estimerad disk (GB)',
-        compute='_compute_storage_total',
-        digits=(12, 2),
-        help='Summan av de rader som är estimat (Dirvish-andelen räknas '
-             'fram ur en kvot — inte uppmätt på disk).',
+        help='Primary + backup, always labelled so the copy is not mistaken '
+             'for live data.',
     )
     lxd_host = fields.Char(
         string='LXD-host (cache)',
@@ -303,17 +305,26 @@ class SaltMinion(models.Model):
              'storage measurement and cached here to avoid re-probing.',
     )
 
-    @api.depends('storage_ids', 'storage_ids.size_gb',
-                 'storage_ids.is_measured')
+    @api.depends('storage_ids.bytes_used',
+                 'storage_ids.layer',
+                 'storage_ids.legacy_reference',
+                 'storage_ids.storage_type')
     def _compute_storage_total(self):
+        """Two independent layers — backup is never added to primary data.
+
+        A Borg archive of a container contains the container's bytes.
+        Summing them together would double-count the customer.
+        """
         for rec in self:
-            rows = rec.storage_ids
-            rec.storage_total_gb = round(sum(rows.mapped('size_gb')), 2)
-            measured = rows.filtered('is_measured')
-            rec.storage_measured_gb = round(
-                sum(measured.mapped('size_gb')), 2)
-            rec.storage_estimated_gb = round(
-                sum((rows - measured).mapped('size_gb')), 2)
+            rows = rec.storage_ids.filtered(lambda r: not r.legacy_reference)
+            primary = rows.filtered(lambda r: r.layer == 'primary')
+            backup = rows.filtered(lambda r: r.layer == 'backup')
+            rec.storage_primary_gb = round(
+                sum(primary.mapped('bytes_used')) / 1024.0 ** 3, 2)
+            rec.storage_backup_gb = round(
+                sum(backup.mapped('bytes_used')) / 1024.0 ** 3, 2)
+            rec.storage_total_gb = round(
+                rec.storage_primary_gb + rec.storage_backup_gb, 2)
 
     @api.depends('snapshot_ids', 'snapshot_ids.server_label',
                  'dirvish_snapshot_ids', 'dirvish_snapshot_ids.server_label')
@@ -992,75 +1003,52 @@ class SaltMinion(models.Model):
 
     # ── Odoo statistics ────────────────────────────────────────────────
 
-    _ODOO_STATS_SCRIPT = r'''
-set -uo pipefail
-CONF=/etc/odoo/odoo.conf
-DB_HOST=$(awk -F' = ' '/^db_host/{print $2; exit}' "$CONF")
-DB_PORT=$(awk -F' = ' '/^db_port/{print $2; exit}' "$CONF")
-DB_USER=$(awk -F' = ' '/^db_user/{print $2; exit}' "$CONF")
-DB_PASS=$(awk -F' = ' '/^db_password/{print $2; exit}' "$CONF")
-export PGPASSWORD="$DB_PASS"
-PSQL="psql -h ${DB_HOST:-localhost} -p ${DB_PORT:-5432} -U ${DB_USER:-odoo} -tA"
-while read -r db; do
-  [ -z "$db" ] && continue
-  is_odoo=$($PSQL -d "$db" -tAc "SELECT 1 FROM information_schema.tables WHERE table_name='res_users'" 2>/dev/null | head -1)
-  [ "$is_odoo" != "1" ] && continue
-  users=$($PSQL -d "$db" -tAc "SELECT count(*) FROM res_users WHERE active" 2>/dev/null | head -1)
-  last_login=$($PSQL -d "$db" -tAc "SELECT max(create_date) FROM res_users_log" 2>/dev/null | head -1)
-  if [ -z "$last_login" ]; then
-    last_login=$($PSQL -d "$db" -tAc "SELECT max(log_date) FROM res_log WHERE log_action='login'" 2>/dev/null | head -1)
-  fi
-  coworkers=$($PSQL -d "$db" -tAc "SELECT count(*) FROM ai_coworker WHERE active" 2>/dev/null | head -1)
-  tokens=$($PSQL -d "$db" -tAc "SELECT COALESCE(SUM(GREATEST(monthly_cap_mtokens, 1)), 0) FROM ai_coworker WHERE active" 2>/dev/null | head -1)
-  demo=$($PSQL -d "$db" -tAc "SELECT count(*) FROM res_company WHERE name ILIKE '%(san francisco)%' OR name ILIKE '%(chicago)%' OR name ILIKE '%(demo)%'" 2>/dev/null | head -1)
-  echo "DB|$db|users=${users:-0}|last=${last_login:-}|coworkers=${coworkers:-0}|tokens=${tokens:-0}|demo=${demo:-0}"
-done < <($PSQL -l 2>/dev/null | cut -d'|' -f1 | grep -vE '^(template0|template1|postgres|_errors)$')
-'''
-
     def _collect_odoo_stats(self):
         """Collect Odoo statistics from this minion via Salt API.
 
-        Runs a bash script on the minion that reads db_* from odoo.conf and
-        reports, per Odoo database: active users, last login, ai.coworker
-        count, monthly systemtoken budget (M) and demo-data presence.
+        Delegates to the Salt execution module `storage.odoo_stats`, which
+        reads the same `odoo.conf` and the same database listing that the
+        storage measurement already uses. The old implementation ran its own
+        bash script over `cmd.run` — two code paths reading the same files,
+        with two chances to drift apart.
+
         Best-effort: any failure leaves the fields untouched.
         """
         self.ensure_one()
-        roles = [r.strip().lower() for r in (self.roles or '').split(',') if r.strip()]
+        roles = [r.strip().lower() for r in (self.roles or '').split(',')
+                 if r.strip()]
         if 'odoo' not in roles and not self.odoo_version:
             return False
         try:
             result = self._call_salt_api(
-                'local', self.name, 'cmd.run', self._ODOO_STATS_SCRIPT,
-                timeout=180, shell='/bin/bash',
+                'local', self.name, 'storage.odoo_stats', timeout=180,
             )
         except Exception as e:
-            _logger.warning('Odoo stats collection failed for %s: %s', self.name, e)
+            _logger.warning('Odoo stats collection failed for %s: %s',
+                            self.name, e)
             return False
-        raw = result.get('return', [{}])[0].get(self.name, '')
-        if not isinstance(raw, str):
-            raw = ''
+
+        rows = (result.get('return') or [{}])[0].get(self.name) or {}
+        if isinstance(rows, dict):
+            rows = rows.get('odoo_stats') or []
+        if not rows:
+            _logger.info('No Odoo databases reported for %s', self.name)
+            return False
 
         dbs = []
         users_total = 0
         coworkers_total = 0
         tokens_total = 0
         last_login = None
-        for line in raw.splitlines():
-            if not line.startswith('DB|'):
-                continue
-            parts = dict(
-                p.split('=', 1) for p in line.split('|')[2:] if '=' in p
-            )
-            db = line.split('|')[1]
-            users_total += int(parts.get('users') or 0)
-            coworkers_total += int(parts.get('coworkers') or 0)
-            tokens_total += int(parts.get('tokens') or 0)
-            if parts.get('demo') and parts['demo'] not in ('0', ''):
-                dbs.append('%s (demo)' % db)
-            else:
-                dbs.append(db)
-            last_val = (parts.get('last') or '').split('.')[0]  # drop microseconds
+        version = None
+        for row in rows:
+            db = row.get('database') or ''
+            users_total += int(row.get('users_active') or 0)
+            coworkers_total += int(row.get('coworkers') or 0)
+            tokens_total += int(row.get('tokens_m') or 0)
+            dbs.append('%s (demo)' % db if row.get('demo') else db)
+            version = version or row.get('version') or None
+            last_val = (row.get('last_login') or '').split('.')[0]
             if last_val and (not last_login or last_val > last_login):
                 last_login = last_val
 
@@ -1071,6 +1059,8 @@ done < <($PSQL -l 2>/dev/null | cut -d'|' -f1 | grep -vE '^(template0|template1|
             'odoo_coworker_tokens_m': tokens_total,
             'odoo_stats_synced': fields.Datetime.now(),
         }
+        if version:
+            vals['odoo_version'] = version
         if last_login:
             try:
                 vals['odoo_last_login'] = fields.Datetime.to_datetime(last_login)
@@ -1557,21 +1547,29 @@ fi
         return None, None, None
 
     def _upsert_storage(self, storage_type, size_gb, provider, method,
-                        is_measured=True):
+                        is_measured=True, bytes_used=None,
+                        bytes_allocated=None):
         """Create or update one storage row for this minion.
 
-        ``is_measured=False`` marks the row as an estimate (never measured
-        on disk) — e.g. the Dirvish share, which is derived from a ratio.
+        `storage_type` is normalised through the storage model's
+        LEGACY_TYPE_MAP, so a stale caller cannot reintroduce a retired type
+        (e.g. `dirvish`). `bytes_used` wins over `size_gb` when both are
+        given — bytes are the source of truth.
         """
         self.ensure_one()
-        if size_gb is None:
-            return
-        row = self.env['salt.minion.storage'].search([
+        Storage = self.env['salt.minion.storage']
+        storage_type = Storage._normalise_type(storage_type)
+        if bytes_used is None:
+            if size_gb is None:
+                return
+            bytes_used = size_gb * 1024.0 ** 3
+        row = Storage.search([
             ('minion_id', '=', self.id),
             ('storage_type', '=', storage_type),
         ], limit=1)
         vals = {
-            'size_gb': round(size_gb, 2),
+            'bytes_used': bytes_used,
+            'bytes_allocated': bytes_allocated or 0.0,
             'provider': provider or '',
             'method': method or '',
             'is_measured': is_measured,
@@ -1580,48 +1578,343 @@ fi
         if row:
             row.write(vals)
         else:
-            self.env['salt.minion.storage'].create({
+            Storage.create({
                 'minion_id': self.id,
                 'storage_type': storage_type,
                 **vals,
             })
 
+    # Mapping from the Salt module's artefact keys to the storage types on
+    # the minion. `lxd_resources` is NOT storage (CPU/RAM) and is skipped.
+    _STORAGE_TYPE_FROM_ARTIFACT = {
+        'lxd_container': 'lxd_container',
+        'postgres_db': 'postgres',
+        'filestore_s3': 'filestore_s3',
+        # NOTE: borg_db/borg_container are NOT mapped here. Their raw archive
+        # sizes belong to the whole PostgreSQL volume / LXD host, not to one
+        # minion. `postgres_borg` is derived from a key figure and
+        # `disk_borg` from the repository total — both handled below.
+
+        'restic_filestore': 'filestore_restic',
+    }
+
+    @staticmethod
+    def _ratio_from_rows(rows):
+        """compressed/original from already-fetched Borg rows.
+
+        Preferred over a fresh API call: the rows are already in hand, and a
+        second `storage.borg` call inside the same collection can race with
+        the repository lock.
+        """
+        best = None
+        for row in rows:
+            original = float(row.get('bytes_secondary') or 0)
+            compressed = float(row.get('bytes_used') or 0)
+            if original and compressed and (best is None or original > best[1]):
+                best = (compressed, original)
+        return (best[0] / best[1]) if best else 0.0
+
+    def _postgres_backup_share(self):
+        """Disk cost of this database's share of the PostgreSQL backup.
+
+        THE MODEL
+            The databases live in the `postgres16` CONTAINER, so that is the
+            archive that holds them. (`fors-lxd-db-server-*` holds the
+            server's configuration — 60 MB per archive — not the data. Using
+            it gave a compression ratio of 0.008 and a `postgres_borg` of
+            0.03 GB, off by a factor of 42.)
+
+                share   = pg_database_size / sum(all databases on the server)
+                cost    = share * sum(deduplicated_size of postgres16 archives)
+
+            `deduplicated_size` is the only figure that answers "how much
+            disk does the backup take": each nightly archive is a full copy
+            of the container, so summing `original` or `compressed` counts
+            the same bytes 16 times.
+
+        KNOWN UNDERCOUNT
+            Databases that have not yet had a retention pass add more bytes
+            than they will in steady state, and the share is computed from
+            today's sizes while the backup accumulated over time. The result
+            is therefore an ESTIMATE, and is marked as such.
+
+        Returns (cost_bytes, share, total_backup_bytes) or (0, 0, 0).
+        """
+        self.ensure_one()
+        api = self.env['saltstack.api']
+        borg_host = self.env['ir.config_parameter'].sudo().get_param(
+            'saltstack_storage.borg_host', '') or 'tull1'
+        lxd_host = self.lxd_host or self.host_machine
+        if not lxd_host:
+            return 0.0, 0.0, 0.0
+
+        # The PostgreSQL container on this host. Its name is configured so a
+        # renamed container does not silently break the calculation.
+        pg_container = self.env['ir.config_parameter'].sudo().get_param(
+            'saltstack_storage.postgres_container', '') or 'postgres16'
+
+        try:
+            raw = api.salt_call('local', borg_host, 'storage.borg_totals',
+                                lxd_host, pg_container, timeout=900)
+            res = json.loads(raw) if isinstance(raw, str) else raw
+            payload = (res.get('return') or [{}])[0].get(borg_host) or {}
+            rows = payload.get('borg_total') or []
+        except Exception as exc:  # noqa: BLE001
+            _logger.warning('Borg postgres totals failed: %s', exc)
+            return 0.0, 0.0, 0.0
+
+        total_backup = float((rows[0] if rows else {}).get('bytes_used') or 0)
+        if not total_backup:
+            return 0.0, 0.0, 0.0
+
+        pg_row = self.storage_ids.filtered(
+            lambda r: r.storage_type == 'postgres')
+        own = float(pg_row[0].bytes_used or 0) if pg_row else 0.0
+        if not own:
+            return 0.0, 0.0, 0.0
+
+        # Denominator: EVERY database on the server, asked directly.
+        # Summing our own measured rows is wrong — only minions that have
+        # been collected appear there, so a single measured database gave a
+        # share of 100 %.
+        total_db = 0.0
+        try:
+            raw = api.salt_call('local', pg_container, 'storage.pg_total_size',
+                                timeout=300)
+            res = json.loads(raw) if isinstance(raw, str) else raw
+            payload = (res.get('return') or [{}])[0].get(pg_container) or {}
+            total_db = float(payload.get('total_bytes') or 0)
+        except Exception as exc:  # noqa: BLE001
+            _logger.warning('PostgreSQL total size failed: %s', exc)
+        if not total_db:
+            return 0.0, 0.0, 0.0
+
+        share = own / total_db
+        return total_backup * share, share, total_backup
+
     def _measure_storage(self):
-        """Measure/estimate the four storage rows for this minion."""
+        """Measure all storage types for this minion.
+
+        Delegates to the Salt execution module `storage.info`, which already
+        knows how to measure every artefact (and where the decoy-PostgreSQL
+        trap is). This method only maps the artefacts onto the seven storage
+        types and persists them.
+
+        The old implementation measured only three types with its own
+        `_measure_lxd`/`_measure_s3` helpers — `postgres`, `postgres_borg`,
+        `disk` and `disk_borg` were never written, so the Storage tab showed
+        a single row.
+        """
         self.ensure_one()
         api = self.env['saltstack.api']
 
-        # 1. LXD host usage (du on the host filesystem, per container).
-        lxd_host, lxd_bytes = self._measure_lxd(api)
-        if lxd_bytes:
-            self._upsert_storage(
-                'lxd_host', lxd_bytes / 1024.0 ** 3, lxd_host,
-                'du -sb %s/containers/%s' % (lxd_host, self.name))
+        def call(target, container, minion=None, archive_stats=1):
+            # storage.info(container, archive_stats, minion) — the argument
+            # ORDER matters. Passing the minion second silently landed it in
+            # archive_stats, so borg_totals never saw the container name.
+            raw = api.salt_call('local', target, 'storage.info',
+                                container, archive_stats, minion or container,
+                                timeout=900)
+            res = json.loads(raw) if isinstance(raw, str) else raw
+            return (res.get('return') or [{}])[0].get(target) or {}
 
-        # 2. Dirvish — estimated share of the host backup tree. Uses the
-        # cached ratio or the configurable default (no slow lxd-total du).
-        ratio = None
-        if lxd_host and lxd_bytes:
-            ratio = self._dirvish_ratio(api, lxd_host)
-        if ratio and lxd_bytes:
-            self._upsert_storage(
-                'dirvish',
-                (lxd_bytes * ratio) / 1024.0 ** 3,
-                'dirvish',
-                'minion-LXD × dirvish/LXD-kvot (%.2f)' % ratio,
-                is_measured=False)
+        # The artefacts live on DIFFERENT hosts:
+        #   - the container's own footprint + Odoo DB/filestore: on the
+        #     container itself
+        #   - the LXD resources: on the LXD host, with the container as arg
+        #   - the Borg archives: on the backup host, keyed by the LXD host
+        #     that owns the container
+        # Calling storage.info only on the container found the first group
+        # and silently missed Borg, which is why the backup types were empty.
+        def merge(dest, src):
+            """Merge src into dest, keeping non-empty values.
 
-        # 3 + 4. S3 source + S3 backup from the restic status report.
-        src_gb, backup_gb, customer = self._measure_s3(api)
-        if src_gb is not None:
+            A plain `dict.update` lets the LXD host's empty lists overwrite
+            the container's real data — the container answers for
+            postgres_db/filestore_s3, the host answers for borg/lxd_resources.
+            """
+            for key, value in (src or {}).items():
+                if isinstance(value, list):
+                    if value:
+                        dest.setdefault(key, []).extend(value)
+                elif value:
+                    dest[key] = value
+
+        payload = {}
+        try:
+            merge(payload, call(self.name, self.name))
+        except Exception as exc:  # noqa: BLE001
+            _logger.warning('storage.info failed for %s: %s', self.name, exc)
+
+        lxd_host = self.lxd_host or self.host_machine
+        if lxd_host:
+            try:
+                # LXD host: CPU/RAM and the container's own footprint.
+                merge(payload, call(lxd_host, self.name, self.name))
+            except Exception as exc:  # noqa: BLE001
+                _logger.warning(
+                    'storage.info failed for LXD host %s (%s): %s',
+                    lxd_host, self.name, exc)
+
+        borg_host = self.env['ir.config_parameter'].sudo().get_param(
+            'saltstack_storage.borg_host', '') or 'tull1'
+        if lxd_host:
+            try:
+                # Borg lives on the BACKUP host, keyed by the LXD host that
+                # owns the container — not on the LXD host itself.
+                borg_payload = call(borg_host, lxd_host, self.name)
+                for key in ('borg_db', 'borg_container'):
+                    rows = borg_payload.get(key) or []
+                    mine = [r for r in rows
+                            if self.name in (r.get('subject') or '')]
+                    if mine:
+                        payload.setdefault(key, []).extend(mine)
+                # (c) The minion's disk_borg is the SUM of every Borg archive
+                # on its LXD host — not the newest archive per volume.
+                if borg_payload.get('borg_total'):
+                    payload['borg_total'] = borg_payload['borg_total']
+                # The DB-archive rows are needed for the backup key figure
+                # even when none of them belongs to this minion by name: the
+                # ratio is a property of the whole PostgreSQL volume.
+                # `storage.borg` filters by container name, so ask it for the
+                # unfiltered archive list explicitly.
+                try:
+                    raw_all = api.salt_call(
+                        'local', borg_host, 'storage.borg', lxd_host, 0,
+                        timeout=900)
+                    res_all = (json.loads(raw_all)
+                               if isinstance(raw_all, str) else raw_all)
+                    all_payload = ((res_all.get('return') or [{}])[0]
+                                   .get(borg_host) or {})
+                    if all_payload.get('borg_db'):
+                        payload['_borg_db_all'] = all_payload['borg_db']
+                except Exception as exc:  # noqa: BLE001
+                    _logger.warning('Borg DB rows for ratio failed: %s', exc)
+            except Exception as exc:  # noqa: BLE001
+                _logger.warning(
+                    'storage.info failed for Borg host %s: %s',
+                    borg_host, exc)
+
+        # Restic repositories live on the restic minion, keyed by customer
+        # name. Asked separately because the measurement needs that host's
+        # rclone credentials and repository password.
+        restic_host = self.env['ir.config_parameter'].sudo().get_param(
+            'saltstack_storage.restic_host', '') or 'restic'
+        # The bucket is named after the CUSTOMER, but the `customer` grain on
+        # an Odoo host is forced to the owning customer (e.g. "vertel"), not
+        # the container name. Try the configured customer first, then the
+        # minion name — the bucket is usually named after the container.
+        candidates = []
+        for name in (self.snapshot_customer, self._backup_customer(),
+                     self.name):
+            name = (name or '').strip().lower()
+            if name and name not in candidates:
+                candidates.append(name)
+
+        for customer in candidates:
+            try:
+                raw = api.salt_call('local', restic_host,
+                                    'storage.restic_stats', customer,
+                                    timeout=600)
+                res = json.loads(raw) if isinstance(raw, str) else raw
+                rows = ((res.get('return') or [{}])[0].get(restic_host) or {}) \
+                    .get('restic_filestore') or []
+                if rows:
+                    payload['restic_filestore'] = rows
+                    break
+            except Exception as exc:  # noqa: BLE001
+                _logger.warning('Restic stats failed for %s: %s',
+                                customer, exc)
+
+        if not isinstance(payload, dict) or not payload:
+            _logger.warning('storage.info for %s returned no payload',
+                            self.name)
+            return False
+
+        # Several artefacts can map to the same type (e.g. two Borg archives
+        # → postgres_borg). The type is unique per minion, so the values are
+        # SUMMED rather than overwritten — otherwise the last row wins and
+        # the storage looks smaller than it is.
+        totals = {}
+        for artifact, rows in payload.items():
+            storage_type = self._STORAGE_TYPE_FROM_ARTIFACT.get(artifact)
+            if not storage_type:
+                continue
+            for row in rows or []:
+                used = float(row.get('bytes_used') or 0)
+                alloc = float(row.get('bytes_allocated') or 0)
+                if not used and not alloc:
+                    continue
+                agg = totals.setdefault(storage_type, {
+                    'used': 0.0, 'alloc': 0.0,
+                    'measured': True, 'methods': [], 'providers': [],
+                })
+                agg['used'] += used
+                agg['alloc'] += alloc
+                if row.get('method') != 'measured':
+                    agg['measured'] = False
+                if row.get('method'):
+                    agg['methods'].append(row['method'])
+                if row.get('source'):
+                    agg['providers'].append(row['source'])
+
+        # (b) postgres_borg as a KEY FIGURE, not a raw archive size.
+        #
+        # A Borg DB archive covers the whole PostgreSQL volume, not one
+        # customer's database. Attributing that archive to this minion would
+        # over-report it massively. Instead:
+        #
+        #   ratio = sum(all DB backups) / sum(all databases)   <- key figure
+        #   postgres_borg = ratio * this database's size
+        #
+        # The ratio is computed from the fleet-wide totals, so it is stable
+        # and comparable across customers.
+        db_size = (totals.get('postgres') or {}).get('used') or 0.0
+        if db_size:
+            cost, share, total_backup = self._postgres_backup_share()
+            if cost:
+                totals['postgres_borg'] = {
+                    'used': cost,
+                    'alloc': 0.0,
+                    'measured': False,
+                    'methods': ['estimated'],
+                    'providers': ['andel %.1f%% av %.2f GB' % (
+                        share * 100, total_backup / 1024.0 ** 3)],
+                }
+
+        # (c) disk_borg = the minion's OWN Borg archives, deduplicated.
+        #
+        # NOT the repository total: on fors that covers 68 containers, so
+        # `ledningssystem` was credited with 314 GB and 1129 archives that
+        # belonged to the whole host.
+        #
+        # `deduplicated_size` is the only honest figure — 19 daily archives
+        # of one container are 435 GB original but 13 GB deduplicated, since
+        # each archive is a full copy of the same bytes.
+        borg_total = (payload.get('borg_total') or [{}])[0]
+        if borg_total.get('bytes_used'):
+            source = borg_total.get('source') or 'archive-cache'
+            totals['disk_borg'] = {
+                'used': float(borg_total['bytes_used']),
+                'alloc': 0.0,
+                'measured': borg_total.get('method') == 'measured',
+                'methods': [borg_total.get('method') or 'measured'],
+                'providers': ['borg %s (%s arkiv)' % (
+                    source, borg_total.get('archives', 0))],
+            }
+
+        for storage_type, agg in totals.items():
             self._upsert_storage(
-                's3', src_gb, customer,
-                'restic-status.json src bucket (Garage)')
-        if backup_gb is not None:
-            self._upsert_storage(
-                's3_backup', backup_gb, '%s-backup' % (customer or ''),
-                'restic-status.json backup bucket')
-        return True
+                storage_type, None,
+                ', '.join(sorted(set(agg['providers'])))[:120],
+                ', '.join(sorted(set(agg['methods'])))[:120],
+                is_measured=agg['measured'],
+                bytes_used=agg['used'],
+                bytes_allocated=agg['alloc'],
+            )
+        _logger.info('storage: %s types written for %s',
+                     len(totals), self.name)
+        return bool(totals)
 
     def action_measure_storage(self):
         """Server action (gear/button): measure storage for the selected minions."""

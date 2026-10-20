@@ -235,22 +235,41 @@
                         <notebook>
                             <page string="Storage">
                                 <group>
-                                    <field name="storage_total_gb"
-                                           string="Totalt diskutnyttjande (GB)"/>
-                                    <field name="storage_measured_gb"/>
-                                    <field name="storage_estimated_gb"/>
-                                    <field name="lxd_host" readonly="1"/>
-                                    <field name="storage_ids" nolabel="1" colspan="2">
-                                        <list editable="bottom">
-                                            <field name="storage_type"/>
-                                            <field name="provider"/>
-                                            <field name="size_gb"/>
-                                            <field name="is_measured"/>
-                                            <field name="method"/>
-                                            <field name="measured_at"/>
-                                        </list>
-                                    </field>
+                                    <group string="Summa">
+                                        <field name="storage_primary_gb"/>
+                                        <field name="storage_backup_gb"/>
+                                        <field name="storage_total_gb"/>
+                                    </group>
+                                    <group string="Mätning">
+                                        <field name="lxd_host" readonly="1"/>
+                                    </group>
                                 </group>
+                                <div class="text-muted mb-2">
+                                    Primärdata är kundens levande data
+                                    (container, disk, Postgres, filestore).
+                                    Backup är en <em>kopia</em> av samma data
+                                    och räknas aldrig in i primärsumman.
+                                </div>
+                                <field name="storage_ids" nolabel="1">
+                                    <list editable="bottom"
+                                          decoration-muted="legacy_reference"
+                                          decoration-info="is_measured == False">
+                                        <field name="storage_type"/>
+                                        <field name="layer" optional="show"/>
+                                        <field name="provider"/>
+                                        <field name="bytes_used" optional="hide"/>
+                                        <field name="size_gb" sum="Summa använt"/>
+                                        <field name="bytes_allocated"
+                                               optional="hide"/>
+                                        <field name="allocated_gb"
+                                               optional="show"/>
+                                        <field name="is_measured"/>
+                                        <field name="method"/>
+                                        <field name="measured_at"/>
+                                        <field name="legacy_reference"
+                                               optional="show"/>
+                                    </list>
+                                </field>
                             </page>
                             <page string="Återskapa data"
                                   invisible="not snapshot_ids and not dirvish_snapshot_ids">
@@ -464,6 +483,12 @@
                             domain="[('is_demo', '=', False)]"/>
                     <filter name="demo_data" string="Odoo demodata"
                             domain="[('odoo_has_demo_data', '=', True)]"/>
+                    <separator/>
+                    <filter name="has_storage" string="Har lagringsmätning"
+                            domain="[('storage_ids', '!=', False)]"/>
+                    <filter name="has_legacy_storage"
+                            string="Har historiska lagringsrader"
+                            domain="[('storage_ids.legacy_reference', '=', True)]"/>
                     <separator/>
                     <filter name="ska" string="SKA" domain="[('dc', '=', 'ska')]"/>
                     <filter name="sto" string="STO" domain="[('dc', '=', 'sto')]"/>

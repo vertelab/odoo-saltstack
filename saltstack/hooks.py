@@ -28,3 +28,9 @@ def _ensure_webhook_config(env):
         url = '%s/saltstack/alert' % base.rstrip('/')
         params.set_param('saltstack.alert.webhook_url', url)
         _logger.info('saltstack: webhook-URL ifylld: %s', url)
+
+
+# NOTE: the storage type migration lives in salt_minion_storage._auto_init()
+# — Odoo has no per-module upgrade hook, and _auto_init fires on both
+# install and --update. It is idempotent, so running it every upgrade is
+# safe.
