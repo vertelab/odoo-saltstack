@@ -22,7 +22,7 @@
                         icon="fa-hdd-o">
                     <div class="o_stat_info">
                         <span class="o_stat_text">Lagring</span>
-                        <field name="storage_total_gb"
+                        <field name="measurement_total_gb"
                                class="o_stat_value"
                                widget="statinfo"/>
                     </div>
@@ -61,11 +61,11 @@
                     </group>
                     <group string="Lagringssumma">
                         <group>
-                            <field name="storage_primary_gb"/>
-                            <field name="storage_backup_gb"/>
+                            <field name="measurement_primary_gb"/>
+                            <field name="measurement_backup_gb"/>
                         </group>
                         <group>
-                            <field name="storage_total_gb"/>
+                            <field name="measurement_total_gb"/>
                             <field name="storage_missing_count"/>
                             <field name="storage_measured_at"/>
                         </group>
@@ -88,7 +88,7 @@
          del av det.
 
          Vi visar PRIMÄRDATA (container + databas + filestore), inte
-         storage_total_gb: backup är en kopia av samma data och får aldrig
+         measurement_total_gb: backup är en kopia av samma data och får aldrig
          presenteras som kundens storlek (se help-texten på fältet).
 
          Två sanningar får aldrig döljas:
@@ -103,7 +103,7 @@
             <!-- Fält som bara används i t-if/t-attf-* måste ändå deklareras,
                  annars saknas de i record-datan och kortet kraschar. -->
             <xpath expr="//kanban" position="inside">
-                <field name="storage_primary_gb"/>
+                <field name="measurement_primary_gb"/>
                 <field name="storage_measured_at"/>
                 <field name="storage_missing_count"/>
                 <field name="storage_summary_title"/>
@@ -113,7 +113,7 @@
                       t-attf-class="o_minion_storage #{record.storage_missing_count.raw_value &gt; 0 ? 'o_minion_storage--incomplete text-warning' : ''}"
                       t-att-title="record.storage_summary_title.raw_value">
                     <i class="fa fa-hdd-o" aria-hidden="true"/>
-                    <field name="storage_primary_gb"/> GB
+                    <field name="measurement_primary_gb"/> GB
                     <t t-if="record.storage_missing_count.raw_value &gt; 0">*</t>
                 </span>
             </xpath>

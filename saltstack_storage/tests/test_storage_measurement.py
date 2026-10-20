@@ -71,19 +71,19 @@ class TestStorageMeasurement(TransactionCase):
         self._mk('borg_db', 'db', used=1 * GB)
         self._mk('restic_filestore', 'bucket', used=3 * GB)
         self.minion.invalidate_recordset()
-        self.assertAlmostEqual(self.minion.storage_primary_gb, 15.0, places=1)
-        self.assertAlmostEqual(self.minion.storage_backup_gb, 10.0, places=1)
-        self.assertAlmostEqual(self.minion.storage_total_gb, 25.0, places=1)
+        self.assertAlmostEqual(self.minion.measurement_primary_gb, 15.0, places=1)
+        self.assertAlmostEqual(self.minion.measurement_backup_gb, 10.0, places=1)
+        self.assertAlmostEqual(self.minion.measurement_total_gb, 25.0, places=1)
         self.assertEqual(self.minion.storage_missing_count, 0)
 
     def test_backup_not_added_to_primary(self):
         """A Borg archive of the container never inflates primary data."""
         self._mk('lxd_container', '/', used=10 * GB)
-        before = self.minion.storage_primary_gb
+        before = self.minion.measurement_primary_gb
         self._mk('borg_container', 'container', used=10 * GB)
         self.minion.invalidate_recordset()
-        self.assertAlmostEqual(self.minion.storage_primary_gb, before, places=2)
-        self.assertAlmostEqual(self.minion.storage_backup_gb, 10.0, places=1)
+        self.assertAlmostEqual(self.minion.measurement_primary_gb, before, places=2)
+        self.assertAlmostEqual(self.minion.measurement_backup_gb, 10.0, places=1)
 
     def test_bucket_size_not_added(self):
         """The S3 bucket size is a deviation, not a summand."""
@@ -132,7 +132,7 @@ class TestStorageMeasurement(TransactionCase):
             'legacy_reference': True,
         })
         self.minion.invalidate_recordset()
-        self.assertAlmostEqual(self.minion.storage_primary_gb, 10.0, places=1)
+        self.assertAlmostEqual(self.minion.measurement_primary_gb, 10.0, places=1)
         self.assertTrue(legacy.legacy_reference)
 
     # ── 2.7 Odoo tab visibility ──────────────────────────────────────────
@@ -153,7 +153,7 @@ class TestStorageMeasurement(TransactionCase):
 
     def test_smart_button_no_measurements(self):
         plain = self.Minion.create({'name': 'storage-test-empty'})
-        self.assertEqual(plain.storage_total_gb, 0.0)
+        self.assertEqual(plain.measurement_total_gb, 0.0)
         action = plain.action_show_storage_measurements()
         self.assertEqual(action['res_model'], 'saltstack.storage.measurement')
 
@@ -186,7 +186,7 @@ class TestStorageMeasurement(TransactionCase):
                     source=row['source'], method=row['method'],
                     raw=row['raw'])
         self.minion.invalidate_recordset()
-        self.assertAlmostEqual(self.minion.storage_primary_gb, 7.0, places=1)
+        self.assertAlmostEqual(self.minion.measurement_primary_gb, 7.0, places=1)
         self.assertEqual(self.minion.storage_db_host, 'postgres16.vertel.se')
 
     # ── 4.3–4.8 cron.task ────────────────────────────────────────────────

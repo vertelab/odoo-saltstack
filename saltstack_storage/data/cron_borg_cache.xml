@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ── Borg archive cache — scheduled by the cron_tick engine ────── -->
+    <!--
+         ONE expensive pass, then cheap reads.
+
+         `borg info <repo>::<archive>` costs 17 s and takes an exclusive
+         repository lock that collides with the nightly backup. Measuring
+         1200 archives takes ~5.7 h — impossible inside a collection run.
+
+         This task measures a bounded number of NEW archives per run and
+         stores the result in /var/lib/storage-info/borg-archives.json, so
+         `borg_totals` becomes a dict lookup (1.8 s instead of 17 s per
+         archive).
+
+         Runs BEFORE storage_collect (sequence 25 vs 30) so the collection
+         reads a warm cache.
+    -->
+    <data noupdate="1">
+        <record id="cron_task_borg_cache" model="cron.task">
+            <field name="name">Storage: bygg Borg-arkivcache</field>
+            <field name="technical_name">borg_archive_cache</field>
+            <field name="module">saltstack_storage</field>
+            <field name="model_name">saltstack.storage.measurement</field>
+            <field name="method_name">_cron_borg_archive_cache</field>
+            <field name="cadence">week</field>
+            <field name="sequence">25</field>
+            <field name="timeout_seconds">7200</field>
+            <field name="active" eval="True"/>
+        </record>
+    </data>
+</odoo>

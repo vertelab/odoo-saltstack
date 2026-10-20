@@ -18,6 +18,10 @@
                         <field name="storage_borg_host"
                                placeholder="tull1"/>
                     </setting>
+                    <setting id="storage_borg_archive_stats"
+                             help="Antal Borg-arkiv som mäts på riktigt per körning. Varje mätning tar 75–120 s och låser repositoryt.">
+                        <field name="storage_borg_archive_stats"/>
+                    </setting>
                     <setting id="storage_retention_days"
                              help="Hur länge mäthistoriken behålls. 0 = behåll allt.">
                         <field name="storage_retention_days"/>

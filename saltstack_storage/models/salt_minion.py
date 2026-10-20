@@ -10,6 +10,7 @@ Adds three things to the base minion registry:
    broken measurement can never affect status or registration.
 """
 
+import json
 import logging
 
 from odoo import _, api, fields, models
@@ -27,20 +28,20 @@ class SaltMinion(models.Model):
         'minion_id',
         string='Lagringsmätningar',
     )
-    storage_primary_gb = fields.Float(
+    measurement_primary_gb = fields.Float(
         string='Primärdata (GB)',
         compute='_compute_storage_layers',
         digits=(16, 2),
         help='Container + databas + filestore. The customer\'s live data.',
     )
-    storage_backup_gb = fields.Float(
+    measurement_backup_gb = fields.Float(
         string='Backup (GB)',
         compute='_compute_storage_layers',
         digits=(16, 2),
         help='Borg + Restic. A COPY of the primary data — never added to it '
              'when the customer\'s own size is reported.',
     )
-    storage_total_gb = fields.Float(
+    measurement_total_gb = fields.Float(
         string='Totalt (GB)',
         compute='_compute_storage_layers',
         digits=(16, 2),
@@ -124,9 +125,9 @@ class SaltMinion(models.Model):
         for rec in self:
             rows = Measurement._current([('minion_id', '=', rec.id)])
             summary = Measurement._summarise(rows)
-            rec.storage_primary_gb = summary['primary_gb']
-            rec.storage_backup_gb = summary['backup_gb']
-            rec.storage_total_gb = summary['total_gb']
+            rec.measurement_primary_gb = summary['primary_gb']
+            rec.measurement_backup_gb = summary['backup_gb']
+            rec.measurement_total_gb = summary['total_gb']
             rec.storage_missing_count = len(summary['artifacts_missing'])
             missing_n = rec.storage_missing_count
             rec.storage_summary_title = (
@@ -183,10 +184,16 @@ class SaltMinion(models.Model):
         api = self.env['saltstack.api']
         container = self.name
 
+        archive_stats = int(self.env['ir.config_parameter'].sudo().get_param(
+            'saltstack_storage.borg_archive_stats', '1') or 1)
         try:
-            result = api.salt_call(
+            # salt_call returns a JSON STRING — decode it. Using the raw
+            # string as a dict silently produced "'str' object has no
+            # attribute 'get'" for every minion.
+            raw = api.salt_call(
                 'local', self.name, 'storage.info', container,
-                timeout=900)
+                archive_stats, timeout=900)
+            result = json.loads(raw) if isinstance(raw, str) else raw
         except Exception as exc:  # noqa: BLE001 — host unreachable
             _logger.warning(
                 'storage.info failed for %s: %s', self.name, exc)
@@ -198,8 +205,15 @@ class SaltMinion(models.Model):
                 'storage.info for %s returned %r', self.name, payload)
             return ['storage.info: unexpected payload']
 
+        # Odoo key figures travel in the same payload. They are NOT storage
+        # artefacts — they belong on the minion, where the Odoo tab reads
+        # them. Writing them here keeps one collection, two destinations.
+        self._apply_odoo_stats(payload.get('odoo_stats') or [])
+
         saved = 0
         for artifact, rows in payload.items():
+            if artifact in ('odoo_stats', 'lxd_resources'):
+                continue
             for row in rows or []:
                 try:
                     Measurement._upsert(
@@ -222,3 +236,41 @@ class SaltMinion(models.Model):
         _logger.info('storage.info: %s measurements saved for %s',
                      saved, self.name)
         return []
+
+    def _apply_odoo_stats(self, rows):
+        """Write the Odoo key figures onto the minion.
+
+        Same fields the old `_collect_odoo_stats()` filled — one collection,
+        two destinations (measurements + minion fields).
+        """
+        self.ensure_one()
+        if not rows:
+            return
+        dbs, users, coworkers, tokens = [], 0, 0, 0
+        last_login = None
+        version = None
+        for row in rows:
+            db = row.get('database') or ''
+            users += int(row.get('users_active') or 0)
+            coworkers += int(row.get('coworkers') or 0)
+            tokens += int(row.get('tokens_m') or 0)
+            dbs.append('%s (demo)' % db if row.get('demo') else db)
+            version = version or row.get('version') or None
+            val = (row.get('last_login') or '').split('.')[0]
+            if val and (not last_login or val > last_login):
+                last_login = val
+        vals = {
+            'odoo_databases': ', '.join(dbs),
+            'odoo_user_count': users,
+            'odoo_coworker_count': coworkers,
+            'odoo_coworker_tokens_m': tokens,
+            'odoo_stats_synced': fields.Datetime.now(),
+        }
+        if version:
+            vals['odoo_version'] = version
+        if last_login:
+            try:
+                vals['odoo_last_login'] = fields.Datetime.to_datetime(last_login)
+            except (ValueError, TypeError):
+                pass
+        self.write(vals)

@@ -17,6 +17,7 @@ Two design rules that the whole module rests on:
    customer. The summary therefore has two independent layers.
 """
 
+import json
 import logging
 
 from odoo import _, api, fields, models
@@ -382,6 +383,49 @@ class StorageMeasurement(models.Model):
         }
 
     # ── Collection entry point (cron.task) ────────────────────────────────
+
+    @api.model
+    def _cron_borg_archive_cache(self):
+        """Build the Borg archive cache on the backup host.
+
+        Runs BEFORE `storage_collect` (sequence 25 vs 30) so the collection
+        reads a warm cache. Measures a bounded number of NEW archives per
+        run — in steady state that is a handful per week.
+        """
+        Minion = self.env['salt.minion']
+        borg_host = self.env['ir.config_parameter'].sudo().get_param(
+            'saltstack_storage.borg_host', '') or 'tull1'
+        api = self.env['saltstack.api']
+        budget = int(self.env['ir.config_parameter'].sudo().get_param(
+            'saltstack_storage.borg_archive_budget', '50') or 50)
+
+        # Every LXD host that has a Borg repository on the backup host.
+        results, failed = [], []
+        try:
+            raw = api.salt_call('local', borg_host, 'cmd.run',
+                                'ls /srv/borgbackup/lxd 2>/dev/null',
+                                timeout=120)
+            listing = str((json.loads(raw) if isinstance(raw, str) else raw)
+                          .get('return', [{}])[0].get(borg_host, '') or '')
+        except Exception as exc:  # noqa: BLE001
+            _logger.warning('Borg host listing failed: %s', exc)
+            return {'failed': [str(exc)]}
+
+        for lxd_host in [h.strip() for h in listing.splitlines() if h.strip()]:
+            try:
+                raw = api.salt_call('local', borg_host,
+                                    'storage.borg_archive_cache',
+                                    lxd_host, budget, timeout=7200)
+                res = json.loads(raw) if isinstance(raw, str) else raw
+                payload = (res.get('return') or [{}])[0].get(borg_host) or {}
+                results.append(payload.get('borg_cache') or {})
+            except Exception as exc:  # noqa: BLE001
+                self.env.invalidate_all()
+                _logger.warning('Borg cache failed for %s: %s', lxd_host, exc)
+                failed.append('%s: %s' % (lxd_host, exc))
+        _logger.info('Borg archive cache: %s hosts, %s failed',
+                     len(results), len(failed))
+        return {'hosts': results, 'failed': failed}
 
     @api.model
     def _cron_collect_all(self):

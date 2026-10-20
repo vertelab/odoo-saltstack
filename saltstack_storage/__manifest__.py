@@ -36,6 +36,7 @@ SaltStack Storage Measurement
     'data': [
         'security/ir.model.access.csv',
         'data/cron_storage_collect.xml',
+        'data/cron_borg_cache.xml',
         'views/storage_measurement_views.xml',
         'views/salt_minion_views.xml',
         'views/storage_menu_views.xml',
