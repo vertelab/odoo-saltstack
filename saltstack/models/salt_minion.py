@@ -163,6 +163,7 @@ class SaltMinion(models.Model):
         compute='_compute_state',
         store=True,
         default='offline',
+        group_expand='_group_expand_state',
         help='Minion-status semaphore: faulty (olösta larm) > online '
              '(svarar) > offline (svarar ej).',
     )
@@ -393,6 +394,21 @@ class SaltMinion(models.Model):
     )
 
     # ── Computed ─────────────────────────────────────────────────────────
+
+    @api.model
+    def _group_expand_state(self, states, domain):
+        """Column order for the state grouping: faulty > offline > online.
+
+        The selection order is online/offline/faulty (the order the values
+        were introduced in), but the kanban must put the most urgent column
+        leftmost. group_expand controls both which groups are shown and in
+        which order, so returning the values in priority order is enough —
+        the priority logic itself (_compute_state) is untouched.
+
+        All three states are always returned, so an empty column stays
+        visible instead of disappearing when no minion has that state.
+        """
+        return ['faulty', 'offline', 'online']
 
     @api.depends('last_seen', 'open_alert_count')
     def _compute_state(self):

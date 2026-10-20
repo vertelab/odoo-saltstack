@@ -492,6 +492,9 @@
                     <separator/>
                     <filter name="ska" string="SKA" domain="[('dc', '=', 'ska')]"/>
                     <filter name="sto" string="STO" domain="[('dc', '=', 'sto')]"/>
+                    <filter name="lab" string="Lab" domain="[('dc', '=', 'lab')]"/>
+                    <filter name="dc_unknown" string="Unknown DC"
+                            domain="[('dc', '=', False)]"/>
                     <separator/>
                     <group expand="0" string="Group By">
                         <filter name="group_by_dc" string="Datacenter"

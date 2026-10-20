@@ -289,6 +289,11 @@ msgstr ""
 msgid "Database"
 msgstr ""
 #. module: saltstack
+#: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_search
+msgid "Unknown DC"
+msgstr "Okänt DC"
+
+#. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__dc
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_search
 msgid "Datacenter"
