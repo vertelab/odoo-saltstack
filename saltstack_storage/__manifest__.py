@@ -2,7 +2,7 @@
 
 {
     'name': 'SaltStack Storage Measurement',
-    'version': '18.0.1.1.4',
+    'version': '18.0.1.1.5',
     'category': 'Infrastructure',
     'summary': 'Measure and summarise storage per minion and customer.',
     'description': '''

@@ -1986,7 +1986,14 @@ fi
             except psycopg2.errors.SerializationFailure:
                 # Everything the failed attempt wrote is rolled back by the
                 # savepoint, so the cache must be dropped before retrying.
-                self.env.invalidate_all()
+                #
+                # invalidate() — NOT invalidate_all() (2026-10-21): the latter
+                # FLUSHES the whole transaction before invalidating, and in an
+                # aborted transaction that flush raises
+                # InFailedSqlTransaction, which escapes the retry loop and
+                # reaches the UI as a bare traceback. invalidate() drops the
+                # cache without a single SQL statement.
+                self.invalidate_model()
                 _logger.warning(
                     'Minion sync: concurrent update (attempt %s/3), retrying',
                     attempt + 1)
@@ -2044,31 +2051,54 @@ fi
             for rec in self.with_context(active_test=False).search([])
         }
 
+        # Per-minion savepoint (2026-10-21): the bulk grains call above holds
+        # the transaction open for ~2 minutes, so ANY concurrent writer of a
+        # salt_minion row (drift-alarm webhook, auto-resolve cron, backfill
+        # cron, websocket bus) makes one write fail with SerializationFailure.
+        # Without a per-row savepoint that single row aborted the whole sync —
+        # three retries in a row all hit the same collision and the fleet's
+        # last_sync froze for days. Now the colliding row is skipped (it is
+        # corrected by the next run) and every other minion is still synced.
+        skipped = []
         for minion_id in all_minions:
             grains = bulk_grains.get(minion_id, {})
             existing = existing_by_name.get(minion_id)
-            if existing:
-                if not existing.active:
-                    existing.active = True
-                    updated += 1
-                existing._apply_grains(grains, with_image=False)
-                if minion_id in up_set:
-                    existing.last_seen = now  # semaphore: online (if no alerts)
-                updated += 1
-            else:
-                rec = self.create({'name': minion_id})
-                existing_by_name[minion_id] = rec
-                rec._apply_grains(grains, with_image=False)
-                if minion_id in up_set:
-                    rec.last_seen = now
-                created += 1
+            try:
+                with self.env.cr.savepoint():
+                    if existing:
+                        if not existing.active:
+                            existing.active = True
+                            updated += 1
+                        existing._apply_grains(grains, with_image=False)
+                        if minion_id in up_set:
+                            existing.last_seen = now  # semaphore: online
+                        updated += 1
+                    else:
+                        rec = self.create({'name': minion_id})
+                        existing_by_name[minion_id] = rec
+                        rec._apply_grains(grains, with_image=False)
+                        if minion_id in up_set:
+                            rec.last_seen = now
+                        created += 1
+            except psycopg2.errors.SerializationFailure:
+                self.invalidate_model()
+                skipped.append(minion_id)
+                _logger.warning(
+                    'Minion sync: concurrent update on %s, skipped this run',
+                    minion_id)
 
         # Deactivate minions no longer present on the Salt master
         # (only reached when manage.status returned a healthy list).
         for rec in existing_by_name.values():
-            if rec.active and rec.name not in all_minions:
-                rec.active = False
-                deactivated += 1
+            if not (rec.active and rec.name not in all_minions):
+                continue
+            try:
+                with self.env.cr.savepoint():
+                    rec.active = False
+                    deactivated += 1
+            except psycopg2.errors.SerializationFailure:
+                self.invalidate_model()
+                skipped.append(rec.name)
 
         # NOTE (2026-09-24, T/11607): the open_alert_count backfill used to run
         # here. It issued one search_count per minion, which forced a flush of
@@ -2080,12 +2110,15 @@ fi
         # data/alert_count_cron.xml) so this transaction only touches
         # salt_minion and stays short.
 
-        return {
+        result = {
             'created': created,
             'updated': updated,
             'deactivated': deactivated,
             'total': len(all_minions),
         }
+        if skipped:
+            result['skipped'] = skipped
+        return result
 
     def action_cron_backfill_alert_counts(self):
         """Scheduled backfill of open_alert_count for all minions.
