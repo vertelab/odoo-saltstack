@@ -229,7 +229,12 @@ class SaltMinion(models.Model):
                     )
                     saved += 1
                 except Exception as exc:  # noqa: BLE001 — one row
-                    self.env.invalidate_all()
+                    # No env.invalidate_all() (2026-10-21): it flushes the
+                    # whole transaction and, inside an already-aborted
+                    # transaction, raises a second SerializationFailure that
+                    # escapes the per-row isolation. invalidate() on this
+                    # model drops the stale cache without any SQL.
+                    self.env['saltstack.storage.measurement'].invalidate_model()
                     _logger.warning(
                         'Could not save %s/%s for %s: %s',
                         artifact, row.get('subject'), self.name, exc)

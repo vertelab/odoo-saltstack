@@ -880,8 +880,16 @@ class SaltMinion(models.Model):
             dc, ', '.join(v for v, _l in valid))
         return False
 
-    def _apply_grains(self, grains):
-        """Write grains data onto this record (no API call)."""
+    def _apply_grains(self, grains, with_image=True):
+        """Write grains data onto this record (no API call).
+
+        ``with_image=False`` skips the logo lookup. The bulk sync passes it:
+        resolving res.partner.image_128 for ~120 minions and rewriting every
+        ir_attachment on each run is the single heaviest part of the sync, and
+        the image only changes when a customer logo does. The image is still
+        refreshed by ``action_sync_from_grains()`` (single minion) and
+        ``action_update_basic_info()``.
+        """
         self.ensure_one()
         if not grains or not isinstance(grains, dict):
             _logger.warning('No grains for %s (got %r)', self.name, grains)
@@ -946,7 +954,8 @@ class SaltMinion(models.Model):
             'grains_json': json.dumps(grains, indent=2, default=str),
             'last_sync': fields.Datetime.now(),
         })
-        self._set_default_image()
+        if with_image:
+            self._set_default_image()
         self._update_demo_data(grains)
         return True
 
@@ -1960,7 +1969,36 @@ fi
         refuses to run the deactivation pass, so a broken Salt API can never
         wipe the registry. Sets last_seen for up minions so the semaphore
         reflects the sync, and backfills open_alert_count.
+
+        Atomic + retried (2026-10-21): the whole sync runs in ONE savepoint
+        and is retried on SerializationFailure. The sync used to abort with
+        "could not serialize access due to concurrent update" whenever another
+        transaction touched a row it had flushed — in practice the drift-alarm
+        webhook, the auto-resolve cron and the open-alert backfill cron, which
+        all write salt_minion.open_alert_count. The failure surfaced as a bare
+        traceback in the UI (no notification) and last_sync froze for the whole
+        fleet (last successful run 2026-10-19).
         """
+        for attempt in range(3):
+            try:
+                with self.env.cr.savepoint():
+                    return self._action_sync_all_minions_once()
+            except psycopg2.errors.SerializationFailure:
+                # Everything the failed attempt wrote is rolled back by the
+                # savepoint, so the cache must be dropped before retrying.
+                self.env.invalidate_all()
+                _logger.warning(
+                    'Minion sync: concurrent update (attempt %s/3), retrying',
+                    attempt + 1)
+                time.sleep(2 * (attempt + 1))
+        _logger.error('Minion sync: gave up after 3 concurrent-update retries')
+        return {
+            'error': 'concurrent update — synken kolliderade tre gånger; '
+                     'försök igen om en stund',
+        }
+
+    def _action_sync_all_minions_once(self):
+        """One sync attempt. Caller owns the savepoint and the retry loop."""
         try:
             result = self._call_salt_api('runner', None, 'manage.status')
         except Exception as e:
@@ -1994,32 +2032,41 @@ fi
             _logger.warning('Bulk grains fetch failed: %s', e)
 
         now = fields.Datetime.now()
+        up_set = set(up)
         created = 0
         updated = 0
         deactivated = 0
+
+        # One read for the whole registry instead of one search per minion
+        # (~120 queries). Same records, far shorter transaction.
+        existing_by_name = {
+            rec.name: rec
+            for rec in self.with_context(active_test=False).search([])
+        }
+
         for minion_id in all_minions:
             grains = bulk_grains.get(minion_id, {})
-            existing = self.search([('name', '=', minion_id)], limit=1)
+            existing = existing_by_name.get(minion_id)
             if existing:
                 if not existing.active:
                     existing.active = True
                     updated += 1
-                existing._apply_grains(grains)
-                if minion_id in up:
+                existing._apply_grains(grains, with_image=False)
+                if minion_id in up_set:
                     existing.last_seen = now  # semaphore: online (if no alerts)
                 updated += 1
             else:
                 rec = self.create({'name': minion_id})
-                rec._apply_grains(grains)
-                if minion_id in up:
+                existing_by_name[minion_id] = rec
+                rec._apply_grains(grains, with_image=False)
+                if minion_id in up_set:
                     rec.last_seen = now
                 created += 1
 
         # Deactivate minions no longer present on the Salt master
         # (only reached when manage.status returned a healthy list).
-        known = self.search([('active', '=', True)])
-        for rec in known:
-            if rec.name not in all_minions:
+        for rec in existing_by_name.values():
+            if rec.active and rec.name not in all_minions:
                 rec.active = False
                 deactivated += 1
 

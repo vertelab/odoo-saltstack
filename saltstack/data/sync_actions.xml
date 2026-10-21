@@ -5,14 +5,22 @@
         <field name="name">Synka minions</field>
         <field name="model_id" ref="model_salt_minion"/>
         <field name="state">code</field>
-        <field name="code">result = env['salt.minion'].sudo().search([]).action_sync_all_minions()
-if isinstance(result, dict) and 'error' in result:
-    message = 'Fel: %s' % result['error']
+        <field name="code">try:
+    result = env['salt.minion'].sudo().search([]).action_sync_all_minions()
+    if isinstance(result, dict) and 'error' in result:
+        message = 'Fel: %s' % result['error']
+        msg_type = 'danger'
+        sticky = True
+    else:
+        message = 'Skapade: %(created)s, uppdaterade: %(updated)s, inaktiverade: %(deactivated)s' % result
+        msg_type = 'success'
+        sticky = False
+except Exception as exc:
+    _logger.exception('Minion sync failed')
+    message = 'Synken kraschade: %s' % exc
     msg_type = 'danger'
-else:
-    message = 'Skapade: %(created)s, uppdaterade: %(updated)s, inaktiverade: %(deactivated)s' % result
-    msg_type = 'success'
-action = {'type': 'ir.actions.client', 'tag': 'display_notification', 'params': {'title': 'Minion-synk', 'message': message, 'type': msg_type, 'sticky': False}}</field>
+    sticky = True
+action = {'type': 'ir.actions.client', 'tag': 'display_notification', 'params': {'title': 'Minion-synk', 'message': message, 'type': msg_type, 'sticky': sticky}}</field>
     </record>
 
     <record id="action_sync_pillars_all" model="ir.actions.server">

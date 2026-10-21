@@ -34,7 +34,6 @@ class SaltMinionSyncStorage(models.Model):
                 synced = self.search([('active', '=', True)])
                 self._sync_storage_measurements(synced)
         except Exception as exc:  # noqa: BLE001 — the sync already succeeded
-            self.env.invalidate_all()
             _logger.warning(
                 'Storage collection after sync failed (sync result kept): %s',
                 exc)
@@ -59,7 +58,12 @@ class SaltMinionSyncStorage(models.Model):
                     minion._collect_storage_measurements()
                 measured += 1
             except Exception as exc:  # noqa: BLE001 — isolate per minion
-                self.env.invalidate_all()
+                # NOTE (2026-10-21): no env.invalidate_all() here. It flushes
+                # every pending write in the transaction, so when the outer
+                # savepoint was already rolled back it raised a SECOND
+                # SerializationFailure and the "isolated" failure escaped all
+                # the way to the UI. The savepoint has already discarded this
+                # minion's writes; the caller's cache invalidation is enough.
                 _logger.warning(
                     'Storage measurement failed during sync for %s: %s',
                     minion.name, exc)
