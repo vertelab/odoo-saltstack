@@ -2046,10 +2046,16 @@ fi
 
         # One read for the whole registry instead of one search per minion
         # (~120 queries). Same records, far shorter transaction.
-        existing_by_name = {
-            rec.name: rec
-            for rec in self.with_context(active_test=False).search([])
-        }
+        #
+        # Duplicate names (2026-10-21): the registry can hold several rows with
+        # the same name — inactive leftovers from earlier imports and, in four
+        # cases, two ACTIVE rows (ct-sfa18-test-…, v4test, bmassan, bm). A dict
+        # comprehension silently kept the LAST row and left the others
+        # untouched, so their last_sync/last_seen stayed frozen forever. Keep
+        # the newest row per name and sync every row in the list.
+        existing_by_name = {}
+        for rec in self.with_context(active_test=False).search([], order='id'):
+            existing_by_name.setdefault(rec.name, []).append(rec)
 
         # Per-minion savepoint (2026-10-21): the bulk grains call above holds
         # the transaction open for ~2 minutes, so ANY concurrent writer of a
@@ -2062,20 +2068,21 @@ fi
         skipped = []
         for minion_id in all_minions:
             grains = bulk_grains.get(minion_id, {})
-            existing = existing_by_name.get(minion_id)
+            records = existing_by_name.get(minion_id)
             try:
                 with self.env.cr.savepoint():
-                    if existing:
-                        if not existing.active:
-                            existing.active = True
+                    if records:
+                        for existing in records:
+                            if not existing.active:
+                                existing.active = True
+                                updated += 1
+                            existing._apply_grains(grains, with_image=False)
+                            if minion_id in up_set:
+                                existing.last_seen = now  # semaphore: online
                             updated += 1
-                        existing._apply_grains(grains, with_image=False)
-                        if minion_id in up_set:
-                            existing.last_seen = now  # semaphore: online
-                        updated += 1
                     else:
                         rec = self.create({'name': minion_id})
-                        existing_by_name[minion_id] = rec
+                        existing_by_name[minion_id] = [rec]
                         rec._apply_grains(grains, with_image=False)
                         if minion_id in up_set:
                             rec.last_seen = now
@@ -2089,16 +2096,17 @@ fi
 
         # Deactivate minions no longer present on the Salt master
         # (only reached when manage.status returned a healthy list).
-        for rec in existing_by_name.values():
-            if not (rec.active and rec.name not in all_minions):
-                continue
-            try:
-                with self.env.cr.savepoint():
-                    rec.active = False
-                    deactivated += 1
-            except psycopg2.errors.SerializationFailure:
-                self.invalidate_model()
-                skipped.append(rec.name)
+        for records in existing_by_name.values():
+            for rec in records:
+                if not (rec.active and rec.name not in all_minions):
+                    continue
+                try:
+                    with self.env.cr.savepoint():
+                        rec.active = False
+                        deactivated += 1
+                except psycopg2.errors.SerializationFailure:
+                    self.invalidate_model()
+                    skipped.append(rec.name)
 
         # NOTE (2026-09-24, T/11607): the open_alert_count backfill used to run
         # here. It issued one search_count per minion, which forced a flush of
