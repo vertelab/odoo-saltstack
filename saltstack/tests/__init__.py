@@ -8,3 +8,4 @@ from . import test_menu_order
 from . import test_minion_kanban
 from . import test_storage_types
 from . import test_salt_api
+from . import test_cron_tick_migration

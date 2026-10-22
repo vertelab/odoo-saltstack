@@ -180,10 +180,45 @@ anropbart **innan** `saltstack_ai` uppgraderas — annars sväljs
 `AttributeError` av `write()`-hookens `try/except` och loopen lär sig
 ingenting utan att något larmar (se Synlighet ovan).
 
+## Schemaläggning — `cron_tick`, inte `ir.cron`
+
+Diagnoskön töms av en `cron.task` (`salt_alert_diagnosis`, kadens `min` =
+var 5:e minut) i `data/diagnosis_cron.xml`. Modulen skapar **ingen** `ir.cron`.
+
+### Webhooken är den primära vägen, cron är säkerhetslinan
+
+`cron_tick`s snabbaste kadens är 5 minuter — jobbet körde tidigare varje
+minut. Utan kompensation hade upphämtningen blivit långsammare.
+
+Därför POST:ar `_schedule_diagnosis()` till
+`/cron/trigger/salt_alert_diagnosis` så snart ett larm hamnar i kön.
+`_schedule_diagnosis()` är den **enda** vägen in i kön (både
+`process_webhook` och `action_diagnose`-knappen går via den), så triggern
+behöver bara finnas på ett ställe.
+
+- **Primär väg:** webhooken → diagnosen startar inom sekunder.
+- **Säkerhetslina:** cron-körningen plockar upp det webhooken missar (Odoo
+  nere, token roterad, manuellt satt `pending`) inom 5 minuter.
+
+Nettoeffekt: från upp till 60 sekunders väntan till några sekunder.
+
+Anropet är **best effort**: larmet är redan sparat och kön redan satt, så ett
+misslyckat webhook-anrop får aldrig fälla larmhanteringen. Det loggas och
+cron tar det.
+
+⚠ **`technical_name` ÄR URL:en.** `salt_alert_diagnosis` får aldrig bytas i
+`data/diagnosis_cron.xml` utan att `_trigger_diagnosis_webhook()` byts i
+samma commit — annars svarar triggern `not_found` och bara loggen visar det.
+
+Token: `cron_tick.webhook_token`, med fallback till
+`saltstack.alert.webhook_token` (samma nyckel som minionerna redan har, så
+ingen andra nyckel behövs).
+
 ## Dependencies
 
 - `saltstack` — Base filesystem bridge
 - `ai_agent_core` — AI agent engine (**≥ 18.0.1.206** för erfarenhetsloopen)
+- `cron_tick` — Schemaläggningsmotorn (modulen registrerar en `cron.task`)
 - `mail` — Chatter and notifications
 
 ## License

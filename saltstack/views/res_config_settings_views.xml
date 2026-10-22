@@ -42,13 +42,27 @@
                             </div>
                         </setting>
 
-                        <setting id="saltstack_sync_setting"
-                                 title="Automatic sync"
-                                 help="How often minions and pillars are synced automatically from the Salt Master.">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="me-2">Sync every</span>
-                                <field name="sync_interval_number" class="w-25"/>
-                                <span>hours</span>
+                        <!-- Intervallet sätts INTE här (2026-10-22). Det
+                             bor i `cron.task`-registret (`minion_sync`), där
+                             ändringen loggas. Att skriva produktionsschemat
+                             från ett formulär var den drift `cron_tick` finns
+                             för att eliminera.
+
+                             Specen (`saltstack-base`, "Settings no longer
+                             carries the interval") kräver att Inställningar
+                             erbjuder en VÄG till registret i stället. Knappen
+                             öppnar samma filtrerade action som menyn. -->
+                        <setting id="saltstack_cron_tasks_setting"
+                                 title="Schemalagda jobb"
+                                 help="Jobbens intervall sätts i cron_tick-registret. Öppna det här — ändringen loggas där.">
+                            <button name="%(action_saltstack_cron_tasks)d"
+                                    type="action"
+                                    string="Öppna schemalagda jobb"
+                                    class="btn btn-secondary"
+                                    icon="fa-clock-o"/>
+                            <div class="text-muted mt8">
+                                Körhistorik, felantal, lås och överskriden
+                                deadline syns i registret.
                             </div>
                         </setting>
                     </block>
@@ -97,34 +111,6 @@
                             <field name="alert_coworker_id"/>
                         </setting>
                     </block>
-                                <block title="Background Jobs">
-                    <setting id="saltstack_bg_jobs_display" string="Cron-jobb">
-                        <field name="saltstack_cron_line_ids" widget="one2many">
-                            <form>
-                                <group>
-                                    <field name="cron_id" readonly="1" force_save="1"/>
-                                    <field name="cron_name" readonly="1"/>
-                                    <field name="cron_active"/>
-                                    <field name="cron_interval_number"/>
-                                    <field name="cron_interval_type"/>
-                                    <field name="cron_lastcall" readonly="1"/>
-                                    <field name="cron_failure_count" readonly="1"/>
-                                    <field name="cron_code" readonly="1"/>
-                                    <button name="action_run_now" type="object"
-                                            string="Kör nu" icon="fa-play"/>
-                                </group>
-                            </form>
-                            <list>
-                                <field name="cron_name"/>
-                                <field name="cron_active"/>
-                                <field name="cron_interval_number"/>
-                                <field name="cron_interval_type"/>
-                                <field name="cron_lastcall"/>
-                                <field name="cron_failure_count"/>
-                            </list>
-                        </field>
-                    </setting>
-                </block>
                 </app>
             </xpath>
         </field>

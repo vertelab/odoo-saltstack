@@ -107,8 +107,79 @@ SaltStack
 ├── Pillars              (synk med Salt Master)
 ├── Minions              (synk med Salt Master)
 └── Konfiguration        (sista menyvalet)
-    └── Inställningar    (första menyvalet — SaltStack-settings)
+    ├── Inställningar    (första menyvalet — SaltStack-settings)
+    ├── Synka minions
+    ├── Synka pillars
+    └── Schemalagda jobb (cron_tick-registret, filtrerat på modulen)
 ```
+
+## Schemalagda jobb — `cron_tick`, inte `ir.cron`
+
+Modulen skapar **ingen aktiv `ir.cron`**. Schemat deklareras som `cron.task`
+i `data/cron_tasks.xml` (och `saltstack_ai/data/diagnosis_cron.xml`) och körs
+av motorn i `cron_tick`. Tre triggers, en körväg: tick-cronen, webhooken
+`POST /cron/trigger/<technical_name>` och "Kör nu"-knappen.
+
+| Jobb | `technical_name` | Frekvens | Motiv |
+|---|---|---|---|
+| Minionsynk + pillarsynk | `minion_sync` | intervall 24 h | Se D1 nedan |
+| Backfill `open_alert_count` | `alert_count_backfill` | `min` (5 min) | Var 15:e minut räcker; 5 är billigt |
+| Auto-resolve driftslarm | `alert_auto_resolve` | `min` (5 min) | Tidsokänsligt (7/14-dygn + live Zabbix) |
+| AI-diagnos (i `saltstack_ai`) | `salt_alert_diagnosis` | `min` + webhook | Webhooken är primär väg, cron är säkerhetslina |
+
+### Två jobb ligger medvetet kvar i `ir.cron`
+
+| Jobb | Varför |
+|---|---|
+| `cron_sync_snapshots` (restic) | Ordningsgarantin mot restic-statusrapporten 06:15 kan inte uttryckas. `nextcall` 06:30 är den enda garantin för färskt innehåll — kadens `daily`/`week` ger 06:00, alltså femton minuter **före** rapporten, och läsaren kontrollerar inte filens ålder. Se `data/sync_snapshot_cron.xml`. |
+| `cron_sync_dirvish_snapshots` | Ska **avvecklas**, inte konverteras. Dirvish är ersatt av Borg + Restic. Avvecklingen ägs av ändringen `minio-snapshot-tab`, som också äger ordningsfrågan (MinIO-synken måste finnas innan Dirvish släcks). |
+
+⚠ **Städa inte bort dem.** Specen `scheduled-jobs` kräver att skälet står
+bredvid jobbet; testerna i `tests/test_cron_tick_migration.py` räknar upp dem
+som dokumenterade undantag.
+
+### D1 — varför `minion_sync` använder intervall, inte kadens
+
+`cadence='daily'` är `last_run.date() < now().date()` **och**
+`now().minute >= offset`, där `offset = sha256(technical_name) % 60`. För
+`minion_sync` blir offset **22**, och `cron_daily` tickar en gång i timmen →
+jobbet landar ~**01:22**, inne i Borg-fönstret 01:00–03:00.
+
+`interval 24h` bevarar dagens beteende exakt (den gamla `ir.cron` var också
+`interval 24h`) utan spridning. Enda skillnaden: intervallet mäts från
+körningens **slut** i stället för dess start — försumbart för ett jobb som tar
+~3 minuter. Vid en missad körning glider schemat, men det syns nu i
+`is_overdue` i stället för att vara tyst.
+
+`cadence='week'` förkastades: en veckovis synk fryser `last_seen`-semafonen i
+sju dygn och registret skulle visa hela flottan som offline.
+
+### Intervallet ändras i registret — inte i Inställningar
+
+`saltstack.sync_interval_number` och `_update_sync_cron()` är **borttagna**
+(2026-10-22). En inställningssparning skrev tidigare `interval_number` rakt på
+en `ir.cron`: produktionsschemat blev ändringsbart från ett formulär, utan
+spår och utan validering. Intervallet sätts nu i **Konfiguration →
+Schemalagda jobb**, där ändringen loggas och där körhistorik, felantal, lås
+och överskriden deadline syns.
+
+Inställningar har en knapp som öppnar samma register.
+
+### Vad konverteringen INTE löser
+
+`psycopg2.errors.SerializationFailure` på `salt_minion.open_alert_count` är
+ett **samtidighetsproblem**, inte ett schemaproblem. Fyra skrivare finns
+(driftlarm-webhook, auto-resolve, backfill, synkens `_apply_grains`) under
+repeatable read. `cron_tick`s lås är per task och hindrar bara en andra
+*synk*. Ingen rad i den koden ändras av den här ändringen.
+
+### `max_failures` — ny beteendeförändring
+
+`cron.task` avaktiverar sig själv efter 10 konsekutiva fel. En `ir.cron` gör
+aldrig det. Det är avsiktligt (ett jobb som ständigt kraschar ska sluta
+försöka), men det betyder att ett konverterat jobb kan stängas av — synligt i
+chatter, `last_error` och `active=False`, aldrig tyst.
+
 
 ## Inställningar
 
@@ -123,6 +194,10 @@ Konfigurera i **SaltStack → Konfiguration → Inställningar** — fliken
 | Zabbix API URL | t.ex. `https://zabbix.vertel.se` |
 | Zabbix API Token | Auth-token för Zabbix API |
 | Zabbix Auth Method | `token` eller `keykeep` |
+
+⚠ **Synkintervallet finns inte längre här** (borttaget 2026-10-22). Det sätts
+i **Konfiguration → Schemalagda jobb**. Inställningar har en knapp som öppnar
+registret. Se avsnittet "Schemalagda jobb" ovan.
 
 ## Installation
 

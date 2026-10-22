@@ -117,10 +117,6 @@ msgid ""
 "http://192.168.11.22:8377"
 msgstr "Adress till Salt-masterns REST API (port 8377). t.ex. http://192.168.11.22:8377"
 #. module: saltstack
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__cron_active
-msgid "Aktiv"
-msgstr ""
-#. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_search
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_pillar_search
 msgid "Aktiva"
@@ -230,7 +226,6 @@ msgstr "Skapa en ny slumpmässig API-nyckel (Bearer token)"
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__create_uid
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__create_uid
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_api__create_uid
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__create_uid
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__create_uid
 msgid "Created by"
 msgstr ""
@@ -239,7 +234,6 @@ msgstr ""
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__create_date
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__create_date
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_api__create_date
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__create_date
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__create_date
 msgid "Created on"
 msgstr ""
@@ -248,16 +242,8 @@ msgstr ""
 msgid "Critical (≥12)"
 msgstr "Kritiska (≥12)"
 #. module: saltstack
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__cron_id
-msgid "Cron"
-msgstr ""
-#. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Cron-jobb"
-msgstr ""
-#. module: saltstack
-#: model:ir.model.fields,field_description:saltstack.field_res_config_settings__saltstack_cron_line_ids
-msgid "Cron-rader"
 msgstr ""
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__customer
@@ -275,10 +261,6 @@ msgstr ""
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_search
 msgid "Dag"
-msgstr ""
-#. module: saltstack
-#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_cron_line__cron_interval_type__days
-msgid "Dagar"
 msgstr ""
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__data_type
@@ -341,7 +323,6 @@ msgstr ""
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__display_name
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__display_name
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_api__display_name
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__display_name
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__display_name
 msgid "Display Name"
 msgstr ""
@@ -381,7 +362,6 @@ msgstr "Fel"
 msgid "Faulty"
 msgstr "Felaktig"
 #. module: saltstack
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__cron_failure_count
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_search
 msgid "Fel"
 msgstr ""
@@ -468,10 +448,6 @@ msgid ""
 "How often minions and pillars are synced automatically from the Salt Master."
 msgstr "Hur ofta minions och pillars synkas automatiskt från Salt Master."
 #. module: saltstack
-#: model:ir.model.fields,help:saltstack.field_res_config_settings__sync_interval_number
-msgid "How often the minion and pillar sync runs (in hours)."
-msgstr "Hur ofta minion- och pillar-synkningen körs (i timmar)."
-#. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_res_config_settings__saltstack_auth_method
 msgid ""
 "How to authenticate with the Salt API. \"Shared Secret\" uses the API key "
@@ -487,7 +463,6 @@ msgstr ""
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__id
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__id
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_api__id
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__id
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__id
 msgid "ID"
 msgstr ""
@@ -537,10 +512,6 @@ msgstr ""
 #. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__salt_pillar__data_type__integer
 msgid "Integer"
-msgstr ""
-#. module: saltstack
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__cron_interval_number
-msgid "Intervall"
 msgstr ""
 #. module: saltstack
 #. odoo-python
@@ -611,7 +582,6 @@ msgstr ""
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__write_uid
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__write_uid
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_api__write_uid
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__write_uid
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__write_uid
 msgid "Last Updated by"
 msgstr ""
@@ -620,7 +590,6 @@ msgstr ""
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__write_date
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__write_date
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_api__write_date
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__write_date
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_runlog__write_date
 msgid "Last Updated on"
 msgstr ""
@@ -678,10 +647,6 @@ msgstr ""
 msgid "Messages"
 msgstr ""
 #. module: saltstack
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__cron_code
-msgid "Metod"
-msgstr ""
-#. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__name
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_minion_form
 msgid "Minion ID"
@@ -702,22 +667,10 @@ msgstr "Minion-status-semafor: faulty (olösta larm) > online (svarar) > offline
 msgid "Minions"
 msgstr ""
 #. module: saltstack
-#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_cron_line__cron_interval_type__minutes
-msgid "Minuter"
-msgstr ""
-#. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__my_activity_date_deadline
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__my_activity_date_deadline
 #: model:ir.model.fields,field_description:saltstack.field_saltstack_alert__my_activity_date_deadline
 msgid "My Activity Deadline"
-msgstr ""
-#. module: saltstack
-#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_cron_line__cron_interval_type__months
-msgid "Månader"
-msgstr ""
-#. module: saltstack
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__cron_name
-msgid "Namn"
 msgstr ""
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__activity_calendar_event_id
@@ -846,10 +799,6 @@ msgstr ""
 msgid "Other"
 msgstr "Övrigt"
 #. module: saltstack
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__cron_interval_type
-msgid "Period"
-msgstr ""
-#. module: saltstack
 #: model:ir.model.fields,help:saltstack.field_salt_minion__host_machine
 msgid "Physical machine hosting this container (e.g. \"fors\", \"strand\")"
 msgstr ""
@@ -894,12 +843,6 @@ msgstr ""
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Pings the Salt master and shows the number of responding minions."
 msgstr "Pingar Salt-mastern och visar antal svarande minions."
-#. module: saltstack
-#: model:ir.model.fields,help:saltstack.field_saltstack_cron_line__cron_lastcall
-msgid ""
-"Previous time the cron ran successfully, provided to the job through the "
-"context on the `lastcall` key"
-msgstr ""
 #. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_minion__private_ip
 msgid "Private IP"
@@ -1036,10 +979,6 @@ msgstr ""
 msgid "Saltstack Administrator"
 msgstr "Saltstack-administratör"
 #. module: saltstack
-#: model:ir.model,name:saltstack.model_saltstack_cron_line
-msgid "Saltstack cron configuration line"
-msgstr ""
-#. module: saltstack
 #: model:res.groups,name:saltstack.group_saltstack_officer
 msgid "Saltstack-officer"
 msgstr ""
@@ -1060,16 +999,11 @@ msgstr ""
 msgid "Secrets"
 msgstr ""
 #. module: saltstack
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__cron_lastcall
-msgid "Senaste körning"
-msgstr ""
-#. module: saltstack
 #: model:ir.model.fields,field_description:saltstack.field_salt_pillar__sequence
 msgid "Sequence"
 msgstr ""
 #. module: saltstack
 #: model:ir.actions.act_window,name:saltstack.action_saltstack_settings
-#: model:ir.model.fields,field_description:saltstack.field_saltstack_cron_line__settings_id
 #: model:ir.ui.menu,name:saltstack.menu_saltstack_settings
 msgid "Settings"
 msgstr "Inställningar"
@@ -1139,10 +1073,6 @@ msgstr "Säkerhet"
 msgid "Sync"
 msgstr "Sync"
 #. module: saltstack
-#: model:ir.model.fields,field_description:saltstack.field_res_config_settings__sync_interval_number
-msgid "Sync interval"
-msgstr "Synk-intervall"
-#. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_pillar_tree
 msgid "Sync with Salt Master"
 msgstr ""
@@ -1177,12 +1107,6 @@ msgstr "Testa Salt-anslutning"
 msgid "Test the connection"
 msgstr "Testa anslutningen"
 #. module: saltstack
-#: model:ir.model.fields,help:saltstack.field_saltstack_cron_line__cron_failure_count
-msgid ""
-"The number of consecutive failures of this job. It is automatically reset on"
-" success."
-msgstr ""
-#. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Time window for Zabbix correlation (±)."
 msgstr "Tidsfönster för Zabbix-korrelation (±)."
@@ -1199,10 +1123,6 @@ msgstr "Larmtid"
 #: model:ir.model.fields,help:saltstack.field_saltstack_alert__last_occurrence
 msgid "Timestamp of the latest deduplicated repeat."
 msgstr "Tidsstämpel för senaste deduplicerade upprepningen."
-#. module: saltstack
-#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_cron_line__cron_interval_type__hours
-msgid "Timmar"
-msgstr ""
 #. module: saltstack
 #: model_terms:ir.ui.view,arch_db:saltstack.view_salt_runlog_search
 msgid "Translations"
@@ -1263,10 +1183,6 @@ msgstr "Varning"
 msgid "Varningar"
 msgstr ""
 #. module: saltstack
-#: model:ir.model.fields.selection,name:saltstack.selection__saltstack_cron_line__cron_interval_type__weeks
-msgid "Veckor"
-msgstr ""
-#. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__source__wazuh
 msgid "Wazuh"
 msgstr "Wazuh"
@@ -1280,12 +1196,6 @@ msgstr ""
 #: model_terms:ir.ui.view,arch_db:saltstack.view_saltstack_settings
 msgid "Webhook enabled"
 msgstr "Webhook aktiverad"
-#. module: saltstack
-#: model:ir.model.fields,help:saltstack.field_saltstack_cron_line__cron_code
-msgid ""
-"Write Python code that the action will execute. Some variables are available"
-" for use; help about python expression is given in the help tab."
-msgstr ""
 #. module: saltstack
 #: model:ir.model.fields.selection,name:saltstack.selection__saltstack_runlog__source__zabbix
 msgid "Zabbix"

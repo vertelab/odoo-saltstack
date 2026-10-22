@@ -351,7 +351,63 @@ class SaltAlert(models.Model):
             return False
         self.diagnosis_state = 'pending'
         self.diagnosis_result = ''
+        # Webhook-trigger (2026-10-22, cron-tick-migration): körningen ska inte
+        # behöva vänta på nästa tick. `cron_tick`s snabbaste kadens är 5
+        # minuter, så utan det här skulle upphämtningen gå från 1 till 5
+        # minuter. Cron-posten `salt_alert_diagnosis` blir SÄKERHETSLINAN för
+        # det webhooken missar (nere, token roterad, manuellt satt pending).
+        #
+        # Detta är den ENDA vägen in i kön: både `process_webhook` och
+        # `action_diagnose`-knappen går via den här metoden, så triggern
+        # behöver bara finnas här.
+        self._trigger_diagnosis_webhook()
         return True
+
+    def _trigger_diagnosis_webhook(self):
+        """POST /cron/trigger/salt_alert_diagnosis — best effort.
+
+        Best effort med flit: larmet är redan sparat och kön är redan satt.
+        Ett misslyckat webhook-anrop får ALDRIG fälla larmhanteringen — cron-
+        körningen plockar upp posten ändå inom 5 minuter. Vi loggar och går
+        vidare.
+
+        `technical_name` i `saltstack_ai/data/diagnosis_cron.xml` ÄR URL:en.
+        Byt aldrig det ena utan det andra.
+        """
+        import json as _json
+        import urllib.request
+
+        params = self.env['ir.config_parameter'].sudo()
+        base = params.get_param('web.base.url', 'http://localhost:8069')
+        token = params.get_param('cron_tick.webhook_token', '') or params.get_param(
+            'saltstack.alert.webhook_token', '')
+        if not token:
+            _logger.info(
+                'Diagnos-webhook: ingen token konfigurerad — larmet plockas '
+                'upp av cron inom 5 minuter')
+            return False
+        url = '%s/cron/trigger/salt_alert_diagnosis' % base.rstrip('/')
+        try:
+            req = urllib.request.Request(
+                url,
+                data=_json.dumps({'alert_id': self.id}).encode(),
+                headers={
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': 'Bearer %s' % token,
+                },
+            )
+            # Kort timeout: det här ligger i webhook-svaret för ett larm.
+            # Svarar Odoo inte inom 5 s är cron-vägen ändå tillräcklig.
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                body = resp.read().decode()
+            _logger.info('Diagnos-webhook: larm %s -> %s', self.id, body[:200])
+            return True
+        except Exception as exc:  # noqa: BLE001 — best effort
+            _logger.warning(
+                'Diagnos-webhook misslyckades för larm %s (%s) — cron plockar '
+                'upp det inom 5 minuter', self.id, exc)
+            return False
 
     def _run_pending_diagnoses(self, limit=5):
         """Cron: exekvera köade (pending) diagnoser i bakgrunden.

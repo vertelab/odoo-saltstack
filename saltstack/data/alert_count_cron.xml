@@ -1,32 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- ── [ERSATT] Backfill av open_alert_count — flyttad 2026-10-22 ── -->
     <!--
-        Backfill of salt.minion.open_alert_count.
+        Jobbet schemaläggs nu av `cron_tick` som `cron.task`
+        `alert_count_backfill` (data/cron_tasks.xml, kadens `min`,
+        sequence 10).
 
-        Split out of the minion sync cron (2026-09-24, T/11607). Previously the
-        backfill ran inside action_sync_all_minions(), where it issued one
-        search_count per minion. That forced a flush of the pending last_seen
-        writes mid-transaction and collided with concurrent writers (driftlarm
-        webhook, auto-resolve cron), aborting the whole sync with:
+        Posten ligger kvar med `active=False` och full definition — se
+        kommentaren i `data/sync_cron.xml` för varför (mönstret från
+        `ai_agent_core/data/cron_heartbeat.xml`).
+
+        BAKGRUNDEN (bevarad, den förklarar fortfarande arkitekturen):
+        Backfillen bröts ut ur minionsynken 2026-09-24 (T/11607). Tidigare
+        körde den inne i `action_sync_all_minions()`, där den gjorde en
+        `search_count` per minion. Det tvingade fram en flush av de väntande
+        `last_seen`-skrivningarna mitt i transaktionen och kolliderade med
+        samtidiga skrivare (driftlarm-webhook, auto-resolve-cron), vilket
+        avbröt HELA synken med:
 
             psycopg2.errors.SerializationFailure: could not serialize access
             due to concurrent update
 
-        The result was that last_seen froze for every minion (86 of them stuck
-        on one timestamp) and the registry reported healthy machines as
-        offline/faulty.
+        Resultatet var att `last_seen` frös för varje minion (86 av dem på en
+        och samma tidsstämpel) och registret rapporterade friska maskiner som
+        offline/felaktiga.
 
-        The field is normally maintained by saltstack.alert on create/resolve;
-        this job only corrects drift, so 15 minutes is plenty.
+        Fältet underhålls normalt av `saltstack.alert` vid create/resolve;
+        det här jobbet rättar bara drift — därför räcker 5 minuter (tidigare
+        15).
     -->
     <record id="cron_backfill_alert_counts" model="ir.cron">
-        <field name="name">Saltstack: backfill open alert counts</field>
+        <field name="name">[ERSATT] Saltstack: backfill open alert counts</field>
         <field name="model_id" ref="saltstack.model_salt_minion"/>
         <field name="state">code</field>
         <field name="code">model.action_cron_backfill_alert_counts()</field>
         <field name="interval_number">15</field>
         <field name="interval_type">minutes</field>
-        <field name="active">True</field>
+        <field name="active" eval="False"/>
         <field name="user_id" ref="base.user_root"/>
     </record>
 </odoo>

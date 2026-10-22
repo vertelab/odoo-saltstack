@@ -7,8 +7,8 @@ oberoende Odoo-moduler; varje modul ligger i en egen undermapp.
 
 | Modul | Katalog | Beskrivning | Beroenden |
 |-------|---------|-------------|-----------|
-| **saltstack** | `saltstack/` | Basmodul: minion-register, pillar-ankare, felinjektion, inställningar | `base`, `mail` |
-| **saltstack_ai** | `saltstack_ai/` | AI-brygga: SaltAPI-klient, tools, skills | `saltstack`, `ai_agent_core`, `mail` |
+| **saltstack** | `saltstack/` | Basmodul: minion-register, pillar-ankare, felinjektion, inställningar | `base`, `mail`, `cron_tick` |
+| **saltstack_ai** | `saltstack_ai/` | AI-brygga: SaltAPI-klient, tools, skills | `saltstack`, `ai_agent_core`, `mail`, `cron_tick` |
 | **saltstack_zabbix** | `saltstack_zabbix/` | Zabbix-anslutning: settings + test-knapp | `saltstack_ai` |
 | **saltstack_wazuh** | `saltstack_wazuh/` | Wazuh/SIEM-anslutning: settings + test-knapp | `saltstack_ai` |
 | **saltstack_zabbix_keykeep** | `saltstack_zabbix_keykeep/` | Keykeep Managed för Zabbix | `saltstack_zabbix`, `keykeep` |
@@ -189,6 +189,43 @@ Proposals och specar ligger i `openspec/`:
 ```bash
 openspec list --json
 ```
+
+## Release note — schemat flyttat till `cron_tick` (saltstack 18.0.1.67.0, saltstack_ai 18.0.1.20.0)
+
+**Beteendeförändringar som operatören märker:**
+
+1. **Synkintervallet finns inte längre i Inställningar.**
+   `sync_interval_number` är borttaget. Intervallet sätts i
+   **SaltStack → Konfiguration → Schemalagda jobb** (registret), där
+   ändringen loggas. Inställningar har en knapp som öppnar samma register.
+   En sparad `ir.config_parameter` `saltstack.sync_interval_number` används
+   inte längre och kan tas bort.
+
+2. **Schemablocket "Background Jobs" i Inställningar är borta.**
+   `saltstack.cron.line` är borttagen. Samma information — och mer — finns i
+   registret: körhistorik, felmeddelande, lås (`locked_by`/`locked_at`),
+   hälsoläge och överskriden deadline. Registrets "Kör nu" går genom samma
+   låsta körväg som schemat; blockets egen knapp gjorde inte det.
+
+3. **`min` betyder 5 minuter, inte 1.** Backfill och auto-resolve gick från
+   15 minuter till 5 (förbättring). AI-diagnoserna gick från 1 minut till 5 —
+   kompenserat av en webhook som startar diagnosen inom sekunder, så
+   nettoeffekten är en förbättring (60 s → några sekunder).
+
+4. **Ett jobb kan stänga av sig självt.** `cron.task` avaktiverar sig efter
+   10 konsekutiva fel. En `ir.cron` gjorde aldrig det. Det syns i chatter,
+   `last_error` och `active=False` — aldrig tyst.
+
+**Oförändrat:** `restic_snapshot_sync` ligger kvar i `ir.cron` med
+`nextcall` 06:30 (ordningsgarantin mot rapporten 06:15). Dirvish-synken
+ligger också kvar — den ska avvecklas av `minio-snapshot-tab`, inte
+konverteras.
+
+**Inte löst:** `SerializationFailure` på `salt_minion.open_alert_count` är
+ett samtidighetsproblem mellan fyra skrivare, inte ett schemaproblem.
+
+Detaljer: `saltstack/README.md` → "Schemalagda jobb" och
+`saltstack_ai/MODULE.md` → "Schemaläggning".
 
 ## Licens
 

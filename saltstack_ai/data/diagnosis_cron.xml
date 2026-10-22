@@ -1,11 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data noupdate="0">
-        <!-- Asynkron AI-diagnos (2026-08-31): webhook/knapp sätter saltstack.alert
-             till 'pending'; denna cron plockar upp pending-alerts och kör
-             _start_diagnosis i bakgrunden (via färsk cursor per alert) så HTTP-
-             svaret inte blockerar i den långa coworker.run() (minuter).
-             Odoo 18: ir.cron refererar en ir.actions.server via ir_actions_server_id. -->
+    <!-- ── AI-diagnos — schemaläggs av `cron_tick`-motorn ────────────── -->
+    <!--
+         NO ir.cron. Motorn i `cron_tick` äger schemaläggningen.
+
+         KADENS `min` = var 5:e minut — motorn har ingen snabbare kadens.
+         Jobbet körde tidigare varje minut, så upphämtningen blir långsammare
+         om inget annat görs. Därför är webhooken den PRIMÄRA vägen:
+         `_schedule_diagnosis()` POST:ar till
+         `/cron/trigger/salt_alert_diagnosis` så snart ett larm hamnar i kön,
+         och diagnosen startar inom sekunder. Cron-körningen är
+         SÄKERHETSLINAN för det webhooken missar (nere, token roterad,
+         manuellt satt pending) — inte den primära vägen.
+
+         Nettoeffekt: från upp till 60 sekunders väntan till några sekunder.
+
+         ⚠ `technical_name` ÄR URL:en. Det får aldrig bytas utan att
+         webhook-anropet i `_trigger_diagnosis_webhook()` byts i samma
+         commit — annars slutar triggern tyst att fungera (den svarar
+         `not_found`, vilket bara syns i loggen).
+
+         Historik: asynkron AI-diagnos 2026-08-31 — webhook/knapp sätter
+         `saltstack.alert` till 'pending', och den här posten plockar upp kön
+         och kör `_start_diagnosis` i bakgrunden (färsk cursor per alert) så
+         HTTP-svaret inte blockerar i den långa `coworker.run()`.
+    -->
+    <data noupdate="1">
+
+        <!-- Server action: behålls som manuell ingång ("Kör nu" på
+             cron.task-posten kör metoden direkt, men actionen är också
+             kopplad till Automation → Scheduled Actions-historiken och kan
+             köras för hand därifrån). -->
         <record id="action_salt_alert_process_diagnoses" model="ir.actions.server">
             <field name="name">Saltstack AI: Process pending diagnoses</field>
             <field name="model_id" ref="model_saltstack_alert"/>
@@ -13,12 +38,37 @@
             <field name="code">model._run_pending_diagnoses()</field>
         </record>
 
+        <record id="cron_task_salt_alert_diagnosis" model="cron.task">
+            <field name="name">Saltstack AI: bearbeta väntande diagnoser</field>
+            <field name="technical_name">salt_alert_diagnosis</field>
+            <field name="module">saltstack_ai</field>
+            <field name="model_name">saltstack.alert</field>
+            <field name="method_name">_run_pending_diagnoses</field>
+            <field name="cadence">min</field>
+            <field name="sequence">30</field>
+            <!-- `coworker.run()` kan ta minuter vid nere minioner. Gränsen är
+                 mjuk (motorn mäter, avbryter inte) — den finns för att en
+                 körning som systematiskt överskrider den ska synas i loggen
+                 och flyttas till queue_job. -->
+            <field name="timeout_seconds">1800</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <!-- ── [ERSATT] Den gamla ir.cron-posten — flyttad 2026-10-22 ── -->
+        <!--
+             Ligger kvar med `active=False` och full definition. Se
+             kommentaren i `saltstack/data/sync_cron.xml` för varför (mönstret
+             från `ai_agent_core/data/cron_heartbeat.xml`): att utelämna `name`
+             kraschar en nyinstallation, `<delete>` på en xmlid som kan saknas
+             kraschar uppgraderingen, och en inaktiv post är spårbar.
+        -->
         <record id="cron_salt_alert_diagnosis" model="ir.cron">
-            <field name="name">Saltstack AI: Process pending diagnoses</field>
+            <field name="name">[ERSATT] Saltstack AI: Process pending diagnoses</field>
             <field name="ir_actions_server_id" ref="action_salt_alert_process_diagnoses"/>
             <field name="interval_number">1</field>
             <field name="interval_type">minutes</field>
-            <field name="active">True</field>
+            <field name="active" eval="False"/>
         </record>
+
     </data>
 </odoo>

@@ -1,14 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Sync cron — created at install, interval controlled from Settings -->
+    <!-- ── [ERSATT] Minionsynk — flyttad till cron_tick 2026-10-22 ────── -->
+    <!--
+         Jobbet schemaläggs nu av `cron_tick` som `cron.task`
+         `minion_sync` (data/cron_tasks.xml, `interval 24h`).
+
+         VARFÖR POSTEN LIGGER KVAR MED active=False I STÄLLET FÖR ATT TAS BORT:
+         mönstret är hämtat från `ai_agent_core/data/cron_heartbeat.xml`:
+           - att utelämna `name` kraschar en nyinstallation (NOT NULL),
+           - `<delete>` på en xmlid som kan saknas kraschar uppgraderingen,
+           - en inaktiv post är spårbar: man ser att jobbet funnits och varför
+             det slutade köra.
+
+         Intervallet sattes tidigare från Inställningar
+         (`res_config_settings._update_sync_cron()` skrev `interval_number`
+         rakt på den här posten). Den vägen är borttagen — schemat sätts i
+         registret, där ändringen loggas.
+    -->
     <record id="cron_sync_minions_pillars" model="ir.cron">
-        <field name="name">Saltstack: synk minions &amp; pillars</field>
+        <field name="name">[ERSATT] Saltstack: synk minions &amp; pillars</field>
         <field name="model_id" ref="saltstack.model_salt_minion"/>
         <field name="state">code</field>
         <field name="code">model.action_cron_sync_all()</field>
         <field name="interval_number">24</field>
         <field name="interval_type">hours</field>
-        <field name="active">True</field>
+        <field name="active" eval="False"/>
         <field name="user_id" ref="base.user_root"/>
     </record>
 </odoo>

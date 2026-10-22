@@ -1,7 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Sync restic snapshots (Återskapa data) — runs daily after the
-         restic-status report (06:15 on the restic minion). -->
+    <!-- ── Restic-snapshots (Återskapa data) — MEDVETET kvar i ir.cron ── -->
+    <!--
+         ⚠ DEN HÄR POSTEN SKA INTE "STÄDAS" TILL cron_tick. Skälet står här
+         och i `saltstack/README.md` ("Schemalagda jobb").
+
+         ORDININGSGARANTIN KAN INTE UTTRYCKAS (design D3).
+
+         Jobbet finns för att läsa `/var/log/garage-backup/restic-status.json`,
+         som skrivs av restic-statusrapporten 06:15. `nextcall` 06:30 är den
+         enda garantin för att innehållet är färskt.
+
+         `cron_tick` har inget tidsfönsterbegrepp:
+           - kadens `daily`  → `sha256('restic_snapshot_sync') % 60` = minut 0,
+                               alltså 06:00 — FEMTON MINUTER FÖRE rapporten
+           - kadens `week`   → 06:00, samma sak
+           - `interval 24h`  → bevarar 06:30 så länge ingen körning missas, men
+                               glider vid en missad körning och självläker
+                               aldrig tillbaka till fönstret
+
+         Läsaren (`action_sync_snapshots()`) kontrollerar dessutom INTE filens
+         ålder — den stämplar `synced_at` med nuvarande tid oavsett hur gammalt
+         innehållet är. En glidning vore därför OSYNLIG. Det är en separat
+         svaghet (datakvalitet, inte schemaläggning) och ska åtgärdas genom att
+         läsaren loggar filens mtime — inte genom att flytta schemat.
+
+         Specen (`scheduled-jobs`, "A job whose timing constraint cannot be
+         expressed stays out of the registry") kräver att skälet dokumenteras
+         bredvid jobbet. Det görs här.
+    -->
     <record id="cron_sync_snapshots" model="ir.cron">
         <field name="name">Saltstack: synk restic-snapshots (Återskapa data)</field>
         <field name="model_id" ref="saltstack.model_salt_minion_snapshot"/>

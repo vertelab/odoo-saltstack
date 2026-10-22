@@ -2,7 +2,7 @@
 
 {
     'name': 'SaltStack Infrastructure',
-    'version': '18.0.1.66.0',
+    'version': '18.0.1.67.0',
     'category': 'Infrastructure',
     'summary': 'Manage SaltStack minions, pillar anchors and infrastructure.',
     'description': '''
@@ -20,7 +20,11 @@ Features:
     'author': 'Vertel Sverige AB',
     'license': 'AGPL-3',
     'website': 'https://vertel.se/apps/odoo-saltstack/saltstack',
-    'depends': ['base', 'mail'],
+    # `cron_tick` is declared explicitly (2026-10-22): the module registers
+    # `cron.task` records, so it must name the engine it writes into. It used
+    # to arrive transitively via `ai_agent_core`, which is an invisible
+    # coupling — `saltstack_storage` already declares it the same way.
+    'depends': ['base', 'mail', 'cron_tick'],
     'data': [
         'security/saltstack_groups.xml',
         'data/model_registry.xml',
@@ -28,6 +32,7 @@ Features:
         'security/ir_model_access_snapshot.xml',
         'data/config_data.xml',
         'data/fault_actions.xml',
+        'data/cron_tasks.xml',
         'data/sync_cron.xml',
         'data/alert_count_cron.xml',
         'data/sync_snapshot_cron.xml',

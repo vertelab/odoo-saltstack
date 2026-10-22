@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ── Schemalagda jobb — ägs av `cron_tick`-motorn ──────────────── -->
+    <!--
+         NO ir.cron. Motorn i `cron_tick` äger schemaläggningen; posterna här
+         deklarerar bara VAD som ska köras och VILKEN kadens det hör till.
+
+         Samma mönster som `saltstack_storage/data/cron_storage_collect.xml`.
+         Tre triggers, en körväg:
+           - tick-cronen för kadensen (eller 5-minutersticken vid intervall)
+           - POST /cron/trigger/<technical_name> (Bearer, alltid HTTP 200)
+           - "Kör nu"-knappen på posten
+
+         `technical_name` är identiteten: det driver spridningen för
+         kadensjobb OCH är URL:en för webhook-triggern. Det får aldrig bytas
+         på en post som är i drift.
+    -->
+    <data noupdate="1">
+
+        <!-- ── Minionsynk + pillarsynk — intervall 24 h ──────────────── -->
+        <!--
+             INTERVALL, INTE KADENS (design D1).
+
+             `cadence='daily'` är `last_run.date() < now().date()` OCH
+             `now().minute >= offset`, där `offset = sha256(name) % 60`.
+             `cron_daily` tickar en gång i timmen, så jobbet landar på första
+             timticken efter att minuten öppnat. För `minion_sync` blir
+             offset 22 → ~01:22, alltså INNE i Borg-fönstret 01:00–03:00.
+
+             `interval 24h` bevarar dagens beteende exakt (dagens ir.cron är
+             `interval 24h`) utan spridning. Enda skillnaden: intervallet mäts
+             från körningens SLUT i stället för dess start — försumbart för ett
+             jobb som tar ~3 minuter, och det syns i `is_overdue` om en körning
+             missas (dagens tysta glidning blir därmed synlig).
+
+             `cadence='week'` övervägdes och förkastades: en veckovis synk
+             fryser `last_seen`-semafonen i sju dygn och registret skulle visa
+             hela flottan som offline.
+
+             Intervallet är inte längre redigerbart från Inställningar — det
+             sätts här. Se `saltstack-base`-specen, "Settings no longer carries
+             the interval".
+        -->
+        <record id="cron_task_minion_sync" model="cron.task">
+            <field name="name">Saltstack: synk minions &amp; pillars</field>
+            <field name="technical_name">minion_sync</field>
+            <field name="module">saltstack</field>
+            <field name="model_name">salt.minion</field>
+            <field name="method_name">action_cron_sync_all</field>
+            <field name="interval_number">24</field>
+            <field name="interval_type">hours</field>
+            <field name="sequence">10</field>
+            <!-- Grains-insamlingen tar ~55 s mot 115 minioner och den
+                 per-minion-savepointade skrivningen ~2 min. 120 s (motorns
+                 default) hade larmat varje körning. -->
+            <field name="timeout_seconds">1200</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <!-- ── Backfill av open_alert_count — kadens `min` ───────────── -->
+        <!--
+             KADENS `min`, INTE intervall 15 (design D2).
+
+             `min` är exakt var 5:e minut, sekventiellt inom ticken, utan
+             jitter. `interval_number=15` bärs också av `min`-ticken och hade
+             hamnat på 5-minutersgriden → verklig kadens 15, 15, 20, 15, 15,
+             20 — oregelbunden utan att vara det med flit.
+
+             Jobbet är en `search_count`-backfill över ~115 minioner, inte 55
+             sekunders grains-insamling. 5 minuter är billigt.
+
+             `sequence=10` före auto-resolve (20): `cron_tick` kör tasks
+             sekventiellt inom en kadens, så de två skrivarna till samma kolumn
+             kan aldrig köras parallellt — vilket är precis vad man vill.
+
+             Historik: utbruten ur synken 2026-09-24 (T/11607) efter
+             `psycopg2.errors.SerializationFailure` — se
+             `data/alert_count_cron.xml` för hela bakgrunden.
+        -->
+        <record id="cron_task_alert_count_backfill" model="cron.task">
+            <field name="name">Saltstack: backfill open alert counts</field>
+            <field name="technical_name">alert_count_backfill</field>
+            <field name="module">saltstack</field>
+            <field name="model_name">salt.minion</field>
+            <field name="method_name">action_cron_backfill_alert_counts</field>
+            <field name="cadence">min</field>
+            <field name="sequence">10</field>
+            <field name="timeout_seconds">300</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <!-- ── Auto-resolve av driftslarm — kadens `min` ─────────────── -->
+        <!--
+             Samma resonemang som backfill (D2). `sequence=20` så att
+             backfillen hinner rätta räknaren innan auto-resolve river larm —
+             de två turordningarna ger samma slutresultat, men den explicita
+             ordningen gör det läsbart vilken som är avsedd.
+
+             Jobbet är tidsokänsligt (7/14-dygnsregler + live Zabbix), så
+             5 minuter i stället för 15 är en förbättring, inte en kompromiss.
+        -->
+        <record id="cron_task_alert_auto_resolve" model="cron.task">
+            <field name="name">Saltstack: auto-resolve driftlarm</field>
+            <field name="technical_name">alert_auto_resolve</field>
+            <field name="module">saltstack</field>
+            <field name="model_name">saltstack.alert</field>
+            <field name="method_name">action_cron_auto_resolve</field>
+            <field name="cadence">min</field>
+            <field name="sequence">20</field>
+            <field name="timeout_seconds">300</field>
+            <field name="active" eval="True"/>
+        </record>
+
+    </data>
+</odoo>

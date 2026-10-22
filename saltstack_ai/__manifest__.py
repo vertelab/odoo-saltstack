@@ -2,7 +2,7 @@
 
 {
     'name': 'SaltStack AI Bridge',
-    'version': '18.0.1.19.0',
+    'version': '18.0.1.20.0',
     'category': 'Infrastructure',
     'summary': 'AI-powered SaltStack, Zabbix och Wazuh integration.',
     'description': '''
@@ -22,7 +22,10 @@ SaltStack AI Bridge
     'author': 'Vertel Sverige AB',
     'license': 'AGPL-3',
     'website': 'https://vertel.se/apps/odoo-saltstack/saltstack_ai',
-    'depends': ['saltstack', 'ai_agent_core', 'mail'],
+    # `cron_tick` deklareras explicit (2026-10-22): modulen registrerar en
+    # `cron.task` (`salt_alert_diagnosis`) och ska därför namnge motorn den
+    # skriver i. Den kom tidigare transitivt via `saltstack` → `ai_agent_core`.
+    'depends': ['saltstack', 'ai_agent_core', 'mail', 'cron_tick'],
     'data': [
         'security/ir.model.access.csv',
         'views/salt_alert_views.xml',

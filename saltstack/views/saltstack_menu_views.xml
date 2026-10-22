@@ -42,4 +42,41 @@
               action="action_sync_pillars_all"
               sequence="30"
               groups="saltstack.group_saltstack_admin"/>
+
+    <!-- ── Schemalagda jobb (cron_tick) ──────────────────────────────── -->
+    <!--
+         Menyn pekar på `cron_tick`s EGEN action, filtrerad på modulens jobb
+         — samma mönster som `saltstack_storage/views/storage_menu_views.xml`
+         redan använder. Vi bygger ingen egen tabell: `cron.task`-listvyn har
+         körhistorik, felmeddelande, lås, hälsoläge och överskriden deadline,
+         och en "Kör nu" som går genom samma låsta körväg som schemat.
+
+         `domain` ligger i actionens `context` (inte i menyn) eftersom
+         `ir.actions.act_window` är det som öppnas — menyn är bara en ingång.
+    -->
+    <record id="action_saltstack_cron_tasks" model="ir.actions.act_window">
+        <field name="name">Schemalagda jobb</field>
+        <field name="res_model">cron.task</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="cron_tick.view_cron_task_search"/>
+        <field name="domain">[('module', '=', 'saltstack')]</field>
+        <field name="context">{'search_default_filter_active': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Inga schemalagda jobb
+            </p>
+            <p>
+                Jobben deklareras som data-XML i modulen och körs av
+                cron_tick-motorn. Intervallet ändras här — inte i
+                Inställningar.
+            </p>
+        </field>
+    </record>
+
+    <menuitem id="menu_saltstack_cron_tasks"
+              name="Schemalagda jobb"
+              parent="menu_saltstack_config"
+              action="action_saltstack_cron_tasks"
+              sequence="40"
+              groups="saltstack.group_saltstack_admin"/>
 </odoo>

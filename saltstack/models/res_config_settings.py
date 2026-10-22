@@ -1,6 +1,6 @@
 # Copyright (C) 2026 Vertel Sverige AB (<https://vertel.se>).
 
-from odoo import api, fields, models
+from odoo import fields, models
 
 
 class ResConfigSettings(models.TransientModel):
@@ -39,14 +39,12 @@ class ResConfigSettings(models.TransientModel):
             selection.append(('keykeep', 'Keykeep Managed'))
         return selection
 
-    # ── Sync scheduling ────────────────────────────────────────────────
-
-    sync_interval_number = fields.Integer(
-        string='Sync interval',
-        config_parameter='saltstack.sync_interval_number',
-        default=24,
-        help='How often the minion and pillar sync runs (in hours).',
-    )
+    # ── Schemaläggning — INGEN inställning ─────────────────────────────
+    # `sync_interval_number` togs bort 2026-10-22 (cron-tick-migration).
+    # Intervallet sätts i `cron.task`-registret (`minion_sync`), där ändringen
+    # loggas. Att skriva produktionsschemat från ett formulär var precis den
+    # drift `cron_tick` finns för att eliminera — se `_update_sync_cron()`
+    # som också togs bort.
 
     # ── Driftlarm webhook (shared) ─────────────────────────────────────
 
@@ -95,8 +93,6 @@ class ResConfigSettings(models.TransientModel):
             'saltstack.alert.coworker_id', False)
         if coworker_id and 'ai.coworker' in self.env:
             res['alert_coworker_id'] = int(coworker_id)
-        res['sync_interval_number'] = int(self.env['ir.config_parameter'].get_param(
-            'saltstack.sync_interval_number', 24))
         return res
 
     def set_values(self):
@@ -104,9 +100,6 @@ class ResConfigSettings(models.TransientModel):
         if self.alert_coworker_id:
             self.env['ir.config_parameter'].set_param(
                 'saltstack.alert.coworker_id', self.alert_coworker_id.id)
-        self.env['ir.config_parameter'].set_param(
-            'saltstack.sync_interval_number', self.sync_interval_number or 24)
-        self._update_sync_cron()
         self._write_boolean_params()
 
     def _write_boolean_params(self):
@@ -125,26 +118,6 @@ class ResConfigSettings(models.TransientModel):
         ):
             if field_name in self._fields:
                 params.set_param(key, 'True' if self[field_name] else 'False')
-
-    def _update_sync_cron(self):
-        """Create/update the sync cron with configured interval."""
-        cron = self.env['ir.cron'].search([
-            ('cron_name', '=', 'Saltstack: synk minions & pillars'),
-        ], limit=1)
-        if not cron:
-            model = self.env['ir.model']._get('salt.minion')
-            cron = self.env['ir.cron'].create({
-                'cron_name': 'Saltstack: synk minions & pillars',
-                'model_id': model.id,
-                'state': 'code',
-                'code': 'model.action_cron_sync_all()',
-                'interval_number': self.sync_interval_number or 24,
-                'interval_type': 'hours',
-                'active': True,
-                'user_id': self.env.ref('base.user_root').id,
-            })
-        else:
-            cron.interval_number = self.sync_interval_number or 24
 
     # ── Test ───────────────────────────────────────────────────────────
 
@@ -260,90 +233,16 @@ class ResConfigSettings(models.TransientModel):
 
 
 # ────────────────────────────────────────────────────────────────────────
-# Background Jobs — cron-administration (samma mönster som ai_agent_core)
+# Schemaläggning — INGEN egen tabell, INGET formulär (2026-10-22)
 # ────────────────────────────────────────────────────────────────────────
-
-SALTSTACK_CRON_NAMES = [
-    'Saltstack: synk minions & pillars',
-]
-
-
-class ResConfigSettingsSaltstackCron(models.TransientModel):
-    _inherit = 'res.config.settings'
-
-    saltstack_cron_line_ids = fields.One2many(
-        'saltstack.cron.line', 'settings_id', string='Cron-rader')
-
-    @api.model
-    def get_values(self):
-        res = super().get_values()
-        crons = self.env['ir.cron'].search(
-            [('cron_name', 'in', SALTSTACK_CRON_NAMES)], order='cron_name')
-        res['saltstack_cron_line_ids'] = [(0, 0, {
-            'cron_id': cron.id,
-            'cron_active': cron.active,
-            'cron_interval_number': cron.interval_number,
-            'cron_interval_type': cron.interval_type,
-        }) for cron in crons]
-        return res
-
-    def set_values(self):
-        super().set_values()
-        for line in self.saltstack_cron_line_ids:
-            if line.cron_id:
-                line.cron_id.write({
-                    'active': line.cron_active,
-                    'interval_number': line.cron_interval_number,
-                    'interval_type': line.cron_interval_type,
-                })
-
-
-class SaltstackCronLine(models.TransientModel):
-    """Per-cron konfigurationsrad i Background Jobs-blocket."""
-    _name = 'saltstack.cron.line'
-    _description = 'Saltstack cron configuration line'
-
-    settings_id = fields.Many2one('res.config.settings', ondelete='cascade')
-    cron_id = fields.Many2one('ir.cron', string='Cron', required=True,
-                              ondelete='cascade')
-    cron_name = fields.Char(related='cron_id.cron_name', string='Namn',
-                            readonly=True)
-    cron_active = fields.Boolean(string='Aktiv', default=True)
-    cron_interval_number = fields.Integer(string='Intervall', default=1)
-    cron_interval_type = fields.Selection([
-        ('minutes', 'Minuter'),
-        ('hours', 'Timmar'),
-        ('days', 'Dagar'),
-        ('weeks', 'Veckor'),
-        ('months', 'Månader'),
-    ], string='Period', default='days')
-    cron_lastcall = fields.Datetime(related='cron_id.lastcall',
-                                    string='Senaste körning', readonly=True)
-    cron_failure_count = fields.Integer(related='cron_id.failure_count',
-                                        string='Fel', readonly=True)
-    cron_code = fields.Text(related='cron_id.code', string='Metod',
-                            readonly=True)
-
-    def action_run_now(self):
-        """Kör cron direkt."""
-        self.ensure_one()
-        if not self.cron_id:
-            return False
-        model_name = self.cron_id.model
-        code = self.cron_id.code
-        if model_name and code:
-            model = self.env[model_name]
-            if code.startswith('model.'):
-                method = code[len('model.'):]
-                if hasattr(model, method):
-                    getattr(model, method)()
-        self.cron_id._trigger(at=fields.Datetime.now())
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': 'Cron triggad',
-                'message': f'{self.cron_name} körs nu.',
-                'type': 'success',
-            },
-        }
+#
+# `saltstack.cron.line` och `saltstack_cron_line_ids` togs bort i
+# cron-tick-migration. Blocket var en ofullständig kopia av `cron.task`s
+# listvy: det visade `lastcall` och `failure_count` men saknade körhistorik,
+# felmeddelande, lås (`locked_by`/`locked_at`), hälsoläge och överskriden
+# deadline — och hade en egen "Kör nu" som anropade metoden direkt, utan
+# advisory-lock, utan savepoint och utan att skriva körlogg. Det är exakt vad
+# `CronTask.action_run_now()` redan gör rätt.
+#
+# Menyn pekar i stället på `cron_tick.action_cron_task` filtrerat på
+# `module='saltstack'` — se `views/saltstack_menu_views.xml`.
