@@ -227,6 +227,61 @@ ett samtidighetsproblem mellan fyra skrivare, inte ett schemaproblem.
 Detaljer: `saltstack/README.md` → "Schemalagda jobb" och
 `saltstack_ai/MODULE.md` → "Schemaläggning".
 
+- **`openspec/dev-environment.md`** — `jakob18` (fri utvecklingsdator) vs
+  `ledningssystem` (produktion). Läs den innan du startar Odoo lokalt: en enda
+  trasig modul i `addons_path` fäller hela registret, och 86 ogiltiga manifest
+  finns i `odoo-fortnox` m.fl. Innehåller receptet för isolerad `addons_path`
+  och testdatabas med pgvector.
+- **`openspec/changes/`** — pågående ändringar, en katalog per ändring med
+  `proposal.md`.
+
+## Utvecklingsmiljö — jakob18 vs ledningssystem
+
+**`ledningssystem` är produktion. `jakob18` är fri.**
+
+| | `jakob18` | `ledningssystem` |
+|---|---|---|
+| Roll | Fri spelplan | Skarp drift |
+| `systemctl restart odoo` | Tillåtet | Aldrig utan `checkmodule --multi-user` |
+| Databaser | `jakob18`, `cm_test_*`, `pi_*`, `test_*` | `ledningssystem` |
+| Får gå sönder | Ja — det är poängen | Aldrig |
+
+**Inte fritt ens på jakob18:** `/usr/share/odoo-fortnox`, `/usr/share/odoo-payroll`
+m.fl. är andra repon och andra kunders moduler — ändra dem inte som bieffekt av
+eget arbete. Delade resurser (`postgres16.vertel.se`, Salt-mastern, Zabbix,
+Wazuh) får aldrig skrivas till av en testkörning.
+
+**Fällan:** `addons_path` har ~132 kataloger och Odoo validerar **alla** manifest
+vid registry-load, inte bara de installerade. Ett enda `'version': '14.0.0.0.1'`
+räcker för `ValueError: Invalid version` och hela uppstarten faller. Bygg en
+isolerad `addons_path` med bara det du testar — se
+`openspec/dev-environment.md`.
+
+**Baseline:** kör alltid sviten på orört HEAD (`git stash`) innan du rapporterar
+"mina tester är gröna". Per 2026-10-23 är `saltstack` + `saltstack_ai`
+**52 tester / 7 fel** på orört HEAD — alla i `test_salt_alert`, pre-existerande.
+"0 failed" är inte målet om baseline aldrig var 0.
+
+## Odoo 18 — icke-lagrade fält i sökvyn
+
+Ett `store=False`-fält **utan** `search=` får inte användas i en `<filter>`-domän.
+Odoo kastar `Unsearchable field "x" in path "x"` vid vyvalidering, vilket fäller
+**hela modulinstallationen** — inte bara den vyn. `fields.py`:
+`_description_searchable = bool(self.store or self.search)`.
+
+`group_by` på ett icke-lagrat fält går inte heller (`ValueError: Cannot convert …
+to SQL because it is not stored`). Använd ett filter i stället.
+
+### Tre domänfällor vid `search=`-metoder
+
+1. **`['|'] * (n-1) + leaves` är bara giltigt för n == 2.** Odoo-domäner är
+   prefix-notation: en operator gäller de **nästa** n termerna. Med fler termer
+   → `Domain ... is syntactically not correct`. Använd `_join_domains`.
+2. **`['!'] + [A, B, C]` negerar bara `A`.** Bind konjunktionen med `'&'` först.
+3. **`not ilike` kan inte uttrycka "värdet saknas" på en CSV-Char.**
+   `'postgres,odoo' NOT ILIKE 'postgres'` är **sant** i SQL. Negera hela den
+   positiva domänen. `'not =ilike'` finns inte som operator.
+
 ## Licens
 
 AGPL-3 — Copyright (C) 2026 Vertel Sverige AB
