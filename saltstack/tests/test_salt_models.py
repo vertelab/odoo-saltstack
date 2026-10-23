@@ -227,3 +227,87 @@ class TestMinionOverview(TransactionCase):
         action = minion.action_show_alerts()
         self.assertEqual(action['res_model'], 'saltstack.alert')
         self.assertEqual(action['domain'], [('host', '=', 'test-alerts-1')])
+
+
+@tagged('post_install', '-at_install')
+class TestStateThreshold(TransactionCase):
+    """T/12322 — the online semaphore must follow the sync interval.
+
+    `last_seen` is written only by the daily minion sync, so a hardcoded 1 h
+    window marks every healthy minion `offline` for ~23 of 24 hours. These
+    tests pin the window to `cron.task` (`minion_sync`) instead.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.SaltMinion = cls.env['salt.minion']
+        cls.CronTask = cls.env['cron.task'].sudo()
+
+    def _task(self):
+        return self.CronTask.search(
+            [('technical_name', '=', 'minion_sync')], limit=1)
+
+    def test_sync_interval_read_from_cron_task(self):
+        """The interval comes from the task, not from a system parameter."""
+        task = self._task()
+        self.assertTrue(task, 'minion_sync must exist in cron_tick data')
+        self.assertEqual(task.interval_number, 24)
+        self.assertEqual(task.interval_type, 'hours')
+        self.assertAlmostEqual(
+            self.SaltMinion._sync_interval_hours(), 24.0)
+
+    def test_threshold_is_interval_times_factor(self):
+        """Window = max(1 h, 1.5 * 24 h) = 36 h for the default schedule."""
+        self.assertAlmostEqual(
+            self.SaltMinion._state_threshold_hours(), 36.0)
+
+    def test_threshold_never_below_one_hour(self):
+        """A tight interval must not collapse the window below 1 h."""
+        task = self._task()
+        task.write({'interval_number': 1, 'interval_type': 'minutes'})
+        self.assertAlmostEqual(
+            self.SaltMinion._state_threshold_hours(), 1.0)
+
+    def test_threshold_follows_a_changed_interval(self):
+        """Raising the interval raises the window — no stale hardcoding."""
+        task = self._task()
+        task.write({'interval_number': 48, 'interval_type': 'hours'})
+        self.assertAlmostEqual(
+            self.SaltMinion._state_threshold_hours(), 72.0)
+
+    def test_missing_task_falls_back_to_24_hours(self):
+        """A missing task must not collapse the window to 1 h."""
+        self._task().unlink()
+        self.assertAlmostEqual(
+            self.SaltMinion._sync_interval_hours(), 24.0)
+        self.assertAlmostEqual(
+            self.SaltMinion._state_threshold_hours(), 36.0)
+
+    def test_state_online_within_window(self):
+        """A minion seen 20 h ago is online under a 36 h window."""
+        from datetime import datetime, timedelta
+        minion = self.SaltMinion.create({
+            'name': 'test-threshold-online',
+            'last_seen': datetime.now() - timedelta(hours=20),
+        })
+        self.assertEqual(minion.state, 'online')
+
+    def test_state_offline_outside_window(self):
+        """A minion seen 40 h ago is offline under a 36 h window."""
+        from datetime import datetime, timedelta
+        minion = self.SaltMinion.create({
+            'name': 'test-threshold-offline',
+            'last_seen': datetime.now() - timedelta(hours=40),
+        })
+        self.assertEqual(minion.state, 'offline')
+
+    def test_state_faulty_beats_online(self):
+        """An unresolved alert wins over a fresh last_seen."""
+        from datetime import datetime
+        minion = self.SaltMinion.create({
+            'name': 'test-threshold-faulty',
+            'last_seen': datetime.now(),
+            'open_alert_count': 1,
+        })
+        self.assertEqual(minion.state, 'faulty')

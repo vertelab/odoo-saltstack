@@ -72,6 +72,29 @@ class SaltMinion(models.Model):
     _order = 'is_demo, dc, name'
     _rec_names_search = ['name', 'customer', 'host_machine', 'private_ip']
 
+    # ── State semaphore thresholds ──────────────────────────────────────
+    #
+    # `last_seen` is written *only* by `action_cron_sync_all` — one timestamp
+    # for every minion that answered the same `manage.status` call. The
+    # freshness window must therefore follow the sync interval, not a fixed
+    # value.
+    #
+    # T/12164 (2026-10-19) introduced this and T/12322 (2026-10-23) had to
+    # restore it: the window had gone back to a hardcoded 1 hour while the
+    # sync runs every 24 hours, so every healthy minion was marked `offline`
+    # for ~23 of 24 hours and the kanban dot showed *when the cron last ran*
+    # rather than whether the host was alive.
+    #
+    # The window is `max(default, factor * interval)` so it stays sane both
+    # for the default 24 h sync (36 h) and for an operator who tightens the
+    # interval to e.g. 15 minutes (1 h floor).
+    _STATE_THRESHOLD_DEFAULT_HOURS = 1.0
+    _STATE_THRESHOLD_FACTOR = 1.5
+
+    # Fallback when the cron task is missing (fresh install, or the task was
+    # deleted by hand). Matches `saltstack/data/cron_tasks.xml`.
+    _SYNC_INTERVAL_FALLBACK_HOURS = 24.0
+
     # ── Identity ────────────────────────────────────────────────────────
 
     name = fields.Char(
@@ -410,11 +433,68 @@ class SaltMinion(models.Model):
         """
         return ['faulty', 'offline', 'online']
 
+    def _sync_interval_hours(self):
+        """Return the minion-sync interval in hours, read from `cron.task`.
+
+        The schedule moved from `ir.cron` to `cron.task` in 18.0.1.67.0
+        (T/12316), and the old `saltstack.sync_interval_number` system
+        parameter was retired with it. Reading the parameter would silently
+        fall back to 24 h forever, so the interval is read from the task that
+        actually owns the schedule.
+
+        Falls back to `_SYNC_INTERVAL_FALLBACK_HOURS` when the task is absent
+        — e.g. during a migration, or on a database where the data file was
+        never loaded. A missing task must not collapse the window to 1 hour.
+        """
+        # Not `ensure_one()`: `_compute_state` calls this once for the whole
+        # recordset, and the interval is a property of the schedule, not of
+        # the individual minion.
+        task = self.env['cron.task'].sudo().search(
+            [('technical_name', '=', 'minion_sync')], limit=1)
+        if not task:
+            return self._SYNC_INTERVAL_FALLBACK_HOURS
+
+        # `cadence` XOR `interval_number`/`interval_type` — see cron.task.
+        if task.interval_type and task.interval_number:
+            per_unit = {
+                'minutes': 1.0 / 60.0,
+                'hours': 1.0,
+                'days': 24.0,
+                'weeks': 24.0 * 7,
+                'months': 24.0 * 30,
+            }.get(task.interval_type)
+            if per_unit:
+                return task.interval_number * per_unit
+
+        cadence_hours = {
+            'min': 5.0 / 60.0,
+            'hour': 1.0,
+            'daily': 24.0,
+            'week': 24.0 * 7,
+            'month': 24.0 * 30,
+        }
+        return cadence_hours.get(task.cadence, self._SYNC_INTERVAL_FALLBACK_HOURS)
+
+    def _state_threshold_hours(self):
+        """Freshness window for the online semaphore, in hours.
+
+        `max(default, factor * sync interval)`. See the class-level constants
+        for why the window follows the sync interval.
+        """
+        hours = self._sync_interval_hours() * self._STATE_THRESHOLD_FACTOR
+        return max(self._STATE_THRESHOLD_DEFAULT_HOURS, hours)
+
     @api.depends('last_seen', 'open_alert_count')
     def _compute_state(self):
-        """Semaphore: faulty (unresolved alerts) > online > offline."""
+        """Semaphore: faulty (unresolved alerts) > online > offline.
+
+        The threshold follows the minion-sync interval — see
+        `_state_threshold_hours()`. Computed once for the recordset: the
+        interval is a property of the schedule, not of the individual minion.
+        """
         from datetime import datetime, timedelta
-        threshold = datetime.now() - timedelta(hours=1)
+        hours = self._state_threshold_hours() if self else 1.0
+        threshold = datetime.now() - timedelta(hours=hours)
         for rec in self:
             if rec.open_alert_count > 0:
                 rec.state = 'faulty'
