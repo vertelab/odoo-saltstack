@@ -596,8 +596,10 @@ class SaltMinionSnapshot(models.Model):
             from zoneinfo import ZoneInfo
             local = dt.replace(tzinfo=ZoneInfo('Europe/Stockholm'))
             return local.astimezone(timezone.utc).replace(tzinfo=None)
-        except Exception:
-            # Utan tz-databas: använd tiden som den är (UTC-antagande).
+        except (ImportError, KeyError, ValueError):
+            # Utan tz-databas (eller okänd zon): använd tiden som den är.
+            # Tiden blir då ett par timmar fel i visningen — men raden finns
+            # och kan återställas, vilket är det som räknas.
             return dt
 
     # ── Dirvish-synk ─────────────────────────────────────────────────────
@@ -710,7 +712,6 @@ class SaltMinionSnapshot(models.Model):
         Idempotent: befintliga rader uppdateras, försvunna datum tas bort.
         Rör aldrig restic-rader (backup_type='dirvish' är filtret).
         """
-        BackupServer = self.env['salt.backup.server']
         created = updated = removed = 0
         unmatched = set()
 
