@@ -9,3 +9,4 @@ __pycache__/
 *.pyo
 bifrost
 bifrost_saltstack
+graphify-out/
