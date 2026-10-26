@@ -295,6 +295,16 @@ class SaltMinion(models.Model):
              'synkade från dirvish-status.json + dirvish-restore.sh --list. '
              'Datumkataloger utan data (misslyckade backuper) tas aldrig med.',
     )
+    borg_snapshot_ids = fields.One2many(
+        'salt.minion.snapshot',
+        'minion_id',
+        string='Borg-snapshots (Återskapa data)',
+        domain=[('backup_type', '=', 'borg')],
+        help='Borg-arkiv för denna maskin — synkade med `borg list` på '
+             'backupservern (tull1). Varje rad är en återställningspunkt. '
+             'Storleken är medvetet 0: arkivstorlek hör till hela volymen, '
+             'inte till minionen (lagring mäts som disk_borg).',
+    )
     restore_target_info = fields.Char(
         string='Kör restore-kommandon på',
         compute='_compute_restore_target_info',
@@ -351,7 +361,8 @@ class SaltMinion(models.Model):
                 rec.storage_primary_gb + rec.storage_backup_gb, 2)
 
     @api.depends('snapshot_ids', 'snapshot_ids.server_label',
-                 'dirvish_snapshot_ids', 'dirvish_snapshot_ids.server_label')
+                 'dirvish_snapshot_ids', 'dirvish_snapshot_ids.server_label',
+                 'borg_snapshot_ids', 'borg_snapshot_ids.server_label')
     def _compute_restore_target_info(self):
         """Vilken maskin restore-kommandona körs på.
 
@@ -360,9 +371,9 @@ class SaltMinion(models.Model):
         så att texten alltid är korrekt — även för en ny kund innan första
         synken hunnit köra.
 
-        Har minionen både restic- och dirvish-rader visas båda maskinerna
-        (de kan vara olika), tydligt märkta per typ så att det inte går att
-        blanda ihop dem.
+        Har minionen rader av flera slag (restic, dirvish, borg) visas alla
+        maskinerna (de kan vara olika), tydligt märkta per typ så att det
+        inte går att blanda ihop dem.
         """
         Server = self.env['salt.backup.server']
         for rec in self:
@@ -379,6 +390,12 @@ class SaltMinion(models.Model):
                     labels.append(snap.server_label)
             if labels:
                 parts.append('Dirvish: %s' % ' / '.join(labels))
+            labels = []
+            for snap in rec.borg_snapshot_ids:
+                if snap.server_label and snap.server_label not in labels:
+                    labels.append(snap.server_label)
+            if labels:
+                parts.append('Borg: %s' % ' / '.join(labels))
             if not parts:
                 fb_name, fb_host, _h, _b = Server._fallback_server_info()
                 if fb_name:
@@ -2020,6 +2037,29 @@ fi
         _logger.info('storage: %s types written for %s',
                      len(totals), self.name)
         return bool(totals)
+
+    def action_sync_borg_snapshots(self):
+        """Knapp: synka Borg-arkiven för de valda minionerna.
+
+        Tunn brygga till `salt.minion.snapshot.action_sync_borg_snapshots()`,
+        som läser ALLA LXD-värdars repon på en gång (det är billigare än att
+        fråga Borg en gång per minion). Cron 07:30 gör samma sak; knappen
+        finns för att kunna verifiera direkt efter en ändring.
+        """
+        result = self.env['salt.minion.snapshot'].action_sync_borg_snapshots()
+        # Öppna fliken Återskapa data så att resultatet syns direkt.
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Borg-synk klar',
+                'message': '%(created)d nya, %(updated)d uppdaterade, '
+                           '%(removed)d borttagna arkiv.' % result,
+                'type': 'success' if result.get('created') or result.get(
+                    'updated') else 'warning',
+                'sticky': False,
+            },
+        }
 
     def action_measure_storage(self):
         """Server action (gear/button): measure storage for the selected minions."""

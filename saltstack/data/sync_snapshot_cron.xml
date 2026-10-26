@@ -40,4 +40,27 @@
         <field name="active">True</field>
         <field name="user_id" ref="base.user_root"/>
     </record>
+
+    <!-- ── Borg-snapshots (Återskapa data) ── -->
+    <!--
+         Borg-arkiven läses direkt via `borg list` på backupservern (tull1) —
+         det finns ingen statusfil att invänta, så jobbet har inget
+         tidsfönster att passa. Det ligger därför 07:30, efter restic (06:30)
+         och dirvish (07:00), så att de tre synkarna inte konkurrerar om
+         Salt-API:t och Borg-repots lås.
+
+         Repona ligger på tull1, inte på LXD-värden — se
+         `_read_borg_archives()` och modulens docstring.
+    -->
+    <record id="cron_sync_borg_snapshots" model="ir.cron">
+        <field name="name">Saltstack: synk borg-snapshots (Återskapa data)</field>
+        <field name="model_id" ref="saltstack.model_salt_minion_snapshot"/>
+        <field name="state">code</field>
+        <field name="code">model.action_sync_borg_snapshots()</field>
+        <field name="interval_number">24</field>
+        <field name="interval_type">hours</field>
+        <field name="nextcall">2026-10-27 07:30:00</field>
+        <field name="active">True</field>
+        <field name="user_id" ref="base.user_root"/>
+    </record>
 </odoo>
