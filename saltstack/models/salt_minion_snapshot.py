@@ -395,12 +395,17 @@ class SaltMinionSnapshot(models.Model):
         sätter BORG_PASSCOMMAND=cat /etc/borg/passphrase).
         """
         repo = '%s/%s' % (self.BORG_REPO_BASE, lxd_host)
-        # --format med TAB som separator; {NL} avslutar varje rad så att
-        # splitlines() ger en arkiv per rad (utan {NL} klistras de ihop).
+        # Pipe som separator, INTE \t. Kommandot går genom bash, och ett \t
+        # inuti enkla citattecken skickas vidare till Borg som de två tecknen
+        # backslash + t — Borg skriver då literal '\t' i stället för en tab.
+        # En pipe kan inte förväxlas med en escape-sekvens, och förekommer
+        # varken i arkivnamn eller i Borgs tidsformat.
+        # {NL} avslutar varje rad så att splitlines() ger en arkiv per rad
+        # (utan {NL} klistras alla arkiv ihop på en enda rad).
         cmd = (
             'set -a; . %s; set +a; '
             'borg list --format '
-            "'{archive}\\t{time}\\t{id}{NL}' %s 2>/dev/null"
+            "'{archive}|{time}|{id}{NL}' %s 2>/dev/null"
         ) % (self.BORG_CONF, repo)
         try:
             result = self.env['saltstack.api'].salt_call(
@@ -415,7 +420,7 @@ class SaltMinionSnapshot(models.Model):
 
         archives = []
         for line in str(raw).splitlines():
-            parts = line.split('\t')
+            parts = line.split('|')
             if len(parts) != 3:
                 continue
             name, btime, aid = (p.strip() for p in parts)
