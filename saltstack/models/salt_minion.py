@@ -187,8 +187,24 @@ class SaltMinion(models.Model):
         store=True,
         default='offline',
         group_expand='_group_expand_state',
-        help='Minion-status semaphore: faulty (olösta larm) > online '
-             '(svarar) > offline (svarar ej).',
+        help='Trafikljus för maskinen — inte en synkstatus.\n'
+             '\n'
+             'Prioritetsordning: faulty > online > offline.\n'
+             '\n'
+             '• Faulty — maskinen har olösta larm (open_alert_count > 0). '
+             'Går före allt annat: en maskin kan synka perfekt och ändå '
+             'ha larm.\n'
+             '• Online — maskinen svarade vid senaste synken, dvs. last_seen '
+             'ligger inom tidsfönstret.\n'
+             '• Offline — maskinen svarade inte, eller har inte setts inom '
+             'fönstret.\n'
+             '\n'
+             'Tidsfönstret följer synkintervallet: max(1 h, 1,5 × intervallet). '
+             'Med dygnssynk blir det 36 h. Se _state_threshold_hours().\n'
+             '\n'
+             'Vill du veta NÄR maskinen sågs senast, läs last_seen. Vill du '
+             'veta när grains senast hämtades, läs last_sync. De är separata '
+             'fält — state svarar bara på frågan "är maskinen frisk?"',
     )
     open_alert_count = fields.Integer(
         string='Open Alerts',
