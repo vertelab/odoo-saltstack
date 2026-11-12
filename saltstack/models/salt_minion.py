@@ -578,10 +578,29 @@ class SaltMinion(models.Model):
             try:
                 with self.env.cr.savepoint():
                     rec.open_alert_count = count
-            except psycopg2.errors.SerializationFailure:
+            except (psycopg2.errors.SerializationFailure,
+                    psycopg2.errors.LockNotAvailable,
+                    psycopg2.errors.DeadlockDetected) as exc:
+                # LockNotAvailable is what `lock_timeout` raises, and it was
+                # NOT caught here — only SerializationFailure was. Measured
+                # 2026-11-12: `alert_count_backfill` failed every min tick for
+                # over an hour with
+                #
+                #   canceling statement due to lock timeout
+                #   CONTEXT: while updating tuple (11,3) in relation "salt_minion"
+                #
+                # The retry comment below says "will be corrected by the
+                # backfill cron" — but the backfill cron was itself the thing
+                # failing, so nothing corrected the counter. Both statements
+                # now take the same skip-and-continue path.
+                #
+                # `minion_sync` writes the same rows (it calls this method
+                # too) and can hold them for the whole fleet sync; a per-row
+                # skip is the correct behaviour — the next run corrects it.
                 _logger.warning(
-                    'open_alert_count: concurrent update on %s, skipped this '
-                    'round (will be corrected by the backfill cron)', rec.name)
+                    'open_alert_count: could not update %s (%s), skipped this '
+                    'round (will be corrected by the backfill cron)',
+                    rec.name, type(exc).__name__)
                 continue
         return True
 
