@@ -3,6 +3,8 @@
 import logging
 import re
 
+import psycopg2.errors
+
 from odoo import _, api, fields, models
 
 _logger = logging.getLogger(__name__)
@@ -488,6 +490,38 @@ class SaltAlert(models.Model):
         self.write({'state': 'aborted', 'resolved': False})
         return True
 
+    def _resolve_one(self, alert):
+        """Resolve ONE alert, skipping it if the row is locked. Returns bool.
+
+        `alert.write()` on a row another transaction holds takes a lock
+        timeout — measured 2026-11-12 on `salt_minion`/`salt_alert` while
+        `alert_count_backfill` and the minion sync wrote the same rows:
+
+            canceling statement due to lock timeout
+            CONTEXT: while updating tuple (11,3) in relation "salt_minion"
+
+        A lock timeout is a DATABASE error: PostgreSQL aborts the whole
+        transaction, so every later statement in `action_cron_auto_resolve`
+        fails with "current transaction is aborted" — including the
+        unrelated rules 2 and 3. One locked row took the entire cron down
+        and left `last_error` pointing at a symptom.
+
+        A per-alert savepoint confines the damage to the row that is locked;
+        the next run resolves it. Same pattern as
+        `salt.minion._update_open_alert_count`.
+        """
+        try:
+            with self.env.cr.savepoint():
+                alert.write({"resolved": True, "state": "resolved"})
+            return True
+        except (psycopg2.errors.LockNotAvailable,
+                psycopg2.errors.SerializationFailure,
+                psycopg2.errors.DeadlockDetected) as exc:
+            _logger.warning(
+                'Auto-resolve: %s is locked (%s), skipped this round',
+                alert.name, type(exc).__name__)
+            return False
+
     def action_cron_auto_resolve(self):
         """Auto-resolve stale/inactive alerts (cron, every 15 min).
 
@@ -562,9 +596,9 @@ class SaltAlert(models.Model):
                     for h, name in active_pairs
                 )
                 if not still_active:
-                    alert.write({"resolved": True, "state": "resolved"})
-                    resolved += 1
-                    stats["zabbix_recovered"] += 1
+                    if self._resolve_one(alert):
+                        resolved += 1
+                        stats["zabbix_recovered"] += 1
         except Exception as e:
             _logger.warning("Auto-resolve Zabbix check failed: %s", e)
 
@@ -577,9 +611,9 @@ class SaltAlert(models.Model):
         ]
         for alert in self.search(domain):
             if not alert.last_occurrence or alert.last_occurrence < cutoff:
-                alert.write({"resolved": True, "state": "resolved"})
-                resolved += 1
-                stats["stale_info"] += 1
+                if self._resolve_one(alert):
+                    resolved += 1
+                    stats["stale_info"] += 1
 
         # 3. Stale single-occurrence dupes (> 14 days, occurrences=1)
         cutoff14 = now - timedelta(days=14)
@@ -589,9 +623,9 @@ class SaltAlert(models.Model):
             ("create_date", "<", cutoff14),
         ]
         for alert in self.search(domain):
-            alert.write({"resolved": True, "state": "resolved"})
-            resolved += 1
-            stats["stale_dupes"] += 1
+            if self._resolve_one(alert):
+                resolved += 1
+                stats["stale_dupes"] += 1
 
         if resolved:
             minions = self.mapped("host")
