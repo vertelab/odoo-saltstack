@@ -178,3 +178,50 @@ class TestRunlogWebhook(TransactionCase):
         self.assertEqual(add['context']['default_source'], 'manual')
         self.assertEqual(add['context']['default_run_type'], 'change')
         self.assertEqual(add['context']['default_minion_id'], minion.id)
+
+    # ── Rubriken (_compute_name) ────────────────────────────────────────
+
+    def test_name_strips_source_prefix_from_summary(self):
+        """Källnamnet ska inte stå två gånger i rubriken.
+
+        Driftfix 2026-11-13 (T/12598): Wazuhs summary är
+        "Wazuh 2026-11-13: 668034 larm ..." — källnamn följt av DATUM, inte
+        kolon. Det gamla regexet krävde kolon direkt efter källnamnet, så
+        prefixet strippades aldrig och rubriken blev
+        "Wazuh — Wazuh 2026-11-13: ... (Error)".
+        """
+        res = self._publish(
+            source='wazuh',
+            run_type='security',
+            host='*',
+            status='error',
+            summary='Wazuh 2026-11-13: 668034 larm (3066 high, 6129 critical) '
+                    '| 58 hosts | 20 FIM-ändringar i /etc',
+        )
+        rec = self.Runlog.browse(res['runlog_id'])
+        self.assertEqual(rec.name.count('Wazuh'), 1, rec.name)
+        self.assertIn('668034 larm', rec.name)
+        self.assertNotIn('Wazuh 2026-11-13:', rec.name)
+
+    def test_name_never_truncates_midword(self):
+        """Rubriken ska inte sluta mitt i en siffra eller på en avdelare.
+
+        Det gamla ``s[:60]`` klippte "... | 58 hosts" till "... | 5", vilket
+        såg ut som en statuskod.
+        """
+        res = self._publish(
+            source='wazuh',
+            run_type='security',
+            host='*',
+            status='error',
+            summary='Wazuh 2026-11-13: 674951 larm (2167 high, 6022 critical) '
+                    '| 58 hosts | 20 FIM-ändringar i /etc | 559147 bruslarm exkluderade',
+        )
+        rec = self.Runlog.browse(res['runlog_id'])
+        detail = rec.name.split('—', 1)[1].rsplit('(', 1)[0].strip()
+        # Ingen hängande avdelare eller ensam siffra i slutet.
+        self.assertNotRegex(detail, r'[\s|,;:/–-]$')
+        self.assertFalse(detail.endswith('| 5'), detail)
+        # Ska sluta på en ellips om den klipptes.
+        if str(rec.summary) and len(rec.summary) > 60:
+            self.assertTrue(detail.endswith('…') or len(detail) < 62, detail)

@@ -2,10 +2,35 @@
 
 import json
 import logging
+import re
 
 from odoo import api, fields, models
 
 _logger = logging.getLogger(__name__)
+
+
+def _truncate_detail(text, limit):
+    """Korta ned en sammanfattning till en läsbar rubrikdel.
+
+    Klipper på ordgräns och tar bort en hängande avdelare i slutet, så att
+    rubriken aldrig slutar mitt i en siffra eller på ett ensamt "|".
+
+    FÄLLA (driftfix 2026-11-13, T/12598): rak ``s[:60]`` gav rubriken
+    "... 20 FIM-ändringar i /etc" → avklippt till "... | 5", vilket såg ut
+    som en statuskod men var första tecknen av "58 hosts".
+    """
+    s = (text or "").strip()
+    if len(s) <= limit:
+        return s
+    cut = s[:limit]
+    # Klipp på sista ordgränsen om vi inte redan står på en.
+    if s[limit:limit + 1] not in ("", " "):
+        sp = cut.rfind(" ")
+        if sp > limit // 2:
+            cut = cut[:sp]
+    # Ta bort hängande avdelare/punktuering.
+    cut = re.sub(r'[\s|,;:/–-]+$', '', cut)
+    return cut + " …"
 
 
 class SaltRunlog(models.Model):
@@ -129,12 +154,25 @@ class SaltRunlog(models.Model):
             if rec.summary:
                 import re
                 s = rec.summary.strip()
-                # Plocka bort en ledande käll-prefix. Två varianter finns:
-                #   "KVM-backup: 17 maskiner ..."   (kolon)
-                #   "LXD-backup hälsa: 6 artefakter ..."  (mellanslag + hälsa)
-                # Båda ska bort — källan står redan först i rubriken.
-                s = re.sub(r'^[A-Za-zÅÄÖåäö0-9_-]+(?:\s+hälsa)?:\s*', '', s)
-                detail = s[:60]
+                # Plocka bort en ledande käll-prefix. Tre varianter finns:
+                #   "KVM-backup: 17 maskiner ..."          (kolon)
+                #   "LXD-backup hälsa: 6 artefakter ..."   (mellanslag + hälsa)
+                #   "Wazuh 2026-11-13: 668034 larm ..."    (källa + datum + kolon)
+                # Alla ska bort — källan står redan först i rubriken.
+                #
+                # FÄLLA (driftfix 2026-11-13, T/12598): det gamla regexet
+                # krävde kolon DIREKT efter källnamnet. Wazuhs summary har
+                # ett datum emellan ("Wazuh 2026-11-13: ..."), så prefixet
+                # strippades aldrig → rubriken blev
+                #   "Wazuh — Wazuh 2026-11-13: 668034 larm ... | 5 (Error)"
+                # med källnamnet två gånger.
+                s = re.sub(
+                    r'^[A-Za-zÅÄÖåäö0-9_-]+'
+                    r'(?:\s+hälsa)?'
+                    r'(?:\s+\d{4}-\d{2}-\d{2})?'   # valfritt datum
+                    r'\s*:\s*',
+                    '', s)
+                detail = _truncate_detail(s, 60)
 
             rec.name = '%s — %s (%s)  %s' % (label, detail, status, when)
 
