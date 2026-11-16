@@ -2138,7 +2138,9 @@ fi
             try:
                 with self.env.cr.savepoint():
                     return self._action_sync_all_minions_once()
-            except psycopg2.errors.SerializationFailure:
+            except (psycopg2.errors.SerializationFailure,
+                    psycopg2.errors.LockNotAvailable,
+                    psycopg2.errors.DeadlockDetected) as exc:
                 # Everything the failed attempt wrote is rolled back by the
                 # savepoint, so the cache must be dropped before retrying.
                 #
@@ -2149,15 +2151,30 @@ fi
                 # reaches the UI as a bare traceback. invalidate() drops the
                 # cache without a single SQL statement.
                 self.invalidate_model()
+                # LockNotAvailable is what `lock_timeout` raises and it was
+                # NOT caught here — only SerializationFailure was. Mätt
+                # 2026-11-16: synken föll på `canceling statement due to lock
+                # timeout ... relation "salt_minion"` när
+                # `alert_count_backfill` skrev samma rader. Samma retry är
+                # rätt svar: nästa försök tar raderna i tur och ordning.
                 _logger.warning(
-                    'Minion sync: concurrent update (attempt %s/3), retrying',
-                    attempt + 1)
+                    'Minion sync: %s (attempt %s/3), retrying',
+                    type(exc).__name__, attempt + 1)
                 time.sleep(2 * (attempt + 1))
         _logger.error('Minion sync: gave up after 3 concurrent-update retries')
         return {
             'error': 'concurrent update — synken kolliderade tre gånger; '
                      'försök igen om en stund',
         }
+
+    #: De grains `_apply_grains` faktiskt läser. Att hämta hela
+    #: `grains.items` (som är tiotals kB per minion) i stället för dessa
+    #: 13 nycklar gjorde bulk-hämtningen 6x långsammare — mätt 2026-11-16.
+    _SYNC_GRAIN_KEYS = (
+        'customer', 'dc', 'domain', 'external_domain', 'gw', 'host', 'lxc',
+        'odoo_full_version', 'odoo_version', 'os', 'osrelease', 'roles',
+        'virtual',
+    )
 
     def _action_sync_all_minions_once(self):
         """One sync attempt. Caller owns the savepoint and the retry loop."""
@@ -2182,13 +2199,31 @@ fi
             return {'error': 'manage.status returned no minions; registry untouched'}
 
         # Bulk-grains: ett anrop mot alla minioner → {minion_id: grains}
+        #
+        # MÄTT 2026-11-16: `grains.items` (HELA grain-trädet) tog 131 s mot
+        # 144 minions — längre än sin egen 120 s-timeout, så anropet hann
+        # aldrig bli klart. Tiden var KONSTANT oavsett hur många minions som
+        # efterfrågades (10 → 191 s, 30 → 191 s), vilket visar att det inte
+        # var arbete utan Salt-API:ts väntan på icke-svarande minions.
+        #
+        # Två ändringar:
+        #
+        # 1. `grains.item` med de 13 nycklar `_apply_grains` faktiskt läser,
+        #    i stället för hela `grains.items`. Samma data, en bråkdel.
+        # 2. Salt-timeout 15 s i stället för 120 s. Mätt: 20,7 s totalt för
+        #    alla 144 minions, med samtliga med. Den gamla 120 s var
+        #    kraftigt överdimensionerad — den gjorde bara att anropet
+        #    blockerade transaktionen i två minuter i onödan.
+        #
+        # VARFÖR DET SPELAR ROLL: anropet håller transaktionen öppen under
+        # hela hämtningen. Två cron-trådar blev `idle in transaction` i 10+
+        # minuter och blockerade HELA min-ticken — `cron.tick min` stod i
+        # "0 ran" och ingen task kördes. Se INC-2026-11-16.
         bulk_grains = {}
         try:
-            # Timeout 120 s: a bulk grains.items against ~115 minions takes
-            # ~55 s in production (measured 2026-10-19). At the old 45 s the
-            # call timed out silently, bulk_grains stayed {} and every new
-            # minion was created with ONLY a name (no IP, no customer).
-            bulk_result = self._call_salt_api('local', '*', 'grains.items', timeout=120)
+            bulk_result = self._call_salt_api(
+                'local', '*', 'grains.item',
+                *self._SYNC_GRAIN_KEYS, timeout=15)
             bulk_grains = bulk_result.get('return', [{}])[0] or {}
         except Exception as e:
             _logger.warning('Bulk grains fetch failed: %s', e)
