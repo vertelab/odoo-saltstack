@@ -47,13 +47,20 @@
             <field name="module">saltstack</field>
             <field name="model_name">salt.minion</field>
             <field name="method_name">action_cron_sync_all</field>
-            <field name="interval_number">24</field>
-            <field name="interval_type">hours</field>
+            <!-- CADENCE `hour`, inte interval 24 h (2026-11-16).
+                 `_is_due` mäter intervallet från `last_run`, så en 24 h-task
+                 blir due i den tick som råkar komma först efter 24 h — och
+                 ligger då i min-ticken tillsammans med 60 andra. Tar synken
+                 157 s blockerar den allt annat i det varvet.
+
+                 Med `hour` får den ett eget fönster (spread över timmen)
+                 och kolliderar inte med min-tickens tasks. Synken är
+                 idempotent, så en gång i timmen i stället för en gång i
+                 dygnet är ofarligt — och `last_seen`-semafonen blir
+                 färskare. -->
+            <field name="cadence">hour</field>
             <field name="sequence">10</field>
-            <!-- Grains-insamlingen tar ~55 s mot 115 minioner och den
-                 per-minion-savepointade skrivningen ~2 min. 120 s (motorns
-                 default) hade larmat varje körning. -->
-            <field name="timeout_seconds">1200</field>
+            <field name="timeout_seconds">600</field>
             <field name="active" eval="True"/>
         </record>
 
