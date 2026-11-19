@@ -167,7 +167,7 @@ class SaltMinion(models.Model):
 
     # ── Collection ────────────────────────────────────────────────────────
 
-    def _collect_storage_measurements(self):
+    def _collect_storage_measurements(self, write_odoo_stats=True):
         """Measure every artefact for this minion.
 
         Delegates to the Salt execution module `storage.info`, which returns
@@ -178,6 +178,16 @@ class SaltMinion(models.Model):
         Failures are isolated per artefact by the module itself. A host that
         cannot be reached raises here, and the caller (cron / sync) isolates
         it per minion.
+
+        `write_odoo_stats` (2026-11-13) — the Odoo key figures ride in the
+        same payload, but they are NOT measurements: they belong to
+        `salt.minion`, a row `minion_sync` owns and holds a row lock on for
+        121-157 s. Writing them from the collection sweep meant every
+        iteration waited for that lock and died on `lock_timeout` (10 s), so
+        `storage_collect` never completed. The sweep therefore passes
+        `False` and lets `minion_sync` own the fields; the sync path keeps
+        the default. An explicit parameter, not a context key, so the intent
+        is visible at the call site and cannot be inherited by accident.
         """
         self.ensure_one()
         Measurement = self.env['saltstack.storage.measurement']
@@ -190,9 +200,23 @@ class SaltMinion(models.Model):
             # salt_call returns a JSON STRING — decode it. Using the raw
             # string as a dict silently produced "'str' object has no
             # attribute 'get'" for every minion.
+            #
+            # TIMEOUT 60 s, inte 900 (mätt 2026-11-18). Ett normalt anrop
+            # tar 28,6 s (33 anrop på 945 s i drift). 900 s var en
+            # säkerhetsmarginal som blev skadlig: en enda hängande minion
+            # blockerade hela svepet i upp till 15 minuter, och eftersom
+            # svepet gör ETT anrop per minion (164 st) blev den totala
+            # tiden ~78 min — mot Odoos `limit_time_real` på 20 min.
+            # Följden: `storage_collect` kom aldrig igenom, `last_run`
+            # sattes aldrig, och den blockerade hour-ticken varje gång.
+            #
+            # 60 s är ~2x det normala. En långsam värd hoppas över och
+            # mäts nästa varv i stället för att stoppa hela svepet.
+            timeout_s = int(self.env['ir.config_parameter'].sudo().get_param(
+                'saltstack_storage.storage_info_timeout', '60') or 60)
             raw = api.salt_call(
                 'local', self.name, 'storage.info', container,
-                archive_stats, timeout=900)
+                archive_stats, timeout=timeout_s)
             result = json.loads(raw) if isinstance(raw, str) else raw
         except Exception as exc:  # noqa: BLE001 — host unreachable
             _logger.warning(
@@ -207,8 +231,10 @@ class SaltMinion(models.Model):
 
         # Odoo key figures travel in the same payload. They are NOT storage
         # artefacts — they belong on the minion, where the Odoo tab reads
-        # them. Writing them here keeps one collection, two destinations.
-        self._apply_odoo_stats(payload.get('odoo_stats') or [])
+        # them. Writing them here keeps one collection, two destinations —
+        # but only when the caller owns that row (see `write_odoo_stats`).
+        if write_odoo_stats:
+            self._apply_odoo_stats(payload.get('odoo_stats') or [])
 
         saved = 0
         for artifact, rows in payload.items():

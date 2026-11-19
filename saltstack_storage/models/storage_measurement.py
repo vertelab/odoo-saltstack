@@ -19,6 +19,7 @@ Two design rules that the whole module rests on:
 
 import json
 import logging
+import time
 
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
@@ -433,23 +434,121 @@ class StorageMeasurement(models.Model):
         This is the `cron.task` entry point (`storage_collect`, cadence
         `week`). Failures are isolated per minion: one unreachable host must
         not stop the fleet.
+
+        THREE FIXES 2026-11-13 — the sweep had never completed since it was
+        created 2026-10-20. `last_run` stayed NULL and `failure_count` 0,
+        because `_run_locked_task` cannot write the failure record once the
+        transaction is dead: the task looked "never run" instead of "failed".
+
+        1. `write_odoo_stats=False`. The sweep used to write `salt.minion`
+           for every minion, competing with `minion_sync` for the same row
+           lock. `minion_sync` holds it 121-157 s; `lock_timeout` is 10 s.
+           Measured in production 2026-11-12 14:47-14:51: four
+           `canceling statement due to lock timeout / while updating tuple
+           (N,M) in relation "salt_minion"`. `minion_sync` owns those
+           fields; the sweep only measures.
+
+        2. `invalidate_model()` instead of `invalidate_all()`. The latter
+           flushes the WHOLE transaction; when the savepoint had already
+           rolled back it raised a second SerializationFailure that
+           REPLACED the original error and escaped the per-minion
+           isolation. Same trap fixed 2026-10-21 in `salt_minion_sync.py`
+           and in `salt_minion.py`.
+
+        3. `SET LOCAL lock_timeout = '2s'` per minion. A row lock should
+           cost one minion, not the sweep. `SET LOCAL` is
+           transaction-local and does not leak through the connection
+           pool. 2 s is generous for a normal UPDATE (milliseconds) and
+           short enough that 157 minions cannot accumulate minutes of
+           waiting.
         """
-        minions = self.env['salt.minion'].search([('active', '=', True)])
+        # CURSOR ÖVER FLERA KÖRNINGAR (2026-11-18).
+        #
+        # Mätt: ett `storage.info` tar 28,6 s. Med 164 minions är hela svepet
+        # ~78 minuter — men Odoos `limit_time_real` dödar workern efter 20.
+        # Svepet kom därför aldrig igenom, `last_run` sattes aldrig, och
+        # `storage_collect` blockerade hour-ticken varje vecka.
+        #
+        # Nu: en tidsbudget per körning (`storage_collect_budget_seconds`,
+        # default 600 s = 10 min) och en sparad cursor
+        # (`saltstack_storage.collect_cursor`) som håller minion-NAMNET där
+        # förra körningen slutade. Nästa veckotick fortsätter där.
+        #
+        # Varför namn och inte id: sorteringen är på `name`, och ett id kan
+        # försvinna mellan körningarna. Namnet är stabilt och sorteringen
+        # deterministisk, så `name > cursor` ger exakt nästa svep utan
+        # dubbletter och utan hål.
+        #
+        # När sista minionen är mätt nollställs cursorn, så nästa vecka
+        # börjar om från början.
+        Param = self.env['ir.config_parameter'].sudo()
+        budget = int(Param.get_param(
+            'saltstack_storage.storage_collect_budget_seconds', '600') or 600)
+        cursor = Param.get_param('saltstack_storage.collect_cursor', '') or ''
+
+        domain = [('active', '=', True)]
+        if cursor:
+            domain.append(('name', '>', cursor))
+        minions = self.env['salt.minion'].search(domain, order='name')
+
+        if not minions and cursor:
+            # Cursorn pekade förbi sista minionen (fleet krympte) — börja om.
+            _logger.info(
+                'Storage collection: cursorn %r ligger efter sista minionen '
+                '— börjar om från början', cursor)
+            Param.set_param('saltstack_storage.collect_cursor', '')
+            cursor = ''
+            minions = self.env['salt.minion'].search(
+                [('active', '=', True)], order='name')
+
         done, failed = 0, []
+        last_name = cursor
+        started = time.monotonic()
         for minion in minions:
+            if time.monotonic() - started >= budget:
+                # Budgeten slut: spara cursorn och fortsätt nästa gång.
+                _logger.info(
+                    'Storage collection: tidsbudgeten (%ss) nådd efter %s '
+                    'minions — fortsätter från %r nästa körning',
+                    budget, done, last_name)
+                break
             try:
                 with self.env.cr.savepoint():
-                    minion._collect_storage_measurements()
+                    self.env.cr.execute("SET LOCAL lock_timeout = '2s'")
+                    minion._collect_storage_measurements(
+                        write_odoo_stats=False)
                 done += 1
+                last_name = minion.name
             except Exception as exc:  # noqa: BLE001 — isolate per minion
-                self.env.invalidate_all()
+                # `invalidate_model()`, NOT `invalidate_all()`: the latter
+                # flushes every pending write in the transaction and, when
+                # the savepoint is already rolled back, raises a second
+                # SerializationFailure that escapes this handler and kills
+                # the whole sweep. The savepoint has already discarded this
+                # minion's writes; dropping the stale cache is enough.
+                self.env['saltstack.storage.measurement'].invalidate_model()
                 _logger.warning(
                     'Storage collection failed for %s: %s', minion.name, exc)
                 failed.append('%s: %s' % (minion.name, exc))
+                # Även ett misslyckat försök flyttar cursorn: annars står
+                # svepet still på en permanent trasig värd för evigt.
+                last_name = minion.name
+
+        remaining = self.env['salt.minion'].search_count(
+            [('active', '=', True), ('name', '>', last_name or '')])
+        if remaining:
+            Param.set_param('saltstack_storage.collect_cursor', last_name)
+        else:
+            # Klart — nollställ så nästa vecka börjar om.
+            Param.set_param('saltstack_storage.collect_cursor', '')
+
         _logger.info(
-            'Storage collection: %s minions measured, %s failed',
-            done, len(failed))
+            'Storage collection: %s minions measured, %s failed, %s '
+            'remaining%s', done, len(failed), remaining,
+            '' if remaining else ' (klart — cursorn nollställd)')
         return {
             'measured': done,
             'failed': failed,
+            'remaining': remaining,
+            'cursor': last_name,
         }

@@ -21,9 +21,25 @@
             <field name="module">saltstack_storage</field>
             <field name="model_name">saltstack.storage.measurement</field>
             <field name="method_name">_cron_collect_all</field>
-            <field name="cadence">week</field>
+            <!-- CADENCE `daily`, inte `week` (2026-11-18). Med cursor och
+                 en budget på 600 s tar en körning ~21 minions. Fleetet är
+                 164 — alltså 8 körningar för att täcka allt. På `week`
+                 hade en full runda tagit 8 VECKOR, vilket gör mätningen
+                 meningslös (den skulle alltid vara inaktuell någonstans).
+
+                 På `daily` är hela fleetet täckt på drygt en vecka, och
+                 varje minion mäts ungefär var 8:e dag. Det är rätt
+                 avvägning för lagringssiffror som ändras långsamt. -->
+            <field name="cadence">daily</field>
             <field name="sequence">30</field>
-            <field name="timeout_seconds">1800</field>
+            <!-- 900 s, inte 1800 (2026-11-18). Tasken har en egen
+                 tidsbudget (`saltstack_storage.storage_collect_budget_seconds`,
+                 default 600 s) och sparar en cursor, så en körning ska
+                 ALDRIG behöva mer än budgeten + marginal. Den gamla 1800
+                 var meningslös: Odoos `limit_time_real` (1200 s) dödade
+                 workern först, så taskens egen timeout hann aldrig slå
+                 till och `last_run` sattes aldrig. -->
+            <field name="timeout_seconds">900</field>
             <field name="active" eval="True"/>
         </record>
     </data>
