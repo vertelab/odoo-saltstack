@@ -6,6 +6,8 @@ Covers: process_webhook payload handling, status/run_type fallback, and
 timestamp parsing.
 """
 
+import os
+
 from odoo.tests.common import TransactionCase, tagged
 
 
@@ -76,6 +78,57 @@ class TestRunlogWebhook(TransactionCase):
                 res = self._publish(source=src)
                 rec = self.Runlog.browse(res['runlog_id'])
                 self.assertEqual(rec.source, src)
+
+    def test_publisher_sources_are_known(self):
+        """Every source/run_type a /srv/salt publisher sends is in the selection.
+
+        The hand-written list in test_backup_sources_are_known only covers the
+        publishers someone remembered. image_build_publish.sh sent
+        source=image-build and run_type=image-build for weeks and both were
+        silently rewritten to 'other' (PITFALL 36) — the Driftslogg showed the
+        post but it could not be filtered, and nothing warned.
+
+        This test reads the publishers from the Salt tree instead of listing
+        them, so a NEW publisher fails the suite until its source is added.
+        Skipped when /srv/salt is not mounted (CI without the Salt tree).
+        """
+        import re
+        from pathlib import Path
+
+        salt_root = Path(os.environ.get('SALT_ROOT', '/srv/salt'))
+        if not salt_root.is_dir():
+            self.skipTest('no Salt tree at %s' % salt_root)
+
+        pat = re.compile(
+            r"""['"](?:source|run_type)['"]\s*:\s*['"]([a-z0-9-]+)['"]""")
+
+        found = {}
+        for path in salt_root.rglob('*'):
+            if path.suffix not in ('.sh', '.py', '.sls') or not path.is_file():
+                continue
+            try:
+                text = path.read_text(errors='ignore')
+            except OSError:
+                continue
+            if '/saltstack/log' not in text:
+                continue
+            for value in pat.findall(text):
+                found.setdefault(value, set()).add(
+                    str(path.relative_to(salt_root)))
+
+        self.assertTrue(found, 'no publishers found under %s' % salt_root)
+
+        src_sel = {k for k, _ in self.Runlog._fields['source'].selection}
+        rt_sel = {k for k, _ in self.Runlog._fields['run_type'].selection}
+
+        for value, files in sorted(found.items()):
+            if value in src_sel or value in rt_sel:
+                continue
+            self.fail(
+                'source/run_type %r is sent by %s but is missing from the '
+                "saltstack.runlog selection — process_webhook() rewrites it "
+                "to 'other' without warning (PITFALL 36)."
+                % (value, ', '.join(sorted(files))))
 
     def test_timestamp_parsed(self):
         """ISO timestamp is parsed into a naive Odoo datetime."""

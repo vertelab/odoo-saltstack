@@ -61,6 +61,7 @@ class SaltRunlog(models.Model):
         ('kvm', 'KVM-backup'),
         ('github-backup', 'GitHub-backup'),
         ('clicktest', 'ClickTest'),
+        ('image-build', 'Golden images'),
         ('salt', 'Salt'),
         ('zabbix', 'Zabbix'),
         ('wazuh', 'Wazuh'),
@@ -78,6 +79,8 @@ class SaltRunlog(models.Model):
         ('translation', 'Odoo SA'),
         ('security', 'Security'),
         ('test', 'Test'),
+        ('image-build', 'Golden images'),
+        ('status', 'Status overview'),
         ('change', 'Change'),
         ('other', 'Other'),
     ], string='Run type', default='other')
