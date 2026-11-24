@@ -79,12 +79,23 @@
         <field name="perm_create" eval="False"/>
         <field name="perm_unlink" eval="False"/>
     </record>
+    <!-- Officer får SKRIVA på driftlarm (T/51446, 2026-11-24).
+         En driftoperatör som ser ett larm ska kunna kvittera det — sätta
+         diagnosis_state, resolved och outcome. Utan skrivrätt kunde AI:ns
+         writeback (driftlarm_update_assessment) aldrig spara sin bedömning,
+         och utfallet outcome — det som lär triagen att skilja brus från
+         verkliga fel — förblev osatt på 12 400 av 12 549 larm.
+
+         perm_unlink förblir False: en operatör ska kunna BEDÖMA ett larm,
+         inte radera det. Skrivrätten är odelbar i Odoo (det finns ingen
+         fältnivå-ACL), så den öppnar hela posten — men radering, som är det
+         oåterkalleliga, hålls stängd. -->
     <record id="access_saltstack_alert_officer" model="ir.model.access">
         <field name="name">saltstack.alert.officer</field>
         <field name="model_id" ref="model_saltstack_alert"/>
         <field name="group_id" ref="group_saltstack_officer"/>
         <field name="perm_read" eval="True"/>
-        <field name="perm_write" eval="False"/>
+        <field name="perm_write" eval="True"/>
         <field name="perm_create" eval="False"/>
         <field name="perm_unlink" eval="False"/>
     </record>
