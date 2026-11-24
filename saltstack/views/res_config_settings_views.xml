@@ -105,11 +105,6 @@
                                  title="Auto diagnosis on alert">
                             <field name="alert_auto_diagnose"/>
                         </setting>
-                        <setting id="alert_coworker_setting"
-                                 title="AI Coworker"
-                                 help="AI coworker that performs diagnosis on drift alerts. Default is the Infrastructure Operator (bundled with the module).">
-                            <field name="alert_coworker_id"/>
-                        </setting>
                     </block>
                 </app>
             </xpath>

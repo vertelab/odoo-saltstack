@@ -8,6 +8,11 @@
         <field name="inherit_id" ref="saltstack.view_saltstack_settings"/>
         <field name="arch" type="xml">
             <xpath expr="//setting[@id='alert_auto_diagnose_setting']" position="after">
+                <setting id="alert_coworker_setting"
+                         title="AI Coworker"
+                         help="AI coworker that performs diagnosis on drift alerts. Default is the Infrastructure Operator (bundled with the module).">
+                    <field name="alert_coworker_id"/>
+                </setting>
                 <setting id="alert_triage_enabled_setting"
                          title="Regelbaserad triage före AI"
                          help="Stäng kända bruslarm utan LLM-anrop.">
