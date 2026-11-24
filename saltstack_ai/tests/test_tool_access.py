@@ -212,7 +212,12 @@ class TestInfrastructureOperatorOdooTools(TransactionCase):
                           'coworker saknar Odoo ORM-verktyg %s' % name)
 
     def test_coworker_has_zabbix_troubleshooting_skill(self):
-        """Zabbix troubleshooting skill is in skill_ids (9 total)."""
+        """Zabbix troubleshooting skill is in skill_ids.
+
+        Antalet prövas inte längre exakt: coworkern får skills även från
+        andra moduler (wazuh, backup, caddy …), så ett hårt `== 9` blir
+        fel så snart någon av dem installeras. Det som ägs här är att
+        Zabbix-skillen finns.
+        """
         skill_names = {s.name for s in self.coworker.skill_ids}
         self.assertIn('Zabbix Troubleshooting Methodology', skill_names)
-        self.assertEqual(len(self.coworker.skill_ids), 9)

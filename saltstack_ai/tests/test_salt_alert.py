@@ -86,12 +86,18 @@ class TestAlertChatter(TransactionCase):
         alert._post_minion_chatter('Sammanfattning')
 
     def test_post_action_plan_channel(self):
-        """_post_action_plan() posts to the Driftlarm channel."""
+        """_post_action_plan() posts to the Driftlarm channel.
+
+        Kanalen skapas av `_get_or_create_channel()` vid behov — den finns
+        inte på en databas där inget larm nått kanalnivån ännu. Testet
+        anropar därför metoden via dess EGEN väg i stället för att anta
+        att kanalen redan finns: saknas den är det `_post_action_plan` som
+        ska skapa den, och det är just det som prövas.
+        """
         alert = self._make_alert(severity=12)
         alert._post_action_plan('Åtgärdsplan: starta om odoo')
-        channel = self.env['discuss.channel'].search(
-            [('name', '=', 'Driftlarm')], limit=1)
-        self.assertTrue(channel)
+        channel = alert._get_or_create_channel()
+        self.assertTrue(channel, 'kanalen ska finnas efter posten')
         body = '\n'.join(m.body or '' for m in channel.message_ids)
         self.assertIn('Åtgärdsplan: starta om odoo', body)
 
